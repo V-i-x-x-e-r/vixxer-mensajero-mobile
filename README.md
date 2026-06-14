@@ -33,15 +33,15 @@
 
 ## Sobre el proyecto
 
-**Vixxer Mensajero** es una app móvil de mensajería privada diseñada en México para usuarios que no quieren depender de su número telefónico ni de su CURP para comunicarse. Está pensada para funcionar incluso en zonas con cobertura limitada, mediante un sistema de **gateway BLE** (planeado para v1.1+) donde un dispositivo cercano con internet puede actuar como puente para mensajes cifrados.
+**Vixxer Mensajero** es una app móvil de mensajería privada diseñada en México para usuarios que no quieren depender de su número telefónico ni de su CURP para comunicarse, con un fuerte enfoque en privacidad y en funcionar bien en escenarios de conectividad limitada.
 
-Este repositorio contiene el **cliente móvil** (Android). El servidor vive en [`vixxer-mensajero-backend`](https://github.com/vixxer/vixxer-mensajero-backend).
+Este repositorio contiene el **cliente móvil** (Android). El servidor vive en [`vixxer-mensajero-backend`](https://github.com/V-i-x-x-e-r/vixxer-mensajero-backend).
 
 ### Problemas que resuelve
 
 - Registro sin necesidad de número telefónico ni CURP.
 - Cifrado extremo a extremo (E2EE) por defecto.
-- Comunicación posible en zonas sin cobertura celular (post-MVP, vía gateway BLE).
+- Pensada para escenarios de conectividad limitada (mejoras post-MVP en evaluación).
 
 ---
 
@@ -57,7 +57,6 @@ Este repositorio contiene el **cliente móvil** (Android). El servidor vive en [
 | Tiempo real | Socket.IO Client |
 | Cifrado | TweetNaCl.js |
 | Almacenamiento local | AsyncStorage |
-| Bluetooth (post-MVP) | react-native-ble-plx |
 | Build | EAS Build |
 
 ---
@@ -75,8 +74,7 @@ Este repositorio contiene el **cliente móvil** (Android). El servidor vive en [
 | 0.5.0 | Sprint 4 | Cifrado E2EE con TweetNaCl | Pendiente |
 | 0.6.0 | Sprint 5 | UI pulida + persistencia offline | Pendiente |
 | **1.0.0** | Sprint 6 | **MVP demo + release** | Pendiente |
-| 1.1.0 | Post-MVP | Mensajería directa por BLE entre dispositivos cercanos | Backlog |
-| 1.2.0 | Post-MVP | Gateway BLE — puente a internet vía otro dispositivo | Backlog |
+| 1.1.0+ | Post-MVP | Mejoras de conectividad y features avanzadas (en evaluación) | Backlog |
 
 ---
 
@@ -102,7 +100,7 @@ git --version
 
 ```bash
 # 1. Clonar el repositorio
-git clone https://github.com/vixxer/vixxer-mensajero-mobile.githttps://dash.cloudflare.com/fc0e7324b2578472c131e2b16cc74a3d/home/overview
+git clone https://github.com/V-i-x-x-e-r/vixxer-mensajero-mobile.git
 cd vixxer-mensajero-mobile
 
 # 2. Cambiar a la rama de integración
@@ -224,7 +222,7 @@ git push origin feature/nombre-de-la-tarea
 # 7. Merge con Squash and merge
 ```
 
-Documentación completa en [`vixxer-docs/gitflow.md`](https://github.com/vixxer/vixxer-docs).
+Documentación completa en [`vixxer-docs/gitflow.md`](https://github.com/V-i-x-x-e-r/vixxer-docs).
 
 ---
 
