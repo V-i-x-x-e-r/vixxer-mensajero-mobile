@@ -3,21 +3,29 @@ import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import * as api from "../lib/api";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
+import { EstadoLista } from "../components/EstadoLista";
 
 export default function Solicitudes()
 {
   const { colores } = useTema();
   const [lista, setLista] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
 
   async function cargar()
   {
+    setError(false);
     try
     {
       setLista(await api.solicitudes());
     }
     catch (e)
     {
-      setLista([]);
+      setError(true);
+    }
+    finally
+    {
+      setCargando(false);
     }
   }
 
@@ -25,6 +33,12 @@ export default function Solicitudes()
   {
     cargar();
   }, []);
+
+  function reintentar()
+  {
+    setCargando(true);
+    cargar();
+  }
 
   async function aceptar(id)
   {
@@ -45,16 +59,21 @@ export default function Solicitudes()
         keyExtractor={(s) => s.id}
         contentContainerStyle={estilos.lista}
         ListEmptyComponent={
-          <Text style={[estilos.vacio, { color: colores.muted }]}>No tienes solicitudes pendientes.</Text>
+          <EstadoLista
+            cargando={cargando}
+            error={error}
+            vacio="No tienes solicitudes pendientes."
+            onReintentar={reintentar}
+          />
         }
         renderItem={({ item }) => (
           <View style={[estilos.fila, { borderColor: colores.borde }]}>
             <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
             <View style={estilos.acciones}>
-              <Pressable onPress={() => rechazar(item.id)} hitSlop={6}>
+              <Pressable onPress={() => rechazar(item.id)} hitSlop={6} style={({ pressed }) => pressed && estilos.presionado}>
                 <Text style={{ color: colores.muted, fontSize: 14 }}>Rechazar</Text>
               </Pressable>
-              <Pressable onPress={() => aceptar(item.id)} style={[estilos.aceptar, { backgroundColor: colores.botonFondo }]}>
+              <Pressable onPress={() => aceptar(item.id)} style={({ pressed }) => [estilos.aceptar, { backgroundColor: colores.botonFondo }, pressed && estilos.presionado]}>
                 <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold, fontSize: 13 }}>Aceptar</Text>
               </Pressable>
             </View>
@@ -67,7 +86,7 @@ export default function Solicitudes()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
-  lista: { padding: 16, gap: 8 },
+  lista: { padding: 16, gap: 8, flexGrow: 1 },
   fila:
   {
     flexDirection: "row",
@@ -81,5 +100,5 @@ const estilos = StyleSheet.create({
   nombre: { fontSize: 16 },
   acciones: { flexDirection: "row", alignItems: "center", gap: 14 },
   aceptar: { borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
-  vacio: { textAlign: "center", marginTop: 40, fontSize: 14 },
+  presionado: { opacity: 0.6 },
 });

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { guardar, leer, TOKEN, MI_ID } from "../lib/storage";
@@ -13,6 +14,7 @@ import { BotonTema } from "../components/BotonTema";
 export default function Login()
 {
   const { colores } = useTema();
+  const insets = useSafeAreaInsets();
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
@@ -31,6 +33,11 @@ export default function Login()
 
   async function entrar()
   {
+    if (!usuario.trim() || !contrasena)
+    {
+      setError("Escribe tu usuario y contraseña");
+      return;
+    }
     setError("");
     setCargando(true);
 
@@ -57,7 +64,7 @@ export default function Login()
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
-      <View style={estilos.cabecera}>
+      <View style={[estilos.cabecera, { paddingTop: insets.top + 16 }]}>
         <View style={estilos.marca}>
           <Logo alto={26} />
           <Text style={[estilos.nombre, { color: colores.texto }]}>Vixxer</Text>
@@ -117,7 +124,6 @@ const estilos = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingTop: 64,
   },
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   nombre: { fontSize: 18, fontFamily: fuentes.semibold },

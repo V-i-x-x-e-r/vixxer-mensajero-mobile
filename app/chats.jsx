@@ -9,12 +9,17 @@ import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
 import { Engrane } from "../components/Engrane";
+import { Avatar } from "../components/Avatar";
+import { EstadoLista } from "../components/EstadoLista";
 
 export default function Chats()
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
   const [amigos, setAmigos] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  const [pendientes, setPendientes] = useState(0);
   const [estado, setEstado] = useState("conectando…");
 
   useEffect(() =>
@@ -46,12 +51,38 @@ export default function Chats()
     };
   }, []);
 
+  const cargar = useCallback(async () =>
+  {
+    setError(false);
+    try
+    {
+      const lista = await api.amigos();
+      setAmigos(lista);
+      const sol = await api.solicitudes();
+      setPendientes(sol.length);
+    }
+    catch (e)
+    {
+      setError(true);
+    }
+    finally
+    {
+      setCargando(false);
+    }
+  }, []);
+
   useFocusEffect(
     useCallback(() =>
     {
-      api.amigos().then(setAmigos).catch(() => setAmigos([]));
-    }, []),
+      cargar();
+    }, [cargar]),
   );
+
+  function reintentar()
+  {
+    setCargando(true);
+    cargar();
+  }
 
   const conectado = estado === "conectado";
 
@@ -73,11 +104,22 @@ export default function Chats()
       </View>
 
       <View style={estilos.acciones}>
-        <Pressable onPress={() => router.push("/agregar")} style={[estilos.chip, { borderColor: colores.borde }]}>
+        <Pressable
+          onPress={() => router.push("/agregar")}
+          style={({ pressed }) => [estilos.chip, { borderColor: colores.borde }, pressed && estilos.presionado]}
+        >
           <Text style={[estilos.chipTxt, { color: colores.texto }]}>Agregar por código</Text>
         </Pressable>
-        <Pressable onPress={() => router.push("/solicitudes")} style={[estilos.chip, { borderColor: colores.borde }]}>
+        <Pressable
+          onPress={() => router.push("/solicitudes")}
+          style={({ pressed }) => [estilos.chip, { borderColor: colores.borde }, pressed && estilos.presionado]}
+        >
           <Text style={[estilos.chipTxt, { color: colores.texto }]}>Solicitudes</Text>
+          {pendientes > 0 ? (
+            <View style={[estilos.badge, { backgroundColor: colores.botonFondo }]}>
+              <Text style={[estilos.badgeTxt, { color: colores.botonTexto }]}>{pendientes}</Text>
+            </View>
+          ) : null}
         </Pressable>
       </View>
 
@@ -86,15 +128,19 @@ export default function Chats()
         keyExtractor={(a) => a.id}
         style={estilos.lista}
         ListEmptyComponent={
-          <Text style={[estilos.vacio, { color: colores.muted }]}>
-            Aún no tienes contactos. Agrega a alguien por su código.
-          </Text>
+          <EstadoLista
+            cargando={cargando}
+            error={error}
+            vacio="Aún no tienes contactos. Agrega a alguien por su código."
+            onReintentar={reintentar}
+          />
         }
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
-            style={[estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }]}
+            style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
           >
+            <Avatar nombre={item.usuario} tamano={42} />
             <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
           </Pressable>
         )}
@@ -112,10 +158,12 @@ const estilos = StyleSheet.create({
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },
   acciones: { flexDirection: "row", gap: 10 },
-  chip: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
+  chip: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
   chipTxt: { fontSize: 14 },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
+  badgeTxt: { fontSize: 12, fontFamily: fuentes.semibold },
   lista: { flex: 1 },
-  fila: { padding: 16, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   nombre: { fontSize: 16 },
-  vacio: { textAlign: "center", marginTop: 40, fontSize: 14 },
+  presionado: { opacity: 0.6 },
 });
