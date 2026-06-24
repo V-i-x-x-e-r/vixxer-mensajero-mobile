@@ -11,6 +11,7 @@ import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
 import { Visto } from "../../components/Visto";
+import { Avatar } from "../../components/Avatar";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 
 function aFecha(iso)
@@ -109,7 +110,7 @@ export default function Chat()
   async function abrir(fila)
   {
     const priv = await leer(CLAVE_PRIVADA);
-    const pub = await llavePublicaDe(fila.remitente_id);
+    const pub = await llavePublicaDe(otroId);
     const claro = descifrar(fila.contenido_cifrado, fila.nonce, pub, priv);
     return claro ?? "No se pudo descifrar este mensaje";
   }
@@ -302,7 +303,16 @@ export default function Chat()
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={[estilos.pantalla, { backgroundColor: colores.fondo }]}
     >
-      <Stack.Screen options={{ title: usuario || "Conversación" }} />
+      <Stack.Screen
+        options={{
+          headerTitle: () => (
+            <View style={estilos.encabezado}>
+              <Avatar nombre={usuario || ""} tamano={30} />
+              <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{usuario || "Conversación"}</Text>
+            </View>
+          ),
+        }}
+      />
 
       <FlatList
         ref={lista}
@@ -451,6 +461,8 @@ export default function Chat()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
+  encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
+  encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
   lista: { padding: 14, gap: 6 },
   banner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
   bannerTxt: { fontSize: 12 },
