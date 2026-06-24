@@ -4,7 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../lib/api";
 import { conectarSocket } from "../lib/socket";
-import { leer, TOKEN } from "../lib/storage";
+import { descifrar } from "../lib/crypto";
+import { llavePublicaDe } from "../lib/llaves";
+import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
@@ -12,11 +14,27 @@ import { Engrane } from "../components/Engrane";
 import { Avatar } from "../components/Avatar";
 import { EstadoLista } from "../components/EstadoLista";
 
+function cuando(iso)
+{
+  if (!iso)
+  {
+    return "";
+  }
+  const f = new Date(iso);
+  const hoy = new Date();
+  if (f.toDateString() === hoy.toDateString())
+  {
+    return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
+  }
+  return f.toLocaleDateString();
+}
+
 export default function Chats()
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
   const [amigos, setAmigos] = useState([]);
+  const [convs, setConvs] = useState({});
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
   const [pendientes, setPendientes] = useState(0);
@@ -56,10 +74,32 @@ export default function Chats()
     setError(false);
     try
     {
-      const lista = await api.amigos();
-      setAmigos(lista);
-      const sol = await api.solicitudes();
-      setPendientes(sol.length);
+      const [lista, conversaciones, solicitudes] = await Promise.all([
+        api.amigos(),
+        api.conversaciones(),
+        api.solicitudes(),
+      ]);
+      setPendientes(solicitudes.length);
+
+      const miId = await leer(MI_ID);
+      const priv = await leer(CLAVE_PRIVADA);
+      const mapa = {};
+      for (const c of conversaciones)
+      {
+        const pub = await llavePublicaDe(c.otro_id);
+        const texto = descifrar(c.ultimo_cifrado, c.ultimo_nonce, pub, priv) ?? "Mensaje cifrado";
+        mapa[c.otro_id] = {
+          preview: c.ultimo_remitente_id === miId ? `Tú: ${texto}` : texto,
+          enviado_en: c.enviado_en,
+          noLeidos: c.no_leidos,
+        };
+      }
+
+      const ordenados = [...lista].sort((a, b) =>
+        (mapa[b.id]?.enviado_en || "").localeCompare(mapa[a.id]?.enviado_en || ""),
+      );
+      setAmigos(ordenados);
+      setConvs(mapa);
     }
     catch (e)
     {
@@ -93,7 +133,7 @@ export default function Chats()
           <Logo alto={24} />
           <Text style={[estilos.titulo, { color: colores.texto }]}>Vixxer</Text>
         </View>
-        <Pressable onPress={() => router.push("/ajustes")} hitSlop={8}>
+        <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
           <Engrane color={colores.texto} />
         </Pressable>
       </View>
@@ -135,15 +175,34 @@ export default function Chats()
             onReintentar={reintentar}
           />
         }
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
-            style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
-          >
-            <Avatar nombre={item.usuario} tamano={42} />
-            <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
-          </Pressable>
-        )}
+        renderItem={({ item }) =>
+        {
+          const c = convs[item.id];
+          return (
+            <Pressable
+              onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
+              style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
+            >
+              <Avatar nombre={item.usuario} tamano={44} />
+              <View style={estilos.centro}>
+                <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
+                {c ? (
+                  <Text style={[estilos.preview, { color: colores.muted }]} numberOfLines={1}>{c.preview}</Text>
+                ) : null}
+              </View>
+              {c ? (
+                <View style={estilos.derecha}>
+                  <Text style={[estilos.hora, { color: colores.muted }]}>{cuando(c.enviado_en)}</Text>
+                  {c.noLeidos > 0 ? (
+                    <View style={[estilos.badge, { backgroundColor: colores.botonFondo }]}>
+                      <Text style={[estilos.badgeTxt, { color: colores.botonTexto }]}>{c.noLeidos}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+            </Pressable>
+          );
+        }}
       />
     </View>
   );
@@ -164,6 +223,10 @@ const estilos = StyleSheet.create({
   badgeTxt: { fontSize: 12, fontFamily: fuentes.semibold },
   lista: { flex: 1 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  centro: { flex: 1, gap: 2 },
   nombre: { fontSize: 16 },
+  preview: { fontSize: 13 },
+  derecha: { alignItems: "flex-end", gap: 4 },
+  hora: { fontSize: 11 },
   presionado: { opacity: 0.6 },
 });
