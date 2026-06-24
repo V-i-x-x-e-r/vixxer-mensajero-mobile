@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
+import { View, Text, Pressable, Switch, Alert, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../lib/api";
@@ -14,11 +14,19 @@ export default function Ajustes()
   const { colores } = useTema();
   const [codigo, setCodigo] = useState("");
   const [copiado, setCopiado] = useState(false);
+  const [prefs, setPrefs] = useState({ mostrar_conexion: true, mostrar_acuses: true });
 
   useEffect(() =>
   {
     api.miCodigo().then((d) => setCodigo(d.codigo)).catch(() => {});
+    api.preferencias().then(setPrefs).catch(() => {});
   }, []);
+
+  function cambiar(clave, valor)
+  {
+    setPrefs((p) => ({ ...p, [clave]: valor }));
+    api.actualizarPreferencias({ [clave]: valor }).catch(() => {});
+  }
 
   async function copiar()
   {
@@ -60,6 +68,24 @@ export default function Ajustes()
         <BotonTema />
       </View>
 
+      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 28 }]}>PRIVACIDAD</Text>
+      <View style={[estilos.fila, { borderColor: colores.borde }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mostrar mi conexión</Text>
+        <Switch
+          value={prefs.mostrar_conexion}
+          onValueChange={(v) => cambiar("mostrar_conexion", v)}
+          trackColor={{ true: colores.botonFondo }}
+        />
+      </View>
+      <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Acuses de lectura</Text>
+        <Switch
+          value={prefs.mostrar_acuses}
+          onValueChange={(v) => cambiar("mostrar_acuses", v)}
+          trackColor={{ true: colores.botonFondo }}
+        />
+      </View>
+
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 28 }]}>CUENTA</Text>
       <Pressable onPress={salir} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
@@ -82,7 +108,7 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
   },
   etiqueta: { fontSize: 15 },
   salir: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
