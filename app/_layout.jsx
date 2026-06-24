@@ -21,6 +21,8 @@ function Navegacion()
       <Stack.Screen name="registro" options={{ headerShown: false }} />
       <Stack.Screen name="chats" options={{ headerShown: false }} />
       <Stack.Screen name="ajustes" options={{ title: "Ajustes" }} />
+      <Stack.Screen name="agregar" options={{ title: "Agregar contacto" }} />
+      <Stack.Screen name="solicitudes" options={{ title: "Solicitudes" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "Conversación" }} />
     </Stack>
   );

@@ -69,6 +69,42 @@ export default function Chat()
   const [editando, setEditando] = useState(null);
   const miId = useRef(null);
   const lista = useRef(null);
+  const tecleando = useRef(null);
+
+  function marcarLeidos(filas)
+  {
+    const ids = filas
+      .filter((m) => m.remitente_id === otroId && !String(m.id).startsWith("local-"))
+      .map((m) => m.id);
+    if (ids.length === 0)
+    {
+      return;
+    }
+    const socket = obtenerSocket();
+    if (socket)
+    {
+      socket.emit("mensaje:leido", { ids });
+    }
+  }
+
+  function escribir(t)
+  {
+    setTexto(t);
+    const socket = obtenerSocket();
+    if (!socket)
+    {
+      return;
+    }
+    socket.emit("usuario:escribiendo", { para: otroId, activo: true });
+    if (tecleando.current)
+    {
+      clearTimeout(tecleando.current);
+    }
+    tecleando.current = setTimeout(() =>
+    {
+      socket.emit("usuario:escribiendo", { para: otroId, activo: false });
+    }, 1500);
+  }
 
   async function abrir(fila)
   {
@@ -92,6 +128,7 @@ export default function Chat()
         if (activo)
         {
           setMensajes(descifrados);
+          marcarLeidos(descifrados);
         }
       }
       catch (e)
@@ -111,6 +148,7 @@ export default function Chat()
       if (activo)
       {
         setMensajes((prev) => [...prev, { ...fila, texto: t }]);
+        marcarLeidos([fila]);
       }
     }
 
@@ -122,10 +160,20 @@ export default function Chat()
       }
     }
 
+    function alEstado(data)
+    {
+      if (activo)
+      {
+        setMensajes((prev) => prev.map((m) => (m.id === data.id ? { ...m, ...data } : m)));
+      }
+    }
+
     if (socket)
     {
       socket.on("mensaje:recibido", alRecibir);
       socket.on("usuario:escribiendo", alEscribir);
+      socket.on("mensaje:entregado", alEstado);
+      socket.on("mensaje:leido", alEstado);
     }
 
     return () =>
@@ -135,6 +183,8 @@ export default function Chat()
       {
         socket.off("mensaje:recibido", alRecibir);
         socket.off("usuario:escribiendo", alEscribir);
+        socket.off("mensaje:entregado", alEstado);
+        socket.off("mensaje:leido", alEstado);
       }
     };
   }, [otroId]);
@@ -167,6 +217,11 @@ export default function Chat()
       nonce,
       respuestaA: respondiendo ? respondiendo.id : null,
     });
+    if (tecleando.current)
+    {
+      clearTimeout(tecleando.current);
+    }
+    socket.emit("usuario:escribiendo", { para: otroId, activo: false });
     setMensajes((prev) => [
       ...prev,
       {
@@ -370,7 +425,7 @@ export default function Chat()
       <View style={[estilos.inputFila, { borderTopColor: colores.borde }]}>
         <TextInput
           value={texto}
-          onChangeText={setTexto}
+          onChangeText={escribir}
           placeholder="Mensaje"
           placeholderTextColor={colores.placeholder}
           style={[estilos.campo, { backgroundColor: colores.surface, borderColor: colores.borde, color: colores.texto }]}

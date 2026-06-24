@@ -1,22 +1,20 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as api from "../lib/api";
 import { conectarSocket } from "../lib/socket";
 import { leer, TOKEN } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
-import { Campo } from "../components/Campo";
 import { Engrane } from "../components/Engrane";
 
 export default function Chats()
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
-  const [q, setQ] = useState("");
-  const [contactos, setContactos] = useState([]);
+  const [amigos, setAmigos] = useState([]);
   const [estado, setEstado] = useState("conectando…");
 
   useEffect(() =>
@@ -48,23 +46,12 @@ export default function Chats()
     };
   }, []);
 
-  async function buscar(texto)
-  {
-    setQ(texto);
-    if (texto.trim().length < 1)
+  useFocusEffect(
+    useCallback(() =>
     {
-      setContactos([]);
-      return;
-    }
-    try
-    {
-      setContactos(await api.buscarUsuarios(texto.trim()));
-    }
-    catch (e)
-    {
-      setContactos([]);
-    }
-  }
+      api.amigos().then(setAmigos).catch(() => setAmigos([]));
+    }, []),
+  );
 
   const conectado = estado === "conectado";
 
@@ -85,21 +72,22 @@ export default function Chats()
         <Text style={[estilos.estadoTxt, { color: colores.muted }]}>{estado}</Text>
       </View>
 
-      <Campo
-        valor={q}
-        setValor={buscar}
-        placeholder="Buscar usuario…"
-        autoCapitalize="none"
-        autoCorrect={false}
-      />
+      <View style={estilos.acciones}>
+        <Pressable onPress={() => router.push("/agregar")} style={[estilos.chip, { borderColor: colores.borde }]}>
+          <Text style={[estilos.chipTxt, { color: colores.texto }]}>Agregar por código</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push("/solicitudes")} style={[estilos.chip, { borderColor: colores.borde }]}>
+          <Text style={[estilos.chipTxt, { color: colores.texto }]}>Solicitudes</Text>
+        </Pressable>
+      </View>
 
       <FlatList
-        data={contactos}
-        keyExtractor={(c) => c.id}
+        data={amigos}
+        keyExtractor={(a) => a.id}
         style={estilos.lista}
         ListEmptyComponent={
           <Text style={[estilos.vacio, { color: colores.muted }]}>
-            Busca a alguien para empezar a chatear.
+            Aún no tienes contactos. Agrega a alguien por su código.
           </Text>
         }
         renderItem={({ item }) => (
@@ -123,6 +111,9 @@ const estilos = StyleSheet.create({
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },
+  acciones: { flexDirection: "row", gap: 10 },
+  chip: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
+  chipTxt: { fontSize: 14 },
   lista: { flex: 1 },
   fila: { padding: 16, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   nombre: { fontSize: 16 },
