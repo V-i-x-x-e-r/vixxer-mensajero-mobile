@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../../lib/api";
@@ -12,6 +12,12 @@ import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
 import { Visto } from "../../components/Visto";
 import { Avatar } from "../../components/Avatar";
+import { Reloj } from "../../components/Reloj";
+
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental)
+{
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 
 function aFecha(iso)
@@ -148,6 +154,7 @@ export default function Chat()
       const t = await abrir(fila);
       if (activo)
       {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setMensajes((prev) => [...prev, { ...fila, texto: t }]);
         marcarLeidos([fila]);
       }
@@ -212,24 +219,37 @@ export default function Chat()
       return;
     }
 
-    socket.emit("mensaje:enviar", {
-      destinatarioId: otroId,
-      contenidoCifrado,
-      nonce,
-      respuestaA: respondiendo ? respondiendo.id : null,
-    });
+    const localId = `local-${Date.now()}`;
+    socket.emit(
+      "mensaje:enviar",
+      {
+        destinatarioId: otroId,
+        contenidoCifrado,
+        nonce,
+        respuestaA: respondiendo ? respondiendo.id : null,
+      },
+      (resp) =>
+      {
+        if (resp && resp.ok)
+        {
+          setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, id: resp.id, estado: "enviado" } : m)));
+        }
+      },
+    );
     if (tecleando.current)
     {
       clearTimeout(tecleando.current);
     }
     socket.emit("usuario:escribiendo", { para: otroId, activo: false });
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setMensajes((prev) => [
       ...prev,
       {
-        id: `local-${Date.now()}`,
+        id: localId,
         remitente_id: miId.current,
         texto: limpio,
         enviado_en: new Date().toISOString(),
+        estado: "enviando",
         respuestaTexto: respondiendo ? respondiendo.texto : null,
       },
     ]);
@@ -376,7 +396,11 @@ export default function Chat()
                     <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
                   ) : null}
                   <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
-                  {mio ? <Visto color={colores.botonTexto} leido={!!item.leido_en} tamano={11} /> : null}
+                  {mio ? (
+                    item.estado === "enviando"
+                      ? <Reloj color={colores.botonTexto} tamano={11} />
+                      : <Visto color={colores.botonTexto} leido={!!item.leido_en} tamano={11} />
+                  ) : null}
                 </View>
               </Pressable>
 
