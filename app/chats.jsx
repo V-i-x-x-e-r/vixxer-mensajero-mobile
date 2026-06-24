@@ -9,6 +9,7 @@ import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
 import { Engrane } from "../components/Engrane";
+import { Avatar } from "../components/Avatar";
 import { EstadoLista } from "../components/EstadoLista";
 
 export default function Chats()
@@ -139,6 +140,7 @@ export default function Chats()
             onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
             style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
           >
+            <Avatar nombre={item.usuario} tamano={42} />
             <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
           </Pressable>
         )}
@@ -161,7 +163,7 @@ const estilos = StyleSheet.create({
   badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
   badgeTxt: { fontSize: 12, fontFamily: fuentes.semibold },
   lista: { flex: 1 },
-  fila: { padding: 16, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   nombre: { fontSize: 16 },
   presionado: { opacity: 0.6 },
 });
