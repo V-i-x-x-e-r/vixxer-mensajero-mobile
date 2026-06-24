@@ -12,6 +12,9 @@ import { router } from "expo-router";
 import * as api from "../lib/api";
 import { conectarSocket } from "../lib/socket";
 import { leer, cerrarSesion, TOKEN } from "../lib/storage";
+import { colores } from "../assets/themes/colores";
+import { Boton } from "../components/Boton";
+import { Campo } from "../components/Campo";
 
 export default function Chats() {
   const [q, setQ] = useState("");
@@ -91,13 +94,28 @@ export default function Chats() {
   );
 }
 
+// app/chats.jsx (fragmento estilos)
 const s = StyleSheet.create({
-  cont: { flex: 1, padding: 16, gap: 12, backgroundColor: "#0f1115" },
+  cont: { flex: 1, padding: 16, gap: 12, backgroundColor: colores.fondo },
   barra: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  estado: { color: "#9aa3b2" },
-  link: { color: "#65a7ff" },
-  campo: { borderWidth: 1, borderColor: "#2a2f3a", borderRadius: 10, padding: 12, color: "#fff" },
-  fila: { padding: 16, borderBottomWidth: 1, borderBottomColor: "#1c2230" },
-  nombre: { color: "#fff", fontSize: 16 },
-  vacio: { color: "#7c8597", textAlign: "center", marginTop: 32 },
+  estado: { color: colores.textoSecundario },
+  link: { color: colores.azul },
+  campo: { 
+    backgroundColor: colores.surface,
+    borderWidth: 1, 
+    borderColor: colores.borde,
+    borderRadius: 10, 
+    padding: 12, 
+    color: colores.texto,
+  },
+  fila: { 
+    padding: 16, 
+    borderBottomWidth: 1, 
+    borderBottomColor: colores.borde,
+    backgroundColor: colores.surface,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  nombre: { color: colores.texto, fontSize: 16 },
+  vacio: { color: colores.textoSecundario, textAlign: "center", marginTop: 32 },
 });
