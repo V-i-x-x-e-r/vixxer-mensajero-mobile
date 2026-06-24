@@ -31,6 +31,11 @@ export default function Login()
 
   async function entrar()
   {
+    if (!usuario.trim() || !contrasena)
+    {
+      setError("Escribe tu usuario y contraseña");
+      return;
+    }
     setError("");
     setCargando(true);
 

@@ -21,6 +21,17 @@ export default function Registro()
 
   async function crear()
   {
+    const u = usuario.trim();
+    if (u.length < 3 || u.length > 20)
+    {
+      setError("El usuario debe tener entre 3 y 20 caracteres");
+      return;
+    }
+    if (contrasena.length < 6)
+    {
+      setError("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
     setError("");
     setCargando(true);
 
