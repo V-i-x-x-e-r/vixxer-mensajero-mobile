@@ -1,4 +1,4 @@
-import { View, Text } from "react-native";
+import { View, Text, Image } from "react-native";
 
 const PALETA = ["#35D487", "#65A7FF", "#FFD166", "#FF6B5E", "#8B7CFF", "#22C55E"];
 
@@ -12,8 +12,13 @@ function colorDe(nombre)
   return PALETA[Math.abs(h) % PALETA.length];
 }
 
-export function Avatar({ nombre = "", tamano = 40 })
+export function Avatar({ nombre = "", uri = null, tamano = 40 })
 {
+  if (uri)
+  {
+    return <Image source={{ uri }} style={{ width: tamano, height: tamano, borderRadius: tamano / 2 }} />;
+  }
+
   const inicial = (nombre.trim()[0] || "?").toUpperCase();
 
   return (

@@ -180,10 +180,10 @@ export default function Chats()
           const c = convs[item.id];
           return (
             <Pressable
-              onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
+              onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } })}
               style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
             >
-              <Avatar nombre={item.usuario} tamano={44} />
+              <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
               <View style={estilos.centro}>
                 <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
                 {c ? (

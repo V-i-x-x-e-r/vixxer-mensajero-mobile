@@ -66,7 +66,7 @@ function agrupar(reacciones)
 export default function Chat()
 {
   const { colores } = useTema();
-  const { id: otroId, usuario } = useLocalSearchParams();
+  const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
@@ -341,7 +341,7 @@ export default function Chat()
         options={{
           headerTitle: () => (
             <View style={estilos.encabezado}>
-              <Avatar nombre={usuario || ""} tamano={32} />
+              <Avatar nombre={usuario || ""} uri={avatar || null} tamano={32} />
               <View>
                 <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{usuario || "Conversación"}</Text>
                 {sub ? <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{sub}</Text> : null}
