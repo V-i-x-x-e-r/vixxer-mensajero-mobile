@@ -6,6 +6,7 @@ import * as api from "../lib/api";
 import { conectarSocket } from "../lib/socket";
 import { leer, TOKEN } from "../lib/storage";
 import { useTema } from "../components/tema";
+import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
 import { Campo } from "../components/Campo";
 import { Engrane } from "../components/Engrane";
@@ -103,7 +104,7 @@ export default function Chats()
         }
         renderItem={({ item }) => (
           <Pressable
-            onPress={() => router.push(`/chat/${item.id}`)}
+            onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
             style={[estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }]}
           >
             <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
@@ -118,7 +119,7 @@ const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
   cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
-  titulo: { fontSize: 18, fontWeight: "600" },
+  titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },

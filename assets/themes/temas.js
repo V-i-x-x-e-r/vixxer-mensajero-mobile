@@ -29,3 +29,10 @@ export const oscuro =
 };
 
 export const barras = ["#35D487", "#65A7FF", "#FFD166"];
+
+export const fuentes =
+{
+  media: "Outfit_500Medium",
+  semibold: "Outfit_600SemiBold",
+  bold: "Outfit_700Bold",
+};

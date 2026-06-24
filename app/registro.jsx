@@ -5,6 +5,7 @@ import * as api from "../lib/api";
 import { asegurarClaves } from "../lib/crypto";
 import { guardar, TOKEN, MI_ID } from "../lib/storage";
 import { useTema } from "../components/tema";
+import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
@@ -116,10 +117,10 @@ const estilos = StyleSheet.create({
     paddingTop: 64,
   },
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
-  nombre: { fontSize: 18, fontWeight: "600" },
+  nombre: { fontSize: 18, fontFamily: fuentes.semibold },
   zona: { flex: 1, justifyContent: "center" },
   titulos: { marginBottom: 36 },
-  titulo: { fontSize: 24, fontWeight: "600", letterSpacing: -0.5 },
+  titulo: { fontSize: 24, fontFamily: fuentes.semibold, letterSpacing: -0.5 },
   subtitulo: { marginTop: 4, fontSize: 14 },
   form: { gap: 12 },
   error: { fontSize: 13 },
