@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { Pressable, Text, ActivityIndicator, Animated } from "react-native";
 import { useTema } from "./tema";
+import { fuentes } from "../assets/themes/temas";
 
 export function Boton({ titulo, onPress, cargando = false, disabled = false })
 {
@@ -30,7 +31,7 @@ export function Boton({ titulo, onPress, cargando = false, disabled = false })
       >
         {cargando
           ? <ActivityIndicator color={colores.botonTexto} />
-          : <Text style={{ color: colores.botonTexto, fontWeight: "600", fontSize: 14 }}>{titulo}</Text>}
+          : <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold, fontSize: 14 }}>{titulo}</Text>}
       </Pressable>
     </Animated.View>
   );
