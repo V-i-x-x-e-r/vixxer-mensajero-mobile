@@ -103,10 +103,16 @@ export default function Chats()
       </View>
 
       <View style={estilos.acciones}>
-        <Pressable onPress={() => router.push("/agregar")} style={[estilos.chip, { borderColor: colores.borde }]}>
+        <Pressable
+          onPress={() => router.push("/agregar")}
+          style={({ pressed }) => [estilos.chip, { borderColor: colores.borde }, pressed && estilos.presionado]}
+        >
           <Text style={[estilos.chipTxt, { color: colores.texto }]}>Agregar por código</Text>
         </Pressable>
-        <Pressable onPress={() => router.push("/solicitudes")} style={[estilos.chip, { borderColor: colores.borde }]}>
+        <Pressable
+          onPress={() => router.push("/solicitudes")}
+          style={({ pressed }) => [estilos.chip, { borderColor: colores.borde }, pressed && estilos.presionado]}
+        >
           <Text style={[estilos.chipTxt, { color: colores.texto }]}>Solicitudes</Text>
           {pendientes > 0 ? (
             <View style={[estilos.badge, { backgroundColor: colores.botonFondo }]}>
@@ -131,7 +137,7 @@ export default function Chats()
         renderItem={({ item }) => (
           <Pressable
             onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario } })}
-            style={[estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }]}
+            style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
           >
             <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
           </Pressable>
@@ -157,4 +163,5 @@ const estilos = StyleSheet.create({
   lista: { flex: 1 },
   fila: { padding: 16, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   nombre: { fontSize: 16 },
+  presionado: { opacity: 0.6 },
 });

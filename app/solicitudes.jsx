@@ -70,10 +70,10 @@ export default function Solicitudes()
           <View style={[estilos.fila, { borderColor: colores.borde }]}>
             <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
             <View style={estilos.acciones}>
-              <Pressable onPress={() => rechazar(item.id)} hitSlop={6}>
+              <Pressable onPress={() => rechazar(item.id)} hitSlop={6} style={({ pressed }) => pressed && estilos.presionado}>
                 <Text style={{ color: colores.muted, fontSize: 14 }}>Rechazar</Text>
               </Pressable>
-              <Pressable onPress={() => aceptar(item.id)} style={[estilos.aceptar, { backgroundColor: colores.botonFondo }]}>
+              <Pressable onPress={() => aceptar(item.id)} style={({ pressed }) => [estilos.aceptar, { backgroundColor: colores.botonFondo }, pressed && estilos.presionado]}>
                 <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold, fontSize: 13 }}>Aceptar</Text>
               </Pressable>
             </View>
@@ -100,4 +100,5 @@ const estilos = StyleSheet.create({
   nombre: { fontSize: 16 },
   acciones: { flexDirection: "row", alignItems: "center", gap: 14 },
   aceptar: { borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 },
+  presionado: { opacity: 0.6 },
 });

@@ -41,7 +41,7 @@ export default function Ajustes()
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <Text style={[estilos.seccion, { color: colores.muted }]}>TU CÓDIGO DE AMIGO</Text>
-      <Pressable onPress={copiar} style={[estilos.codigoCaja, { borderColor: colores.borde }]}>
+      <Pressable onPress={copiar} style={({ pressed }) => [estilos.codigoCaja, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.codigo, { color: colores.texto }]}>{codigo || "…"}</Text>
         <Text style={[estilos.copiar, { color: colores.muted }]}>{copiado ? "copiado" : "tocar para copiar"}</Text>
       </Pressable>
@@ -53,7 +53,7 @@ export default function Ajustes()
       </View>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 28 }]}>CUENTA</Text>
-      <Pressable onPress={salir} style={[estilos.salir, { borderColor: colores.borde }]}>
+      <Pressable onPress={salir} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
       </Pressable>
     </View>
@@ -79,4 +79,5 @@ const estilos = StyleSheet.create({
   etiqueta: { fontSize: 15 },
   salir: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
   salirTxt: { fontSize: 15, fontWeight: "600" },
+  presionado: { opacity: 0.6 },
 });
