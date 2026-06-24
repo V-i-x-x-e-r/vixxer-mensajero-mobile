@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { conectarSocket } from "../lib/socket";
@@ -12,6 +13,7 @@ import { Engrane } from "../components/Engrane";
 export default function Chats()
 {
   const { colores } = useTema();
+  const insets = useSafeAreaInsets();
   const [q, setQ] = useState("");
   const [contactos, setContactos] = useState([]);
   const [estado, setEstado] = useState("conectando…");
@@ -66,7 +68,7 @@ export default function Chats()
   const conectado = estado === "conectado";
 
   return (
-    <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
+    <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
       <View style={estilos.cabecera}>
         <View style={estilos.marca}>
           <Logo alto={24} />
@@ -113,7 +115,7 @@ export default function Chats()
 }
 
 const estilos = StyleSheet.create({
-  pantalla: { flex: 1, paddingHorizontal: 20, paddingTop: 16, gap: 12 },
+  pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
   cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   titulo: { fontSize: 18, fontWeight: "600" },
