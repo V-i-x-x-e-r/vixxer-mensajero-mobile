@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../lib/api";
@@ -31,11 +31,19 @@ export default function Ajustes()
     setTimeout(() => setCopiado(false), 1500);
   }
 
-  async function salir()
+  async function cerrar()
   {
     desconectarSocket();
     await cerrarSesion();
     router.replace("/");
+  }
+
+  function salir()
+  {
+    Alert.alert("Cerrar sesión", "¿Seguro que quieres salir?", [
+      { text: "Cancelar", style: "cancel" },
+      { text: "Salir", style: "destructive", onPress: cerrar },
+    ]);
   }
 
   return (
