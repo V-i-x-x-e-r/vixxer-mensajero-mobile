@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
+import * as Clipboard from "expo-clipboard";
 import * as api from "../../lib/api";
 import { obtenerSocket } from "../../lib/socket";
 import { cifrar, descifrar } from "../../lib/crypto";
@@ -10,6 +11,7 @@ import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
 import { Visto } from "../../components/Visto";
+import { AccionesMensaje } from "../../components/AccionesMensaje";
 
 function aFecha(iso)
 {
@@ -44,6 +46,16 @@ function hora(iso)
   return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
 }
 
+function agrupar(reacciones)
+{
+  const conteo = {};
+  for (const e of reacciones || [])
+  {
+    conteo[e] = (conteo[e] || 0) + 1;
+  }
+  return Object.entries(conteo);
+}
+
 export default function Chat()
 {
   const { colores } = useTema();
@@ -52,6 +64,9 @@ export default function Chat()
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
   const [abajo, setAbajo] = useState(true);
+  const [sel, setSel] = useState(null);
+  const [respondiendo, setRespondiendo] = useState(null);
+  const [editando, setEditando] = useState(null);
   const miId = useRef(null);
   const lista = useRef(null);
 
@@ -135,12 +150,90 @@ export default function Chat()
     const priv = await leer(CLAVE_PRIVADA);
     const pubDest = await llavePublicaDe(otroId);
     const { contenidoCifrado, nonce } = cifrar(limpio, pubDest, priv);
-    socket.emit("mensaje:enviar", { destinatarioId: otroId, contenidoCifrado, nonce });
+
+    if (editando)
+    {
+      const objetivo = editando.id;
+      socket.emit("mensaje:editar", { id: objetivo, destinatarioId: otroId, contenidoCifrado, nonce });
+      setMensajes((prev) => prev.map((m) => (m.id === objetivo ? { ...m, texto: limpio, editado: true } : m)));
+      setEditando(null);
+      setTexto("");
+      return;
+    }
+
+    socket.emit("mensaje:enviar", {
+      destinatarioId: otroId,
+      contenidoCifrado,
+      nonce,
+      respuestaA: respondiendo ? respondiendo.id : null,
+    });
     setMensajes((prev) => [
       ...prev,
-      { id: `local-${Date.now()}`, remitente_id: miId.current, texto: limpio, enviado_en: new Date().toISOString() },
+      {
+        id: `local-${Date.now()}`,
+        remitente_id: miId.current,
+        texto: limpio,
+        enviado_en: new Date().toISOString(),
+        respuestaTexto: respondiendo ? respondiendo.texto : null,
+      },
     ]);
+    setRespondiendo(null);
     setTexto("");
+  }
+
+  function reaccionar(mensaje, emoji)
+  {
+    socket_emit("mensaje:reaccionar", { id: mensaje.id, emoji });
+    setMensajes((prev) =>
+      prev.map((m) =>
+      {
+        if (m.id !== mensaje.id)
+        {
+          return m;
+        }
+        const actuales = m.reacciones || [];
+        const nuevas = actuales.includes(emoji) ? actuales.filter((e) => e !== emoji) : [...actuales, emoji];
+        return { ...m, reacciones: nuevas };
+      }),
+    );
+    setSel(null);
+  }
+
+  function socket_emit(evento, datos)
+  {
+    const socket = obtenerSocket();
+    if (socket)
+    {
+      socket.emit(evento, datos);
+    }
+  }
+
+  function borrar(mensaje)
+  {
+    socket_emit("mensaje:borrar", { id: mensaje.id });
+    setMensajes((prev) => prev.filter((m) => m.id !== mensaje.id));
+    setSel(null);
+  }
+
+  async function copiar(mensaje)
+  {
+    await Clipboard.setStringAsync(mensaje.texto);
+    setSel(null);
+  }
+
+  function responder(mensaje)
+  {
+    setRespondiendo(mensaje);
+    setEditando(null);
+    setSel(null);
+  }
+
+  function editar(mensaje)
+  {
+    setEditando(mensaje);
+    setRespondiendo(null);
+    setTexto(mensaje.texto);
+    setSel(null);
   }
 
   function alDesplazar(e)
@@ -181,6 +274,7 @@ export default function Chat()
           const mio = item.remitente_id === miId.current;
           const prev = mensajes[index - 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
+          const reacciones = agrupar(item.reacciones);
 
           return (
             <View>
@@ -192,7 +286,9 @@ export default function Chat()
                 </View>
               ) : null}
 
-              <View
+              <Pressable
+                onLongPress={() => setSel(item)}
+                delayLongPress={250}
                 style={[
                   estilos.burbuja,
                   mio
@@ -200,12 +296,34 @@ export default function Chat()
                     : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
                 ]}
               >
+                {item.respuestaTexto ? (
+                  <View style={[estilos.cita, { borderColor: mio ? colores.botonTexto : colores.borde }]}>
+                    <Text numberOfLines={1} style={{ color: mio ? colores.botonTexto : colores.muted, fontSize: 13, opacity: 0.8 }}>
+                      {item.respuestaTexto}
+                    </Text>
+                  </View>
+                ) : null}
+
                 <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
+
                 <View style={estilos.meta}>
+                  {item.editado ? (
+                    <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
+                  ) : null}
                   <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
                   {mio ? <Visto color={colores.botonTexto} leido={!!item.leido_en} tamano={11} /> : null}
                 </View>
-              </View>
+              </Pressable>
+
+              {reacciones.length > 0 ? (
+                <View style={[estilos.reaccionesFila, mio ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" }]}>
+                  {reacciones.map(([emoji, n]) => (
+                    <View key={emoji} style={[estilos.chip, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+                      <Text style={estilos.chipTxt}>{emoji}{n > 1 ? ` ${n}` : ""}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
             </View>
           );
         }}
@@ -222,6 +340,33 @@ export default function Chat()
 
       {escribiendo ? <Text style={[estilos.escribiendo, { color: colores.muted }]}>escribiendo…</Text> : null}
 
+      {respondiendo ? (
+        <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
+            Respondiendo: {respondiendo.texto}
+          </Text>
+          <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
+            <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {editando ? (
+        <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Text style={[estilos.avisoTxt, { color: colores.muted }]}>Editando mensaje</Text>
+          <Pressable
+            onPress={() =>
+            {
+              setEditando(null);
+              setTexto("");
+            }}
+            hitSlop={8}
+          >
+            <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       <View style={[estilos.inputFila, { borderTopColor: colores.borde }]}>
         <TextInput
           value={texto}
@@ -231,9 +376,20 @@ export default function Chat()
           style={[estilos.campo, { backgroundColor: colores.surface, borderColor: colores.borde, color: colores.texto }]}
         />
         <Pressable onPress={enviar} style={[estilos.enviar, { backgroundColor: colores.botonFondo }]}>
-          <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>Enviar</Text>
+          <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>{editando ? "Guardar" : "Enviar"}</Text>
         </Pressable>
       </View>
+
+      <AccionesMensaje
+        mensaje={sel}
+        esMio={sel ? sel.remitente_id === miId.current : false}
+        onReaccionar={reaccionar}
+        onResponder={responder}
+        onCopiar={copiar}
+        onEditar={editar}
+        onBorrar={borrar}
+        onCerrar={() => setSel(null)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -246,8 +402,13 @@ const estilos = StyleSheet.create({
   dia: { alignItems: "center", marginVertical: 8 },
   diaTxt: { fontSize: 12, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, overflow: "hidden" },
   burbuja: { maxWidth: "80%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9 },
+  cita: { borderLeftWidth: 2, paddingLeft: 8, marginBottom: 4 },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-end", marginTop: 3 },
+  editado: { fontSize: 10, opacity: 0.7, fontStyle: "italic" },
   hora: { fontSize: 10, opacity: 0.7 },
+  reaccionesFila: { flexDirection: "row", gap: 4, marginTop: 2 },
+  chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  chipTxt: { fontSize: 12 },
   bajar:
   {
     position: "absolute",
@@ -261,6 +422,19 @@ const estilos = StyleSheet.create({
     justifyContent: "center",
   },
   escribiendo: { paddingHorizontal: 16, paddingBottom: 4, fontSize: 13 },
+  aviso:
+  {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 12,
+    marginBottom: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  avisoTxt: { flex: 1, fontSize: 13, marginRight: 8 },
   inputFila: { flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1 },
   campo: { flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
   enviar: { borderRadius: 10, paddingHorizontal: 18, justifyContent: "center" },
