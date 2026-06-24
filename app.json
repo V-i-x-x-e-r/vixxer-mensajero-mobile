@@ -1,22 +1,25 @@
 {
   "expo": {
-    "name": "Vixxer Mensajero",
+    "name": "Vixxer",
     "slug": "vixxer-mensajero",
     "scheme": "vixxer",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F5F2"
+    },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "dev.vixxer.mensajero",
       "adaptiveIcon": {
-        "backgroundColor": "#0f1115",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#14110F",
+        "foregroundImage": "./assets/adaptive-foreground.png"
       }
     },
     "web": {
