@@ -1,114 +1,128 @@
-// app/registro.jsx — Registro.
-// LÓGICA (Paola): crear() genera el par de claves (asegurarClaves), registra con la
-// llave PÚBLICA, y como el backend NO devuelve token al registrar, hace login
-// automático para entrar. La clave privada nunca sale del teléfono.
-// VISUAL (Raúl): el JSX de abajo es mínimo y provisional.
-
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { asegurarClaves } from "../lib/crypto";
 import { guardar, TOKEN, MI_ID } from "../lib/storage";
-import { colores } from "../assets/themes/colores";
+import { useTema } from "../components/tema";
+import { Logo } from "../components/Logo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
+import { BotonTema } from "../components/BotonTema";
 
-export default function Registro() {
+export default function Registro()
+{
+  const { colores } = useTema();
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
 
-  async function crear() {
+  async function crear()
+  {
     setError("");
     setCargando(true);
-    try {
-      const llave_publica = await asegurarClaves(); // genera/guarda el par; sube la pública
-      await api.registrar(usuario.trim(), contrasena, llave_publica); // -> 201
-      // El backend no devuelve token en /register: entramos con login.
+
+    try
+    {
+      const llave_publica = await asegurarClaves();
+      await api.registrar(usuario.trim(), contrasena, llave_publica);
       const data = await api.login(usuario.trim(), contrasena);
       await guardar(TOKEN, data.token);
       await guardar(MI_ID, data.usuario.id);
       router.replace("/chats");
-    } catch (e) {
-      if (e.status === 409) setError("Ese usuario ya existe");
-      else if (e.status === 422) setError("Usuario (3-20) y contraseña (mín. 6)");
-      else setError("No se pudo registrar. ¿Está arriba el backend?");
-    } finally {
+    }
+    catch (e)
+    {
+      if (e.status === 409)
+      {
+        setError("Ese usuario ya existe");
+      }
+      else if (e.status === 422)
+      {
+        setError("Usuario (3-20) y contraseña (mín. 6)");
+      }
+      else
+      {
+        setError("No se pudo registrar. ¿Está arriba el backend?");
+      }
+    }
+    finally
+    {
       setCargando(false);
     }
   }
 
-  // ----- VISUAL provisional (Raúl) -----
-   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <View style={styles.card}>
-        <Text style={styles.titulo}>Crear cuenta</Text>
-
-        <Campo valor={usuario} setValor={setUsuario} placeholder="Usuario" />
-        <Campo
-          valor={contrasena}
-          setValor={setContrasena}
-          placeholder="Contraseña"
-          secureTextEntry
-        />
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Boton titulo="Registrarme" onPress={crear} cargando={cargando} />
-
-        <Text style={styles.link} onPress={() => router.back()}>
-          Ya tengo cuenta
-        </Text>
+  return (
+    <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
+      <View style={estilos.cabecera}>
+        <View style={estilos.marca}>
+          <Logo alto={26} />
+          <Text style={[estilos.nombre, { color: colores.texto }]}>Vixxer</Text>
+        </View>
+        <BotonTema />
       </View>
-    </KeyboardAvoidingView>
+
+      <KeyboardAvoidingView
+        style={estilos.zona}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View style={estilos.titulos}>
+          <Text style={[estilos.titulo, { color: colores.texto }]}>Crear cuenta</Text>
+          <Text style={[estilos.subtitulo, { color: colores.muted }]}>Sin correo, sin teléfono</Text>
+        </View>
+
+        <View style={estilos.form}>
+          <Campo
+            valor={usuario}
+            setValor={setUsuario}
+            placeholder="Usuario"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <Campo
+            valor={contrasena}
+            setValor={setContrasena}
+            placeholder="Contraseña"
+            secureTextEntry
+          />
+
+          {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
+
+          <Boton titulo="Registrarme" onPress={crear} cargando={cargando} />
+        </View>
+
+        <Text style={[estilos.pie, { color: colores.muted }]}>
+          ¿Ya tienes cuenta?{" "}
+          <Text
+            style={[estilos.enlace, { color: colores.enlace }]}
+            onPress={() => router.back()}
+          >
+            Inicia sesión
+          </Text>
+        </Text>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colores.fondo,
-    justifyContent: "center",
+const estilos = StyleSheet.create({
+  pantalla: { flex: 1, paddingHorizontal: 28 },
+  cabecera:
+  {
+    flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
+    justifyContent: "space-between",
+    paddingTop: 64,
   },
-  card: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: colores.surface,
-    borderRadius: 20,
-    padding: 24,
-    gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  titulo: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colores.azul,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  error: {
-    color: colores.error,
-    textAlign: 'center',
-    backgroundColor: 'rgba(255,107,107,0.1)',
-    padding: 12,
-    borderRadius: 8,
-    fontSize: 14,
-  },
-  link: {
-    color: colores.azul,
-    textAlign: 'center',
-    marginTop: 4,
-    fontSize: 15,
-  },
+  marca: { flexDirection: "row", alignItems: "center", gap: 10 },
+  nombre: { fontSize: 18, fontWeight: "600" },
+  zona: { flex: 1, justifyContent: "center" },
+  titulos: { marginBottom: 36 },
+  titulo: { fontSize: 24, fontWeight: "600", letterSpacing: -0.5 },
+  subtitulo: { marginTop: 4, fontSize: 14 },
+  form: { gap: 12 },
+  error: { fontSize: 13 },
+  pie: { marginTop: 28, textAlign: "center", fontSize: 14 },
+  enlace: { fontWeight: "600", textDecorationLine: "underline" },
 });

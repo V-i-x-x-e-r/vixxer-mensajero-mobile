@@ -1,32 +1,31 @@
-// app/chats.jsx — Lista de chats / buscador de contactos.
-// LÓGICA (Paola): abre el socket (una sola vez para toda la app), refleja el estado
-// de conexión, y busca contactos en el backend. Al tocar uno, navega a la conversación.
-// VISUAL (Raúl): la FlatList y el encabezado de abajo son provisionales.
-//
-// Nota: GET /api/usuarios/buscar lo entrega Ricardo en el Sprint A. Mientras no esté,
-// la búsqueda devolverá error de red/404 y la lista quedará vacía (la UI no se rompe).
-
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { conectarSocket } from "../lib/socket";
-import { leer, cerrarSesion, TOKEN } from "../lib/storage";
-import { colores } from "../assets/themes/colores";
-import { Boton } from "../components/Boton";
+import { leer, TOKEN } from "../lib/storage";
+import { useTema } from "../components/tema";
+import { Logo } from "../components/Logo";
 import { Campo } from "../components/Campo";
+import { Engrane } from "../components/Engrane";
 
-export default function Chats() {
+export default function Chats()
+{
+  const { colores } = useTema();
+  const insets = useSafeAreaInsets();
   const [q, setQ] = useState("");
   const [contactos, setContactos] = useState([]);
   const [estado, setEstado] = useState("conectando…");
 
-  // Conectar el socket al entrar y reflejar el estado en la UI.
-  useEffect(() => {
+  useEffect(() =>
+  {
     let socket;
-    (async () => {
+    (async () =>
+    {
       const token = await leer(TOKEN);
-      if (!token) {
+      if (!token)
+      {
         router.replace("/");
         return;
       }
@@ -36,8 +35,11 @@ export default function Chats() {
       socket.on("disconnect", () => setEstado("sin conexión"));
       socket.on("connect_error", () => setEstado("sin conexión"));
     })();
-    return () => {
-      if (socket) {
+
+    return () =>
+    {
+      if (socket)
+      {
         socket.off("connect");
         socket.off("disconnect");
         socket.off("connect_error");
@@ -45,48 +47,66 @@ export default function Chats() {
     };
   }, []);
 
-  async function buscar(texto) {
+  async function buscar(texto)
+  {
     setQ(texto);
-    if (texto.trim().length < 1) {
+    if (texto.trim().length < 1)
+    {
       setContactos([]);
       return;
     }
-    try {
+    try
+    {
       setContactos(await api.buscarUsuarios(texto.trim()));
-    } catch (e) {
-      setContactos([]); // endpoint aún no listo o sin resultados: no rompemos la UI
+    }
+    catch (e)
+    {
+      setContactos([]);
     }
   }
 
-  async function salir() {
-    await cerrarSesion();
-    router.replace("/");
-  }
+  const conectado = estado === "conectado";
 
-  // ----- VISUAL provisional (Raúl) -----
   return (
-    <View style={s.cont}>
-      <View style={s.barra}>
-        <Text style={s.estado}>● {estado}</Text>
-        <Pressable onPress={salir}>
-          <Text style={s.link}>Salir</Text>
+    <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
+      <View style={estilos.cabecera}>
+        <View style={estilos.marca}>
+          <Logo alto={24} />
+          <Text style={[estilos.titulo, { color: colores.texto }]}>Vixxer</Text>
+        </View>
+        <Pressable onPress={() => router.push("/ajustes")} hitSlop={8}>
+          <Engrane color={colores.texto} />
         </Pressable>
       </View>
-      <TextInput
-        value={q}
-        onChangeText={buscar}
+
+      <View style={estilos.estado}>
+        <View style={[estilos.punto, { backgroundColor: conectado ? "#22C55E" : colores.muted }]} />
+        <Text style={[estilos.estadoTxt, { color: colores.muted }]}>{estado}</Text>
+      </View>
+
+      <Campo
+        valor={q}
+        setValor={buscar}
         placeholder="Buscar usuario…"
-        placeholderTextColor="#7c8597"
         autoCapitalize="none"
-        style={s.campo}
+        autoCorrect={false}
       />
+
       <FlatList
         data={contactos}
         keyExtractor={(c) => c.id}
-        ListEmptyComponent={<Text style={s.vacio}>Busca a alguien para empezar a chatear.</Text>}
+        style={estilos.lista}
+        ListEmptyComponent={
+          <Text style={[estilos.vacio, { color: colores.muted }]}>
+            Busca a alguien para empezar a chatear.
+          </Text>
+        }
         renderItem={({ item }) => (
-          <Pressable onPress={() => router.push(`/chat/${item.id}`)} style={s.fila}>
-            <Text style={s.nombre}>{item.usuario}</Text>
+          <Pressable
+            onPress={() => router.push(`/chat/${item.id}`)}
+            style={[estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }]}
+          >
+            <Text style={[estilos.nombre, { color: colores.texto }]}>{item.usuario}</Text>
           </Pressable>
         )}
       />
@@ -94,28 +114,16 @@ export default function Chats() {
   );
 }
 
-// app/chats.jsx (fragmento estilos)
-const s = StyleSheet.create({
-  cont: { flex: 1, padding: 16, gap: 12, backgroundColor: colores.fondo },
-  barra: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  estado: { color: colores.textoSecundario },
-  link: { color: colores.azul },
-  campo: { 
-    backgroundColor: colores.surface,
-    borderWidth: 1, 
-    borderColor: colores.borde,
-    borderRadius: 10, 
-    padding: 12, 
-    color: colores.texto,
-  },
-  fila: { 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: colores.borde,
-    backgroundColor: colores.surface,
-    borderRadius: 8,
-    marginVertical: 4,
-  },
-  nombre: { color: colores.texto, fontSize: 16 },
-  vacio: { color: colores.textoSecundario, textAlign: "center", marginTop: 32 },
+const estilos = StyleSheet.create({
+  pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
+  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  marca: { flexDirection: "row", alignItems: "center", gap: 10 },
+  titulo: { fontSize: 18, fontWeight: "600" },
+  estado: { flexDirection: "row", alignItems: "center", gap: 6 },
+  punto: { width: 8, height: 8, borderRadius: 4 },
+  estadoTxt: { fontSize: 13 },
+  lista: { flex: 1 },
+  fila: { padding: 16, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  nombre: { fontSize: 16 },
+  vacio: { textAlign: "center", marginTop: 40, fontSize: 14 },
 });

@@ -1,22 +1,33 @@
-// app/_layout.jsx — raíz de navegación (expo-router).
-// El cableado de rutas es lógica (Paola); el ASPECTO del header y los temas
-// son visuales (Raúl): cambia colores/títulos a gusto aquí.
-
 import { Stack } from "expo-router";
+import { ProveedorTema, useTema } from "../components/tema";
 
-export default function RootLayout() {
+function Navegacion()
+{
+  const { colores } = useTema();
+
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: "#0f1115" },
-        headerTintColor: "#ffffff",
-        contentStyle: { backgroundColor: "#0f1115" },
+        headerStyle: { backgroundColor: colores.fondo },
+        headerTintColor: colores.texto,
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: colores.fondo },
       }}
     >
-      <Stack.Screen name="index" options={{ title: "Vixxer" }} />
-      <Stack.Screen name="registro" options={{ title: "Crear cuenta" }} />
-      <Stack.Screen name="chats" options={{ title: "Chats" }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="registro" options={{ headerShown: false }} />
+      <Stack.Screen name="chats" options={{ headerShown: false }} />
+      <Stack.Screen name="ajustes" options={{ title: "Ajustes" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "Conversación" }} />
     </Stack>
+  );
+}
+
+export default function RootLayout()
+{
+  return (
+    <ProveedorTema>
+      <Navegacion />
+    </ProveedorTema>
   );
 }
