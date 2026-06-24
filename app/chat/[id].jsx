@@ -70,6 +70,7 @@ export default function Chat()
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
+  const [presencia, setPresencia] = useState(null);
   const [abajo, setAbajo] = useState(true);
   const [sel, setSel] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null);
@@ -112,6 +113,11 @@ export default function Chat()
       socket.emit("usuario:escribiendo", { para: otroId, activo: false });
     }, 1500);
   }
+
+  useEffect(() =>
+  {
+    api.presencia(otroId).then(setPresencia).catch(() => {});
+  }, [otroId]);
 
   async function abrir(fila)
   {
@@ -318,6 +324,14 @@ export default function Chat()
     setAbajo(contentOffset.y + layoutMeasurement.height >= contentSize.height - 80);
   }
 
+  const sub = escribiendo
+    ? "escribiendo…"
+    : presencia && presencia.en_linea
+      ? "en línea"
+      : presencia && presencia.ultima_conexion
+        ? `últ. vez ${hora(presencia.ultima_conexion)}`
+        : null;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -327,8 +341,11 @@ export default function Chat()
         options={{
           headerTitle: () => (
             <View style={estilos.encabezado}>
-              <Avatar nombre={usuario || ""} tamano={30} />
-              <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{usuario || "Conversación"}</Text>
+              <Avatar nombre={usuario || ""} tamano={32} />
+              <View>
+                <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{usuario || "Conversación"}</Text>
+                {sub ? <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{sub}</Text> : null}
+              </View>
             </View>
           ),
         }}
@@ -427,7 +444,6 @@ export default function Chat()
         </Pressable>
       ) : null}
 
-      {escribiendo ? <Text style={[estilos.escribiendo, { color: colores.muted }]}>escribiendo…</Text> : null}
 
       {respondiendo ? (
         <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -487,6 +503,7 @@ const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
   encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
+  encabezadoSub: { fontSize: 12 },
   lista: { padding: 14, gap: 6 },
   banner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
   bannerTxt: { fontSize: 12 },
@@ -512,7 +529,6 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  escribiendo: { paddingHorizontal: 16, paddingBottom: 4, fontSize: 13 },
   aviso:
   {
     flexDirection: "row",
