@@ -1,10 +1,23 @@
-// components/Campo.jsx — VISUAL (Raúl). Placeholder: dale tu estilo.
-import { TextInput, StyleSheet } from "react-native";
+import { TextInput } from "react-native";
+import { colores } from "../assets/themes/colores";
 
-export function Campo(props) {
-  return <TextInput placeholderTextColor="#7c8597" style={s.campo} {...props} />;
+export function Campo({ valor, setValor, placeholder, secureTextEntry = false }) {
+  return (
+    <TextInput
+      style={{
+        backgroundColor: colores.surfaceLight, // un tono más claro que el fondo de la tarjeta
+        borderRadius: 12,
+        padding: 16,
+        fontSize: 16,
+        color: colores.texto,
+        borderWidth: 1,
+        borderColor: colores.borde,
+      }}
+      placeholder={placeholder}
+      placeholderTextColor={colores.textoSecundario}
+      value={valor}
+      onChangeText={setValor}
+      secureTextEntry={secureTextEntry}
+    />
+  );
 }
-
-const s = StyleSheet.create({
-  campo: { borderWidth: 1, borderColor: "#2a2f3a", borderRadius: 10, padding: 12, color: "#fff" },
-});

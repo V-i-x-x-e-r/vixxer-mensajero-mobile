@@ -1,16 +1,26 @@
-// components/Boton.jsx — VISUAL (Raúl). Placeholder: dale tu estilo.
-// Recibe props y pinta; no contiene lógica.
-import { Pressable, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { Pressable, Text, ActivityIndicator } from "react-native";
+import { colores } from "../assets/themes/colores";
 
 export function Boton({ titulo, onPress, cargando = false, disabled = false }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled || cargando} style={s.boton}>
-      {cargando ? <ActivityIndicator color="#0f1115" /> : <Text style={s.txt}>{titulo}</Text>}
+    <Pressable
+      onPress={onPress}
+      disabled={disabled || cargando}
+      style={{
+        backgroundColor: colores.azulOscuro,
+        borderRadius: 12,
+        padding: 16,
+        alignItems: "center",
+        opacity: (disabled || cargando) ? 0.6 : 1,
+      }}
+    >
+      {cargando ? (
+        <ActivityIndicator color={colores.blanco} />
+      ) : (
+        <Text style={{ color: colores.blanco, fontWeight: "700", fontSize: 16 }}>
+          {titulo}
+        </Text>
+      )}
     </Pressable>
   );
 }
-
-const s = StyleSheet.create({
-  boton: { backgroundColor: "#35d487", borderRadius: 10, padding: 14, alignItems: "center" },
-  txt: { color: "#0f1115", fontWeight: "700" },
-});

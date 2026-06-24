@@ -5,11 +5,14 @@
 // VISUAL (Raúl): el JSX de abajo es mínimo y provisional.
 
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator,KeyboardAvoidingView, Platform } from "react-native";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { asegurarClaves } from "../lib/crypto";
 import { guardar, TOKEN, MI_ID } from "../lib/storage";
+import { colores } from "../assets/themes/colores";
+import { Boton } from "../components/Boton";
+import { Campo } from "../components/Campo";
 
 export default function Registro() {
   const [usuario, setUsuario] = useState("");
@@ -38,42 +41,74 @@ export default function Registro() {
   }
 
   // ----- VISUAL provisional (Raúl) -----
-  return (
-    <View style={s.cont}>
-      <Text style={s.titulo}>Crear cuenta</Text>
-      <TextInput
-        value={usuario}
-        onChangeText={setUsuario}
-        placeholder="Usuario"
-        placeholderTextColor="#7c8597"
-        autoCapitalize="none"
-        style={s.campo}
-      />
-      <TextInput
-        value={contrasena}
-        onChangeText={setContrasena}
-        placeholder="Contraseña"
-        placeholderTextColor="#7c8597"
-        secureTextEntry
-        style={s.campo}
-      />
-      {error ? <Text style={s.error}>{error}</Text> : null}
-      <Pressable onPress={crear} disabled={cargando} style={s.boton}>
-        {cargando ? <ActivityIndicator color="#0f1115" /> : <Text style={s.botonTxt}>Registrarme</Text>}
-      </Pressable>
-      <Pressable onPress={() => router.back()}>
-        <Text style={s.link}>Ya tengo cuenta</Text>
-      </Pressable>
-    </View>
+   return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={styles.container}
+    >
+      <View style={styles.card}>
+        <Text style={styles.titulo}>Crear cuenta</Text>
+
+        <Campo valor={usuario} setValor={setUsuario} placeholder="Usuario" />
+        <Campo
+          valor={contrasena}
+          setValor={setContrasena}
+          placeholder="Contraseña"
+          secureTextEntry
+        />
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Boton titulo="Registrarme" onPress={crear} cargando={cargando} />
+
+        <Text style={styles.link} onPress={() => router.back()}>
+          Ya tengo cuenta
+        </Text>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
-const s = StyleSheet.create({
-  cont: { flex: 1, justifyContent: "center", padding: 24, gap: 12, backgroundColor: "#0f1115" },
-  titulo: { color: "#fff", fontSize: 28, fontWeight: "800", textAlign: "center", marginBottom: 12 },
-  campo: { borderWidth: 1, borderColor: "#2a2f3a", borderRadius: 10, padding: 12, color: "#fff" },
-  boton: { backgroundColor: "#35d487", borderRadius: 10, padding: 14, alignItems: "center" },
-  botonTxt: { color: "#0f1115", fontWeight: "700" },
-  error: { color: "#ff6b6b" },
-  link: { color: "#65a7ff", textAlign: "center", marginTop: 8 },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colores.fondo,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colores.surface,
+    borderRadius: 20,
+    padding: 24,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  titulo: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: colores.azul,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  error: {
+    color: colores.error,
+    textAlign: 'center',
+    backgroundColor: 'rgba(255,107,107,0.1)',
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 14,
+  },
+  link: {
+    color: colores.azul,
+    textAlign: 'center',
+    marginTop: 4,
+    fontSize: 15,
+  },
 });
