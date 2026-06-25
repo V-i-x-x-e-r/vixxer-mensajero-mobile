@@ -3,7 +3,14 @@ import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
+import { asegurarClaves } from "../lib/crypto";
 import { guardar, leer, TOKEN, MI_ID } from "../lib/storage";
+
+async function sincronizarLlave()
+{
+  const pub = await asegurarClaves();
+  await api.actualizarLlavePublica(pub).catch(() => {});
+}
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
@@ -22,10 +29,11 @@ export default function Login()
 
   useEffect(() =>
   {
-    leer(TOKEN).then((t) =>
+    leer(TOKEN).then(async (t) =>
     {
       if (t)
       {
+        await sincronizarLlave();
         router.replace("/chats");
       }
     });
@@ -46,6 +54,7 @@ export default function Login()
       const data = await api.login(usuario.trim(), contrasena);
       await guardar(TOKEN, data.token);
       await guardar(MI_ID, data.usuario.id);
+      await sincronizarLlave();
       router.replace("/chats");
     }
     catch (e)

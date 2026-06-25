@@ -3,7 +3,6 @@ import { View, Text, Pressable, FlatList, RefreshControl, Modal, StyleSheet } fr
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
-import { API_URL } from "../../lib/config";
 import { conectarSocket } from "../../lib/socket";
 import { descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
@@ -107,7 +106,7 @@ export default function Chats()
       setEstado(socket.connected ? "conectado" : "conectando…");
       socket.on("connect", () => setEstado("conectado"));
       socket.on("disconnect", () => setEstado("sin conexión"));
-      socket.on("connect_error", (err) => setEstado("sin conexión: " + (err?.message || "?")));
+      socket.on("connect_error", () => setEstado("sin conexión"));
       socket.on("mensaje:recibido", async (fila) =>
       {
         await mostrar(fila.remitente_id);
@@ -220,7 +219,6 @@ export default function Chats()
         <View style={[estilos.punto, { backgroundColor: conectado ? "#22C55E" : colores.muted }]} />
         <Text style={[estilos.estadoTxt, { color: colores.muted }]}>{estado}</Text>
       </View>
-      <Text style={[estilos.estadoTxt, { color: colores.muted }]} numberOfLines={1}>API: {API_URL}</Text>
 
       <FlatList
         data={amigos}
