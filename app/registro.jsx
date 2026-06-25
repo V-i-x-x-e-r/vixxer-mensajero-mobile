@@ -3,7 +3,7 @@ import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
-import { asegurarClaves } from "../lib/crypto";
+import { crearIdentidad } from "../lib/crypto";
 import { guardar, TOKEN, MI_ID } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
@@ -11,6 +11,7 @@ import { Logo } from "../components/Logo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
+import { RespaldoCodigo } from "../components/RespaldoCodigo";
 
 export default function Registro()
 {
@@ -20,6 +21,7 @@ export default function Registro()
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [codigo, setCodigo] = useState("");
 
   async function crear()
   {
@@ -39,12 +41,13 @@ export default function Registro()
 
     try
     {
-      const llave_publica = await asegurarClaves();
-      await api.registrar(usuario.trim(), contrasena, llave_publica);
+      const identidad = await crearIdentidad();
+      await api.registrar(usuario.trim(), contrasena, identidad.publicKey);
       const data = await api.login(usuario.trim(), contrasena);
       await guardar(TOKEN, data.token);
       await guardar(MI_ID, data.usuario.id);
-      router.replace("/chats");
+      await api.subirRespaldo(identidad.respaldo).catch(() => {});
+      setCodigo(identidad.codigo);
     }
     catch (e)
     {
@@ -116,6 +119,12 @@ export default function Registro()
           </Text>
         </Text>
       </KeyboardAvoidingView>
+
+      <RespaldoCodigo
+        visible={!!codigo}
+        codigo={codigo}
+        onCerrar={() => router.replace("/chats")}
+      />
     </View>
   );
 }
