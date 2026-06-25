@@ -107,7 +107,7 @@ export default function Chats()
       setEstado(socket.connected ? "conectado" : "conectando…");
       socket.on("connect", () => setEstado("conectado"));
       socket.on("disconnect", () => setEstado("sin conexión"));
-      socket.on("connect_error", () => setEstado("sin conexión"));
+      socket.on("connect_error", (err) => setEstado("sin conexión: " + (err?.message || "?")));
       socket.on("mensaje:recibido", async (fila) =>
       {
         await mostrar(fila.remitente_id);
