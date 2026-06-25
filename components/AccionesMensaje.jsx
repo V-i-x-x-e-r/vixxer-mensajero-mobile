@@ -1,38 +1,57 @@
-import { useEffect, useState } from "react";
-import { Modal, View, Text, TextInput, Pressable, StyleSheet } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Modal, View, Text, TextInput, Pressable, StyleSheet, Dimensions } from "react-native";
 import { useTema } from "./tema";
+import { fuentes } from "../assets/themes/temas";
+import { Responder } from "./Responder";
+import { Copiar } from "./Copiar";
+import { Lapiz } from "./Lapiz";
+import { Bote } from "./Bote";
 
 const REACCIONES = ["\u{1F44D}", "❤️", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
+const ANCHO = 300;
+const ALTO = 108;
 
-function Accion({ texto, onPress, colores, peligro = false })
+function Accion({ icono, etiqueta, onPress, color })
 {
   return (
-    <Pressable onPress={onPress} style={estilos.accion}>
-      <Text style={{ color: peligro ? colores.error : colores.texto, fontSize: 16 }}>{texto}</Text>
+    <Pressable onPress={onPress} style={({ pressed }) => [estilos.accion, pressed && estilos.presionado]}>
+      {icono}
+      <Text style={[estilos.accionTxt, { color }]}>{etiqueta}</Text>
     </Pressable>
   );
 }
 
-export function AccionesMensaje({ mensaje, esMio, onReaccionar, onResponder, onCopiar, onEditar, onBorrar, onCerrar })
+export function AccionesMensaje({ sel, esMio, onReaccionar, onResponder, onCopiar, onEditar, onBorrar, onCerrar })
 {
   const { colores } = useTema();
-  const [personalizado, setPersonalizado] = useState(false);
+  const entrada = useRef(null);
   const [emoji, setEmoji] = useState("");
 
   useEffect(() =>
   {
-    setPersonalizado(false);
     setEmoji("");
-  }, [mensaje]);
+  }, [sel]);
 
-  if (!mensaje)
+  if (!sel)
   {
     return null;
   }
 
-  function confirmar()
+  const mensaje = sel.mensaje;
+  const { width: W } = Dimensions.get("window");
+  const ancho = Math.min(ANCHO, W - 24);
+  const arriba = sel.y - ALTO - 8 > 70;
+  const top = arriba ? sel.y - ALTO - 8 : sel.y + sel.h + 8;
+  const left = Math.max(12, Math.min(esMio ? sel.x + sel.w - ancho : sel.x, W - ancho - 12));
+
+  function abrirEmoji()
   {
-    const limpio = emoji.trim();
+    entrada.current?.focus();
+  }
+
+  function alEmoji(t)
+  {
+    const limpio = t.trim();
     if (limpio)
     {
       onReaccionar(mensaje, limpio);
@@ -42,54 +61,62 @@ export function AccionesMensaje({ mensaje, esMio, onReaccionar, onResponder, onC
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onCerrar}>
       <Pressable style={estilos.fondo} onPress={onCerrar}>
-        <Pressable style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]} onPress={() => {}}>
-          {personalizado ? (
-            <View style={estilos.personalizado}>
-              <TextInput
-                value={emoji}
-                onChangeText={setEmoji}
-                onSubmitEditing={confirmar}
-                placeholder="Pon un emoji"
-                placeholderTextColor={colores.placeholder}
-                autoFocus
-                maxLength={8}
-                style={[estilos.entrada, { color: colores.texto, borderColor: colores.borde }]}
-              />
-              <Pressable onPress={confirmar} style={[estilos.usar, { backgroundColor: colores.botonFondo }]}>
-                <Text style={{ color: colores.botonTexto, fontSize: 14 }}>Reaccionar</Text>
+        <View style={[estilos.barra, { width: ancho, top, left, backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <View style={estilos.reacciones}>
+            {REACCIONES.map((e) => (
+              <Pressable key={e} onPress={() => onReaccionar(mensaje, e)} hitSlop={6}>
+                <Text style={estilos.emoji}>{e}</Text>
               </Pressable>
-            </View>
-          ) : (
-            <View style={estilos.reacciones}>
-              {REACCIONES.map((e) => (
-                <Pressable key={e} onPress={() => onReaccionar(mensaje, e)} hitSlop={6}>
-                  <Text style={estilos.emoji}>{e}</Text>
-                </Pressable>
-              ))}
-              <Pressable onPress={() => setPersonalizado(true)} hitSlop={6} style={[estilos.mas, { borderColor: colores.borde }]}>
-                <Text style={{ color: colores.texto, fontSize: 22 }}>+</Text>
-              </Pressable>
-            </View>
-          )}
+            ))}
+            <Pressable onPress={abrirEmoji} hitSlop={6} style={[estilos.mas, { borderColor: colores.borde }]}>
+              <Text style={{ color: colores.texto, fontSize: 18 }}>+</Text>
+            </Pressable>
+          </View>
 
-          <Accion texto="Responder" onPress={() => onResponder(mensaje)} colores={colores} />
-          <Accion texto="Copiar" onPress={() => onCopiar(mensaje)} colores={colores} />
-          {esMio ? <Accion texto="Editar" onPress={() => onEditar(mensaje)} colores={colores} /> : null}
-          {esMio ? <Accion texto="Borrar" onPress={() => onBorrar(mensaje)} colores={colores} peligro /> : null}
-        </Pressable>
+          <View style={[estilos.separador, { backgroundColor: colores.borde }]} />
+
+          <View style={estilos.acciones}>
+            <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} />
+            <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />
+            {esMio ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
+            {esMio ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
+          </View>
+        </View>
+
+        <TextInput
+          ref={entrada}
+          value={emoji}
+          onChangeText={alEmoji}
+          caretHidden
+          style={estilos.oculto}
+        />
       </Pressable>
     </Modal>
   );
 }
 
 const estilos = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
-  tarjeta: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, padding: 16, paddingBottom: 32, gap: 2 },
-  reacciones: { flexDirection: "row", justifyContent: "space-around", alignItems: "center", paddingVertical: 8, marginBottom: 6 },
-  emoji: { fontSize: 28 },
-  mas: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  personalizado: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, marginBottom: 6 },
-  entrada: { flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 22, textAlign: "center" },
-  usar: { borderRadius: 10, paddingHorizontal: 16, paddingVertical: 12 },
-  accion: { paddingVertical: 14 },
+  fondo: { flex: 1 },
+  barra:
+  {
+    position: "absolute",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 8,
+    gap: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  reacciones: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 },
+  emoji: { fontSize: 24 },
+  mas: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  separador: { height: 1, marginVertical: 2 },
+  acciones: { flexDirection: "row", justifyContent: "space-around" },
+  accion: { alignItems: "center", gap: 3, paddingVertical: 4, paddingHorizontal: 6 },
+  accionTxt: { fontSize: 11, fontFamily: fuentes.media },
+  presionado: { opacity: 0.6 },
+  oculto: { position: "absolute", width: 1, height: 1, opacity: 0 },
 });

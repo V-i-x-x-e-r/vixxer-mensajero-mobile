@@ -1,24 +1,12 @@
-import { useCallback } from "react";
-import { View } from "react-native";
-import { Tabs, useFocusEffect } from "expo-router";
+import { Tabs } from "expo-router";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Chat } from "../../components/Chat";
 import { Amigos } from "../../components/Amigos";
-import { Badge } from "../../components/Badge";
-import { useSolicitudes } from "../../components/Solicitudes";
 
 export default function TabsLayout()
 {
   const { colores } = useTema();
-  const { pendientes, refrescar } = useSolicitudes();
-
-  useFocusEffect(
-    useCallback(() =>
-    {
-      refrescar();
-    }, [refrescar]),
-  );
 
   return (
     <Tabs
@@ -36,15 +24,7 @@ export default function TabsLayout()
       />
       <Tabs.Screen
         name="amigos"
-        options={{
-          title: "Amigos",
-          tabBarIcon: ({ color }) => (
-            <View>
-              <Amigos color={color} tamano={24} />
-              <Badge cantidad={pendientes} estilo={{ position: "absolute", top: -6, right: -10 }} />
-            </View>
-          ),
-        }}
+        options={{ title: "Amigos", tabBarIcon: ({ color }) => <Amigos color={color} tamano={24} /> }}
       />
     </Tabs>
   );

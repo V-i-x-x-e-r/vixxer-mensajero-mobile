@@ -60,6 +60,22 @@ function agrupar(reacciones)
   return Object.entries(conteo);
 }
 
+function BurbujaMedible({ style, onSeleccionar, children })
+{
+  const ref = useRef(null);
+
+  function alMantener()
+  {
+    ref.current?.measureInWindow((x, y, w, h) => onSeleccionar({ x, y, w, h }));
+  }
+
+  return (
+    <Pressable ref={ref} onLongPress={alMantener} delayLongPress={250} style={style}>
+      {children}
+    </Pressable>
+  );
+}
+
 export default function Chat()
 {
   const { colores } = useTema();
@@ -387,9 +403,8 @@ export default function Chat()
                 </View>
               ) : null}
 
-              <Pressable
-                onLongPress={() => setSel(item)}
-                delayLongPress={250}
+              <BurbujaMedible
+                onSeleccionar={(coords) => setSel({ mensaje: item, ...coords })}
                 style={[
                   estilos.burbuja,
                   mio
@@ -418,7 +433,7 @@ export default function Chat()
                       : <Visto color={colores.botonTexto} leido={!!item.leido_en} tamano={11} />
                   ) : null}
                 </View>
-              </Pressable>
+              </BurbujaMedible>
 
               {reacciones.length > 0 ? (
                 <View style={[estilos.reaccionesFila, mio ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" }]}>
@@ -494,8 +509,8 @@ export default function Chat()
       </View>
 
       <AccionesMensaje
-        mensaje={sel}
-        esMio={sel ? sel.remitente_id === miId.current : false}
+        sel={sel}
+        esMio={sel ? sel.mensaje.remitente_id === miId.current : false}
         onReaccionar={reaccionar}
         onResponder={responder}
         onCopiar={copiar}

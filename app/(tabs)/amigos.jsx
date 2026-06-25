@@ -76,24 +76,22 @@ export default function AmigosPantalla()
           <RefreshControl refreshing={refrescando} onRefresh={alRefrescar} tintColor={colores.muted} colors={[colores.texto]} />
         }
         ListHeaderComponent={
-          <View style={estilos.acciones}>
-            <Pressable
-              onPress={() => router.push("/agregar")}
-              style={({ pressed }) => [estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
-            >
-              <Text style={[estilos.accionTxt, { color: colores.texto }]}>Agregar por código</Text>
-              <Text style={[estilos.flecha, { color: colores.muted }]}>{"›"}</Text>
-            </Pressable>
-            <Pressable
-              onPress={() => router.push("/solicitudes")}
-              style={({ pressed }) => [estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
-            >
-              <Text style={[estilos.accionTxt, { color: colores.texto }]}>Solicitudes</Text>
-              <View style={estilos.derechaAccion}>
-                <Badge cantidad={pendientes} />
-                <Text style={[estilos.flecha, { color: colores.muted }]}>{"›"}</Text>
-              </View>
-            </Pressable>
+          <View>
+            <View style={estilos.acciones}>
+              <Pressable
+                onPress={() => router.push("/agregar")}
+                style={({ pressed }) => [estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
+              >
+                <Text style={[estilos.accionTxt, { color: colores.texto }]}>Agregar por código</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/solicitudes")}
+                style={({ pressed }) => [estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
+              >
+                <Text style={[estilos.accionTxt, { color: colores.texto }]}>Solicitudes</Text>
+                <Badge cantidad={pendientes} estilo={{ position: "absolute", top: -7, right: -7 }} />
+              </Pressable>
+            </View>
             <Text style={[estilos.seccion, { color: colores.muted }]}>TUS CONTACTOS</Text>
           </View>
         }
@@ -124,11 +122,9 @@ const estilos = StyleSheet.create({
   cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   lista: { flex: 1 },
-  acciones: { gap: 8, marginBottom: 4 },
-  accion: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 14 },
-  accionTxt: { fontSize: 15 },
-  derechaAccion: { flexDirection: "row", alignItems: "center", gap: 8 },
-  flecha: { fontSize: 20 },
+  acciones: { flexDirection: "row", gap: 10, marginBottom: 4 },
+  accion: { flex: 1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 16 },
+  accionTxt: { fontSize: 14 },
   seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginTop: 16, marginBottom: 4 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   nombre: { fontSize: 16, flex: 1 },
