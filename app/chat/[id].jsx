@@ -18,6 +18,8 @@ import { Flecha } from "../../components/Flecha";
 import { Check } from "../../components/Check";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 
+const GRIS_VISTO = "#8E8E93";
+
 function aFecha(iso)
 {
   return iso ? new Date(iso) : new Date();
@@ -393,7 +395,7 @@ export default function Chat()
     <View
       style={[
         estilos.pantalla,
-        { backgroundColor: colores.fondo, paddingBottom: Platform.OS === "ios" ? Math.max(tecladoAlto - insets.bottom, 0) : 0 },
+        { backgroundColor: colores.fondo, paddingBottom: Platform.OS === "ios" ? tecladoAlto : 0 },
       ]}
     >
       <Stack.Screen
@@ -475,8 +477,8 @@ export default function Chat()
                   <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
                   {mio ? (
                     item.estado === "enviando"
-                      ? <Reloj color={colores.botonTexto} tamano={11} />
-                      : <Visto color={colores.botonTexto} leido={!!item.leido_en} tamano={11} />
+                      ? <Reloj color={GRIS_VISTO} tamano={11} />
+                      : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
                   ) : null}
                 </View>
               </BurbujaMedible>

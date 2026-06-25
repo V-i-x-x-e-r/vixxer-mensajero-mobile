@@ -1,8 +1,8 @@
 import Svg, { Path } from "react-native-svg";
 
-export function Visto({ color, leido = false, tamano = 14 })
+export function Visto({ color, dos = false, tamano = 14 })
 {
-  if (leido)
+  if (dos)
   {
     return (
       <Svg width={tamano + 5} height={tamano} viewBox="0 0 21 16" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

@@ -115,6 +115,7 @@ export default function Chats()
       socket.on("connect_error", () => setEstado("sin conexión"));
       socket.on("mensaje:recibido", async (fila) =>
       {
+        socket.emit("mensaje:entregado", { id: fila.id });
         await mostrar(fila.remitente_id);
         cargar();
       });
