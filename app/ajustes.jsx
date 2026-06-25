@@ -120,7 +120,7 @@ export default function Ajustes()
           value={prefs.mostrar_conexion}
           onValueChange={(v) => cambiar("mostrar_conexion", v)}
           trackColor={{ true: colores.botonFondo, false: colores.borde }}
-          thumbColor={colores.fondo}
+          thumbColor={prefs.mostrar_conexion ? colores.fondo : colores.texto}
           ios_backgroundColor={colores.borde}
         />
       </View>
@@ -130,7 +130,7 @@ export default function Ajustes()
           value={prefs.mostrar_acuses}
           onValueChange={(v) => cambiar("mostrar_acuses", v)}
           trackColor={{ true: colores.botonFondo, false: colores.borde }}
-          thumbColor={colores.fondo}
+          thumbColor={prefs.mostrar_acuses ? colores.fondo : colores.texto}
           ios_backgroundColor={colores.borde}
         />
       </View>
