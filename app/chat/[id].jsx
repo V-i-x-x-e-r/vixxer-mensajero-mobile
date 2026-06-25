@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, LayoutAnimation, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../../lib/api";
 import { obtenerSocket } from "../../lib/socket";
@@ -80,6 +81,8 @@ function BurbujaMedible({ style, onSeleccionar, children })
 export default function Chat()
 {
   const { colores } = useTema();
+  const insets = useSafeAreaInsets();
+  const alturaHeader = insets.top + (Platform.OS === "ios" ? 44 : 56);
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
@@ -375,7 +378,8 @@ export default function Chat()
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={alturaHeader}
       style={[estilos.pantalla, { backgroundColor: colores.fondo }]}
     >
       <Stack.Screen
