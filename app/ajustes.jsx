@@ -7,7 +7,7 @@ import * as api from "../lib/api";
 import { cerrarSesion } from "../lib/storage";
 import { desconectarSocket } from "../lib/socket";
 import { useTema } from "../components/tema";
-import { fuentes, barras } from "../assets/themes/temas";
+import { fuentes } from "../assets/themes/temas";
 import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
@@ -114,7 +114,8 @@ export default function Ajustes()
         <Switch
           value={prefs.mostrar_conexion}
           onValueChange={(v) => cambiar("mostrar_conexion", v)}
-          trackColor={{ true: barras[0], false: colores.borde }}
+          trackColor={{ true: colores.texto, false: colores.borde }}
+          thumbColor={colores.fondo}
           ios_backgroundColor={colores.borde}
         />
       </View>
@@ -123,7 +124,8 @@ export default function Ajustes()
         <Switch
           value={prefs.mostrar_acuses}
           onValueChange={(v) => cambiar("mostrar_acuses", v)}
-          trackColor={{ true: barras[0], false: colores.borde }}
+          trackColor={{ true: colores.texto, false: colores.borde }}
+          thumbColor={colores.fondo}
           ios_backgroundColor={colores.borde}
         />
       </View>
