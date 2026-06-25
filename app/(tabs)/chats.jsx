@@ -66,7 +66,13 @@ export default function Chats()
       for (const c of conversaciones)
       {
         const pub = await llavePublicaDe(c.otro_id);
-        const texto = descifrar(c.ultimo_cifrado, c.ultimo_nonce, pub, priv) ?? "Mensaje cifrado";
+        let claro = descifrar(c.ultimo_cifrado, c.ultimo_nonce, pub, priv);
+        if (claro === null)
+        {
+          const fresca = await llavePublicaDe(c.otro_id, true);
+          claro = descifrar(c.ultimo_cifrado, c.ultimo_nonce, fresca, priv);
+        }
+        const texto = claro ?? "Mensaje cifrado";
         mapa[c.otro_id] = {
           preview: c.ultimo_remitente_id === miId ? `Tú: ${texto}` : texto,
           enviado_en: c.enviado_en,

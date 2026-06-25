@@ -137,7 +137,12 @@ export default function Chat()
   {
     const priv = await leer(CLAVE_PRIVADA);
     const pub = await llavePublicaDe(otroId);
-    const claro = descifrar(fila.contenido_cifrado, fila.nonce, pub, priv);
+    let claro = descifrar(fila.contenido_cifrado, fila.nonce, pub, priv);
+    if (claro === null)
+    {
+      const fresca = await llavePublicaDe(otroId, true);
+      claro = descifrar(fila.contenido_cifrado, fila.nonce, fresca, priv);
+    }
     return claro ?? "No se pudo descifrar este mensaje";
   }
 
