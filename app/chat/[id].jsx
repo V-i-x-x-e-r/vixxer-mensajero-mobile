@@ -4,10 +4,10 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../../lib/api";
-import { obtenerSocket } from "../../lib/socket";
+import { obtenerSocket, conectarSocket } from "../../lib/socket";
 import { cifrar, descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
-import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
+import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
@@ -97,6 +97,8 @@ export default function Chat()
   const miId = useRef(null);
   const lista = useRef(null);
   const tecleando = useRef(null);
+  const abajoRef = useRef(true);
+  const cantidadRef = useRef(0);
 
   function marcarLeidos(filas)
   {
@@ -257,7 +259,15 @@ export default function Chat()
     {
       return;
     }
-    const socket = obtenerSocket();
+    let socket = obtenerSocket();
+    if (!socket)
+    {
+      socket = conectarSocket(await leer(TOKEN));
+    }
+    if (!socket)
+    {
+      return;
+    }
     const priv = await leer(CLAVE_PRIVADA);
     const pubDest = await llavePublicaDe(otroId);
     const { contenidoCifrado, nonce } = cifrar(limpio, pubDest, priv);
@@ -313,7 +323,6 @@ export default function Chat()
   function reaccionar(mensaje, emoji)
   {
     socket_emit("mensaje:reaccionar", { id: mensaje.id, emoji });
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setMensajes((prev) =>
       prev.map((m) =>
       {
@@ -334,10 +343,6 @@ export default function Chat()
       }),
     );
     setSel(null);
-    if (abajo)
-    {
-      setTimeout(() => lista.current?.scrollToEnd({ animated: false }), 0);
-    }
   }
 
   function socket_emit(evento, datos)
@@ -380,8 +385,19 @@ export default function Chat()
   function alDesplazar(e)
   {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    setAbajo(contentOffset.y + layoutMeasurement.height >= contentSize.height - 140);
+    const cerca = contentOffset.y + layoutMeasurement.height >= contentSize.height - 140;
+    abajoRef.current = cerca;
+    setAbajo(cerca);
   }
+
+  useEffect(() =>
+  {
+    if (mensajes.length > cantidadRef.current && abajoRef.current)
+    {
+      requestAnimationFrame(() => lista.current?.scrollToEnd({ animated: true }));
+    }
+    cantidadRef.current = mensajes.length;
+  }, [mensajes]);
 
   const sub = escribiendo
     ? "escribiendo…"
@@ -395,7 +411,7 @@ export default function Chat()
     <View
       style={[
         estilos.pantalla,
-        { backgroundColor: colores.fondo, paddingBottom: Platform.OS === "ios" ? tecladoAlto : 0 },
+        { backgroundColor: colores.fondo, paddingBottom: tecladoAlto > 0 ? tecladoAlto : insets.bottom },
       ]}
     >
       <Stack.Screen
@@ -420,13 +436,6 @@ export default function Chat()
         contentContainerStyle={estilos.lista}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
-        onContentSizeChange={() =>
-        {
-          if (abajo)
-          {
-            lista.current?.scrollToEnd({ animated: false });
-          }
-        }}
         ListHeaderComponent={
           <View style={estilos.banner}>
             <Candado color={colores.muted} tamano={12} />
