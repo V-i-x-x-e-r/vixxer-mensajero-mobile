@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, Switch, StyleSheet } from "react-native";
+import { View, Text, Pressable, Switch, ScrollView, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -87,7 +87,8 @@ export default function Ajustes()
   }
 
   return (
-    <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
+    <View style={{ flex: 1, backgroundColor: colores.fondo }}>
+      <ScrollView contentContainerStyle={estilos.pantalla} showsVerticalScrollIndicator={false}>
       <View style={estilos.perfil}>
         <Pressable onPress={cambiarFoto} style={({ pressed }) => pressed && estilos.presionado}>
           <Avatar nombre={usuario} uri={avatar} tamano={92} />
@@ -134,6 +135,7 @@ export default function Ajustes()
       <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
       </Pressable>
+      </ScrollView>
 
       <Confirmacion
         visible={confirmar}
@@ -149,7 +151,7 @@ export default function Ajustes()
 }
 
 const estilos = StyleSheet.create({
-  pantalla: { flex: 1, padding: 20 },
+  pantalla: { padding: 20, paddingBottom: 48 },
   perfil: { alignItems: "center", gap: 8, marginBottom: 24 },
   usuario: { fontSize: 18, fontFamily: fuentes.semibold },
   cambiar: { fontSize: 12 },
