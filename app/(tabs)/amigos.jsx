@@ -122,7 +122,7 @@ export default function AmigosPantalla()
                 style={[estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }]}
               >
                 <Text style={[estilos.accionTxt, { color: colores.texto }]}>Solicitudes</Text>
-                <Badge cantidad={pendientes} estilo={{ position: "absolute", top: -7, right: -7 }} />
+                <Badge cantidad={pendientes} estilo={{ position: "absolute", top: 8, right: 10 }} />
               </Presionable>
             </View>
             <Text style={[estilos.seccion, { color: colores.muted }]}>TUS CONTACTOS</Text>

@@ -3,9 +3,7 @@ import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
-import { crearIdentidad } from "../lib/crypto";
 import { guardar, leer, TOKEN, MI_ID, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../lib/storage";
-import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
@@ -21,7 +19,6 @@ export default function Login()
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
-  const [codigo, setCodigo] = useState("");
 
   async function entrarTrasSesion()
   {
@@ -33,26 +30,7 @@ export default function Login()
       router.replace("/chats");
       return;
     }
-
-    let respaldo = null;
-    try
-    {
-      respaldo = await api.obtenerRespaldo();
-    }
-    catch (e)
-    {
-    }
-
-    if (respaldo && respaldo.cifrado)
-    {
-      router.replace("/recuperar");
-      return;
-    }
-
-    const identidad = await crearIdentidad();
-    await api.actualizarLlavePublica(identidad.publicKey).catch(() => {});
-    await api.subirRespaldo(identidad.respaldo).catch(() => {});
-    setCodigo(identidad.codigo);
+    router.replace("/recuperar");
   }
 
   useEffect(() =>
@@ -148,12 +126,6 @@ export default function Login()
           </Text>
         </Text>
       </KeyboardAvoidingView>
-
-      <RespaldoCodigo
-        visible={!!codigo}
-        codigo={codigo}
-        onCerrar={() => router.replace("/chats")}
-      />
     </View>
   );
 }
