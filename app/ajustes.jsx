@@ -116,11 +116,23 @@ export default function Ajustes()
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>PRIVACIDAD</Text>
       <View style={[estilos.fila, { borderColor: colores.borde }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mostrar mi conexión</Text>
-        <Switch value={prefs.mostrar_conexion} onValueChange={(v) => cambiar("mostrar_conexion", v)} trackColor={{ true: colores.botonFondo }} />
+        <Switch
+          value={prefs.mostrar_conexion}
+          onValueChange={(v) => cambiar("mostrar_conexion", v)}
+          trackColor={{ true: colores.botonFondo, false: colores.borde }}
+          thumbColor={colores.fondo}
+          ios_backgroundColor={colores.borde}
+        />
       </View>
       <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Acuses de lectura</Text>
-        <Switch value={prefs.mostrar_acuses} onValueChange={(v) => cambiar("mostrar_acuses", v)} trackColor={{ true: colores.botonFondo }} />
+        <Switch
+          value={prefs.mostrar_acuses}
+          onValueChange={(v) => cambiar("mostrar_acuses", v)}
+          trackColor={{ true: colores.botonFondo, false: colores.borde }}
+          thumbColor={colores.fondo}
+          ios_backgroundColor={colores.borde}
+        />
       </View>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
