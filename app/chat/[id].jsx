@@ -3,9 +3,10 @@ import { View, Text, TextInput, Pressable, FlatList, StyleSheet } from "react-na
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
+import * as ImagePicker from "expo-image-picker";
 import * as api from "../../lib/api";
 import { obtenerSocket, asegurarSocket } from "../../lib/socket";
-import { cifrar, descifrar } from "../../lib/crypto";
+import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { useTema } from "../../components/tema";
@@ -16,9 +17,28 @@ import { Avatar } from "../../components/Avatar";
 import { Reloj } from "../../components/Reloj";
 import { Flecha } from "../../components/Flecha";
 import { Check } from "../../components/Check";
+import { Clip } from "../../components/Clip";
+import { Adjunto } from "../../components/Adjunto";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 
 const GRIS_VISTO = "#8E8E93";
+
+function leerMedia(texto)
+{
+  if (!texto || texto[0] !== "{")
+  {
+    return null;
+  }
+  try
+  {
+    const obj = JSON.parse(texto);
+    return obj && obj.t === "img" ? obj : null;
+  }
+  catch (e)
+  {
+    return null;
+  }
+}
 
 function aFecha(iso)
 {
@@ -93,6 +113,7 @@ export default function Chat()
   const [sel, setSel] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null);
   const [editando, setEditando] = useState(null);
+  const [subiendo, setSubiendo] = useState(false);
   const miId = useRef(null);
   const lista = useRef(null);
   const tecleando = useRef(null);
@@ -247,13 +268,8 @@ export default function Chat()
     };
   }, [otroId]);
 
-  async function enviar()
+  async function mandar(plano)
   {
-    const limpio = texto.trim();
-    if (!limpio)
-    {
-      return;
-    }
     const socket = await asegurarSocket();
     if (!socket)
     {
@@ -261,10 +277,58 @@ export default function Chat()
     }
     const priv = await leer(CLAVE_PRIVADA);
     const pubDest = await llavePublicaDe(otroId);
-    const { contenidoCifrado, nonce } = cifrar(limpio, pubDest, priv);
+    const { contenidoCifrado, nonce } = cifrar(plano, pubDest, priv);
+    const localId = `local-${Date.now()}`;
+    const resp = respondiendo;
+    socket.emit(
+      "mensaje:enviar",
+      {
+        destinatarioId: otroId,
+        contenidoCifrado,
+        nonce,
+        respuestaA: resp ? resp.id : null,
+      },
+      (r) =>
+      {
+        if (r && r.ok)
+        {
+          setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, id: r.id, estado: "enviado" } : m)));
+        }
+      },
+    );
+    setMensajes((prev) => [
+      ...prev,
+      {
+        id: localId,
+        remitente_id: miId.current,
+        texto: plano,
+        enviado_en: new Date().toISOString(),
+        estado: "enviando",
+        respuestaTexto: resp ? resp.texto : null,
+      },
+    ]);
+    setRespondiendo(null);
+    lista.current?.scrollToOffset({ offset: 0, animated: true });
+  }
+
+  async function enviar()
+  {
+    const limpio = texto.trim();
+    if (!limpio)
+    {
+      return;
+    }
 
     if (editando)
     {
+      const socket = await asegurarSocket();
+      if (!socket)
+      {
+        return;
+      }
+      const priv = await leer(CLAVE_PRIVADA);
+      const pubDest = await llavePublicaDe(otroId);
+      const { contenidoCifrado, nonce } = cifrar(limpio, pubDest, priv);
       const objetivo = editando.id;
       socket.emit("mensaje:editar", { id: objetivo, destinatarioId: otroId, contenidoCifrado, nonce });
       setMensajes((prev) => prev.map((m) => (m.id === objetivo ? { ...m, texto: limpio, editado: true } : m)));
@@ -273,42 +337,41 @@ export default function Chat()
       return;
     }
 
-    const localId = `local-${Date.now()}`;
-    socket.emit(
-      "mensaje:enviar",
-      {
-        destinatarioId: otroId,
-        contenidoCifrado,
-        nonce,
-        respuestaA: respondiendo ? respondiendo.id : null,
-      },
-      (resp) =>
-      {
-        if (resp && resp.ok)
-        {
-          setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, id: resp.id, estado: "enviado" } : m)));
-        }
-      },
-    );
     if (tecleando.current)
     {
       clearTimeout(tecleando.current);
     }
-    socket.emit("usuario:escribiendo", { para: otroId, activo: false });
-    setMensajes((prev) => [
-      ...prev,
-      {
-        id: localId,
-        remitente_id: miId.current,
-        texto: limpio,
-        enviado_en: new Date().toISOString(),
-        estado: "enviando",
-        respuestaTexto: respondiendo ? respondiendo.texto : null,
-      },
-    ]);
-    setRespondiendo(null);
+    socket_emit("usuario:escribiendo", { para: otroId, activo: false });
     setTexto("");
-    lista.current?.scrollToOffset({ offset: 0, animated: true });
+    await mandar(limpio);
+  }
+
+  async function adjuntarImagen()
+  {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted)
+    {
+      return;
+    }
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6, base64: true });
+    if (r.canceled)
+    {
+      return;
+    }
+    setSubiendo(true);
+    try
+    {
+      const cif = cifrarArchivo(r.assets[0].base64);
+      const { path } = await api.subirMedia(cif.datos);
+      await mandar(JSON.stringify({ t: "img", path, mime: "image/jpeg", k: cif.clave, n: cif.nonce }));
+    }
+    catch (e)
+    {
+    }
+    finally
+    {
+      setSubiendo(false);
+    }
   }
 
   function reaccionar(mensaje, emoji)
@@ -423,8 +486,10 @@ export default function Chat()
           const prev = invertidos[index + 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const reacciones = agrupar(item.reacciones);
-          const citado = item.respuestaTexto
+          const media = leerMedia(item.texto);
+          const citadoCrudo = item.respuestaTexto
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
+          const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoCrudo;
 
           return (
             <View>
@@ -453,7 +518,11 @@ export default function Chat()
                   </View>
                 ) : null}
 
-                <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
+                {media ? (
+                  <Adjunto media={media} color={mio ? colores.botonTexto : colores.texto} />
+                ) : (
+                  <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
+                )}
 
                 <View style={estilos.meta}>
                   {item.editado ? (
@@ -519,6 +588,14 @@ export default function Chat()
       ) : null}
 
       <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
+        <Pressable
+          onPress={adjuntarImagen}
+          disabled={subiendo}
+          hitSlop={6}
+          style={({ pressed }) => [estilos.clip, { opacity: subiendo ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
+        >
+          <Clip color={colores.muted} tamano={24} />
+        </Pressable>
         <TextInput
           value={texto}
           onChangeText={escribir}
@@ -601,5 +678,6 @@ const estilos = StyleSheet.create({
   inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
   campo: { flex: 1, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, maxHeight: 120, fontSize: 15 },
   enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  clip: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
   enviarPresionado: { transform: [{ scale: 0.92 }] },
 });
