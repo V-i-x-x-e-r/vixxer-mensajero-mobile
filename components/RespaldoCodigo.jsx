@@ -26,7 +26,14 @@ export function RespaldoCodigo({ visible, codigo, onCerrar })
           </Text>
 
           <Pressable onPress={copiar} style={[estilos.codigoCaja, { borderColor: colores.borde }]}>
-            <Text style={[estilos.codigo, { color: colores.texto }]}>{codigo}</Text>
+            <Text
+              style={[estilos.codigo, { color: colores.texto }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
+            >
+              {codigo}
+            </Text>
             <Text style={[estilos.copiar, { color: colores.muted }]}>{copiado ? "copiado" : "tocar para copiar"}</Text>
           </Pressable>
 
@@ -52,8 +59,8 @@ const estilos = StyleSheet.create({
   tarjeta: { width: "100%", maxWidth: 380, borderWidth: 1, borderRadius: 16, padding: 22, gap: 12 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   texto: { fontSize: 14, lineHeight: 20 },
-  codigoCaja: { borderWidth: 1, borderRadius: 12, paddingVertical: 18, alignItems: "center", gap: 6, marginTop: 4 },
-  codigo: { fontSize: 22, fontFamily: fuentes.bold, letterSpacing: 2 },
+  codigoCaja: { borderWidth: 1, borderRadius: 12, paddingVertical: 18, paddingHorizontal: 16, alignItems: "center", gap: 6, marginTop: 4 },
+  codigo: { fontSize: 20, fontFamily: fuentes.bold, letterSpacing: 1, alignSelf: "stretch", textAlign: "center" },
   copiar: { fontSize: 12 },
   boton: { borderRadius: 12, paddingVertical: 14, alignItems: "center", marginTop: 4 },
   presionado: { opacity: 0.6 },
