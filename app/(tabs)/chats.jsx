@@ -3,7 +3,7 @@ import { View, Text, Pressable, FlatList, RefreshControl, Modal, StyleSheet } fr
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
-import { conectarSocket } from "../../lib/socket";
+import { conectarSocket, obtenerSocket } from "../../lib/socket";
 import { descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
@@ -137,6 +137,11 @@ export default function Chats()
     useCallback(() =>
     {
       cargar();
+      const s = obtenerSocket();
+      if (s)
+      {
+        s.emit("entregar:pendientes");
+      }
     }, [cargar]),
   );
 
