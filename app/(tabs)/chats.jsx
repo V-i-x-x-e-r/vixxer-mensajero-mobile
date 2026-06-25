@@ -2,17 +2,17 @@ import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import * as api from "../lib/api";
-import { conectarSocket } from "../lib/socket";
-import { descifrar } from "../lib/crypto";
-import { llavePublicaDe } from "../lib/llaves";
-import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../lib/storage";
-import { useTema } from "../components/tema";
-import { fuentes } from "../assets/themes/temas";
-import { Logo } from "../components/Logo";
-import { Engrane } from "../components/Engrane";
-import { Avatar } from "../components/Avatar";
-import { EstadoLista } from "../components/EstadoLista";
+import * as api from "../../lib/api";
+import { conectarSocket } from "../../lib/socket";
+import { descifrar } from "../../lib/crypto";
+import { llavePublicaDe } from "../../lib/llaves";
+import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
+import { useTema } from "../../components/tema";
+import { fuentes } from "../../assets/themes/temas";
+import { Logo } from "../../components/Logo";
+import { Engrane } from "../../components/Engrane";
+import { Avatar } from "../../components/Avatar";
+import { EstadoLista } from "../../components/EstadoLista";
 
 function cuando(iso)
 {
@@ -38,7 +38,6 @@ export default function Chats()
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
-  const [pendientes, setPendientes] = useState(0);
   const [estado, setEstado] = useState("conectando…");
 
   useEffect(() =>
@@ -75,12 +74,10 @@ export default function Chats()
     setError(false);
     try
     {
-      const [lista, conversaciones, solicitudes] = await Promise.all([
+      const [lista, conversaciones] = await Promise.all([
         api.amigos(),
         api.conversaciones(),
-        api.solicitudes(),
       ]);
-      setPendientes(solicitudes.length);
 
       const miId = await leer(MI_ID);
       const priv = await leer(CLAVE_PRIVADA);
@@ -96,7 +93,8 @@ export default function Chats()
         };
       }
 
-      const ordenados = [...lista].sort((a, b) =>
+      const conConversacion = lista.filter((a) => mapa[a.id]);
+      const ordenados = conConversacion.sort((a, b) =>
         (mapa[b.id]?.enviado_en || "").localeCompare(mapa[a.id]?.enviado_en || ""),
       );
       setAmigos(ordenados);
@@ -151,26 +149,6 @@ export default function Chats()
         <Text style={[estilos.estadoTxt, { color: colores.muted }]}>{estado}</Text>
       </View>
 
-      <View style={estilos.acciones}>
-        <Pressable
-          onPress={() => router.push("/agregar")}
-          style={({ pressed }) => [estilos.chip, { borderColor: colores.borde }, pressed && estilos.presionado]}
-        >
-          <Text style={[estilos.chipTxt, { color: colores.texto }]}>Agregar por código</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push("/solicitudes")}
-          style={({ pressed }) => [estilos.chip, { borderColor: colores.borde }, pressed && estilos.presionado]}
-        >
-          <Text style={[estilos.chipTxt, { color: colores.texto }]}>Solicitudes</Text>
-          {pendientes > 0 ? (
-            <View style={[estilos.badge, { backgroundColor: colores.botonFondo }]}>
-              <Text style={[estilos.badgeTxt, { color: colores.botonTexto }]}>{pendientes}</Text>
-            </View>
-          ) : null}
-        </Pressable>
-      </View>
-
       <FlatList
         data={amigos}
         keyExtractor={(a) => a.id}
@@ -182,7 +160,7 @@ export default function Chats()
           <EstadoLista
             cargando={cargando}
             error={error}
-            vacio="Aún no tienes contactos. Agrega a alguien por su código."
+            vacio="Aún no tienes conversaciones. Ve a Amigos para empezar una."
             onReintentar={reintentar}
           />
         }
@@ -227,11 +205,6 @@ const estilos = StyleSheet.create({
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },
-  acciones: { flexDirection: "row", gap: 10 },
-  chip: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 },
-  chipTxt: { fontSize: 14 },
-  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
-  badgeTxt: { fontSize: 12, fontFamily: fuentes.semibold },
   lista: { flex: 1 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   centro: { flex: 1, gap: 2 },
@@ -239,5 +212,7 @@ const estilos = StyleSheet.create({
   preview: { fontSize: 13 },
   derecha: { alignItems: "flex-end", gap: 4 },
   hora: { fontSize: 11 },
+  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
+  badgeTxt: { fontSize: 12, fontFamily: fuentes.semibold },
   presionado: { opacity: 0.6 },
 });

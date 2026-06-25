@@ -4,10 +4,12 @@ import * as api from "../lib/api";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { EstadoLista } from "../components/EstadoLista";
+import { useSolicitudes } from "../components/Solicitudes";
 
 export default function Solicitudes()
 {
   const { colores } = useTema();
+  const { refrescar } = useSolicitudes();
   const [lista, setLista] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(false);
@@ -43,13 +45,15 @@ export default function Solicitudes()
   async function aceptar(id)
   {
     await api.aceptarSolicitud(id);
-    cargar();
+    await cargar();
+    refrescar();
   }
 
   async function rechazar(id)
   {
     await api.rechazarSolicitud(id);
-    cargar();
+    await cargar();
+    refrescar();
   }
 
   return (

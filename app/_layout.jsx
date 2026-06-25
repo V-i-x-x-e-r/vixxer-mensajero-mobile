@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { useFonts, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { ProveedorTema, useTema } from "../components/tema";
+import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { fuentes } from "../assets/themes/temas";
 
 function Navegacion()
@@ -19,7 +20,7 @@ function Navegacion()
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="registro" options={{ headerShown: false }} />
-      <Stack.Screen name="chats" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="ajustes" options={{ title: "Ajustes" }} />
       <Stack.Screen name="agregar" options={{ title: "Agregar contacto" }} />
       <Stack.Screen name="solicitudes" options={{ title: "Solicitudes" }} />
@@ -39,7 +40,9 @@ export default function RootLayout()
 
   return (
     <ProveedorTema>
-      <Navegacion />
+      <ProveedorSolicitudes>
+        <Navegacion />
+      </ProveedorSolicitudes>
     </ProveedorTema>
   );
 }
