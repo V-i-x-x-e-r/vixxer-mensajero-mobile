@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, Switch, Alert, StyleSheet } from "react-native";
+import { View, Text, Pressable, Alert, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -9,6 +9,7 @@ import { desconectarSocket } from "../lib/socket";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { BotonTema } from "../components/BotonTema";
+import { Interruptor } from "../components/Interruptor";
 import { Avatar } from "../components/Avatar";
 
 export default function Ajustes()
@@ -116,23 +117,11 @@ export default function Ajustes()
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>PRIVACIDAD</Text>
       <View style={[estilos.fila, { borderColor: colores.borde }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mostrar mi conexión</Text>
-        <Switch
-          value={prefs.mostrar_conexion}
-          onValueChange={(v) => cambiar("mostrar_conexion", v)}
-          trackColor={{ true: colores.botonFondo, false: colores.borde }}
-          thumbColor={prefs.mostrar_conexion ? colores.fondo : colores.texto}
-          ios_backgroundColor={colores.borde}
-        />
+        <Interruptor valor={prefs.mostrar_conexion} onCambiar={(v) => cambiar("mostrar_conexion", v)} />
       </View>
       <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Acuses de lectura</Text>
-        <Switch
-          value={prefs.mostrar_acuses}
-          onValueChange={(v) => cambiar("mostrar_acuses", v)}
-          trackColor={{ true: colores.botonFondo, false: colores.borde }}
-          thumbColor={prefs.mostrar_acuses ? colores.fondo : colores.texto}
-          ios_backgroundColor={colores.borde}
-        />
+        <Interruptor valor={prefs.mostrar_acuses} onCambiar={(v) => cambiar("mostrar_acuses", v)} />
       </View>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
