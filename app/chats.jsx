@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../lib/api";
@@ -36,6 +36,7 @@ export default function Chats()
   const [amigos, setAmigos] = useState([]);
   const [convs, setConvs] = useState({});
   const [cargando, setCargando] = useState(true);
+  const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
   const [pendientes, setPendientes] = useState(0);
   const [estado, setEstado] = useState("conectando…");
@@ -124,6 +125,13 @@ export default function Chats()
     cargar();
   }
 
+  async function refrescar()
+  {
+    setRefrescando(true);
+    await cargar();
+    setRefrescando(false);
+  }
+
   const conectado = estado === "conectado";
 
   return (
@@ -167,6 +175,9 @@ export default function Chats()
         data={amigos}
         keyExtractor={(a) => a.id}
         style={estilos.lista}
+        refreshControl={
+          <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.texto]} />
+        }
         ListEmptyComponent={
           <EstadoLista
             cargando={cargando}
