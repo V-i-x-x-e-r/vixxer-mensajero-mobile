@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, LayoutAnimation, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Keyboard, Platform, LayoutAnimation, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -82,7 +82,7 @@ export default function Chat()
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
-  const alturaHeader = insets.top + (Platform.OS === "ios" ? 44 : 56);
+  const [tecladoAlto, setTecladoAlto] = useState(0);
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
@@ -130,6 +130,19 @@ export default function Chat()
       socket.emit("usuario:escribiendo", { para: otroId, activo: false });
     }, 1500);
   }
+
+  useEffect(() =>
+  {
+    const verShow = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const verHide = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const mostrar = Keyboard.addListener(verShow, (e) => setTecladoAlto(e.endCoordinates.height));
+    const ocultar = Keyboard.addListener(verHide, () => setTecladoAlto(0));
+    return () =>
+    {
+      mostrar.remove();
+      ocultar.remove();
+    };
+  }, []);
 
   useEffect(() =>
   {
@@ -377,10 +390,11 @@ export default function Chat()
         : null;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={alturaHeader}
-      style={[estilos.pantalla, { backgroundColor: colores.fondo }]}
+    <View
+      style={[
+        estilos.pantalla,
+        { backgroundColor: colores.fondo, paddingBottom: Platform.OS === "ios" ? Math.max(tecladoAlto - insets.bottom, 0) : 0 },
+      ]}
     >
       <Stack.Screen
         options={{
@@ -550,7 +564,7 @@ export default function Chat()
         onBorrar={borrar}
         onCerrar={() => setSel(null)}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
