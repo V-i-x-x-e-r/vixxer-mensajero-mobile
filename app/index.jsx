@@ -3,14 +3,9 @@ import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
-import { asegurarClaves } from "../lib/crypto";
-import { guardar, leer, TOKEN, MI_ID } from "../lib/storage";
-
-async function sincronizarLlave()
-{
-  const pub = await asegurarClaves();
-  await api.actualizarLlavePublica(pub).catch(() => {});
-}
+import { crearIdentidad } from "../lib/crypto";
+import { guardar, leer, TOKEN, MI_ID, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../lib/storage";
+import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
@@ -26,15 +21,47 @@ export default function Login()
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [codigo, setCodigo] = useState("");
+
+  async function entrarTrasSesion()
+  {
+    const priv = await leer(CLAVE_PRIVADA);
+    if (priv)
+    {
+      const pub = await leer(CLAVE_PUBLICA);
+      api.actualizarLlavePublica(pub).catch(() => {});
+      router.replace("/chats");
+      return;
+    }
+
+    let respaldo = null;
+    try
+    {
+      respaldo = await api.obtenerRespaldo();
+    }
+    catch (e)
+    {
+    }
+
+    if (respaldo && respaldo.cifrado)
+    {
+      router.replace("/recuperar");
+      return;
+    }
+
+    const identidad = await crearIdentidad();
+    await api.actualizarLlavePublica(identidad.publicKey).catch(() => {});
+    await api.subirRespaldo(identidad.respaldo).catch(() => {});
+    setCodigo(identidad.codigo);
+  }
 
   useEffect(() =>
   {
-    leer(TOKEN).then(async (t) =>
+    leer(TOKEN).then((t) =>
     {
       if (t)
       {
-        await sincronizarLlave();
-        router.replace("/chats");
+        entrarTrasSesion();
       }
     });
   }, []);
@@ -54,8 +81,7 @@ export default function Login()
       const data = await api.login(usuario.trim(), contrasena);
       await guardar(TOKEN, data.token);
       await guardar(MI_ID, data.usuario.id);
-      await sincronizarLlave();
-      router.replace("/chats");
+      await entrarTrasSesion();
     }
     catch (e)
     {
@@ -122,6 +148,12 @@ export default function Login()
           </Text>
         </Text>
       </KeyboardAvoidingView>
+
+      <RespaldoCodigo
+        visible={!!codigo}
+        codigo={codigo}
+        onCerrar={() => router.replace("/chats")}
+      />
     </View>
   );
 }

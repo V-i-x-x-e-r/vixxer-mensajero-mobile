@@ -20,6 +20,7 @@ function Navegacion()
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="registro" options={{ headerShown: false }} />
+      <Stack.Screen name="recuperar" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="ajustes" options={{ title: "Ajustes" }} />
       <Stack.Screen name="agregar" options={{ title: "Agregar contacto" }} />
