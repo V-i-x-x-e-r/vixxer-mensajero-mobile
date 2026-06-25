@@ -146,7 +146,11 @@ export default function Chat()
       setTecladoAlto(e.endCoordinates.height);
       if (abajoRef.current)
       {
-        requestAnimationFrame(() => lista.current?.scrollToEnd({ animated: true }));
+        abajoRef.current = true;
+        setTimeout(() =>
+        {
+          lista.current?.scrollToEnd({ animated: true });
+        }, 250);
       }
     });
     const ocultar = Keyboard.addListener(verHide, () => setTecladoAlto(0));
@@ -300,6 +304,7 @@ export default function Chat()
     }
 
     const localId = `local-${Date.now()}`;
+    abajoRef.current = true;
     socket.emit(
       "mensaje:enviar",
       {
@@ -402,7 +407,7 @@ export default function Chat()
   function alDesplazar(e)
   {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const cerca = contentOffset.y + layoutMeasurement.height >= contentSize.height - 140;
+    const cerca = contentOffset.y + layoutMeasurement.height >= contentSize.height - 220;
     abajoRef.current = cerca;
     setAbajo(cerca);
   }
@@ -411,7 +416,7 @@ export default function Chat()
   {
     if (mensajes.length > cantidadRef.current && abajoRef.current)
     {
-      requestAnimationFrame(() => lista.current?.scrollToEnd({ animated: true }));
+      setTimeout(() => lista.current?.scrollToEnd({ animated: true }), 60);
     }
     cantidadRef.current = mensajes.length;
   }, [mensajes]);
