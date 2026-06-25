@@ -416,6 +416,7 @@ export default function Chat()
         ref={lista}
         data={mensajes}
         keyExtractor={(m) => m.id}
+        style={estilos.flex}
         contentContainerStyle={estilos.lista}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
@@ -572,6 +573,7 @@ export default function Chat()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
+  flex: { flex: 1 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
   encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
   encabezadoSub: { fontSize: 12 },
