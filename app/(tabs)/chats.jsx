@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
@@ -7,11 +7,15 @@ import { conectarSocket } from "../../lib/socket";
 import { descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
+import { leerEstados, alternarFijado, alternarSilenciado, ocultar, mostrar } from "../../lib/chatLocal";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
 import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
+import { Pin } from "../../components/Pin";
+import { Silencio } from "../../components/Silencio";
+import { Bote } from "../../components/Bote";
 import { EstadoLista } from "../../components/EstadoLista";
 
 function cuando(iso)
@@ -35,45 +39,21 @@ export default function Chats()
   const insets = useSafeAreaInsets();
   const [amigos, setAmigos] = useState([]);
   const [convs, setConvs] = useState({});
+  const [estados, setEstados] = useState({ fijados: [], silenciados: [], ocultos: [] });
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
   const [estado, setEstado] = useState("conectando…");
-
-  useEffect(() =>
-  {
-    let socket;
-    (async () =>
-    {
-      const token = await leer(TOKEN);
-      if (!token)
-      {
-        router.replace("/");
-        return;
-      }
-      socket = conectarSocket(token);
-      setEstado(socket.connected ? "conectado" : "conectando…");
-      socket.on("connect", () => setEstado("conectado"));
-      socket.on("disconnect", () => setEstado("sin conexión"));
-      socket.on("connect_error", () => setEstado("sin conexión"));
-    })();
-
-    return () =>
-    {
-      if (socket)
-      {
-        socket.off("connect");
-        socket.off("disconnect");
-        socket.off("connect_error");
-      }
-    };
-  }, []);
+  const [sel, setSel] = useState(null);
+  const [borrando, setBorrando] = useState(false);
 
   const cargar = useCallback(async () =>
   {
     setError(false);
     try
     {
+      const e = await leerEstados();
+      setEstados(e);
       const [lista, conversaciones] = await Promise.all([
         api.amigos(),
         api.conversaciones(),
@@ -93,11 +73,11 @@ export default function Chats()
         };
       }
 
-      const conConversacion = lista.filter((a) => mapa[a.id]);
-      const ordenados = conConversacion.sort((a, b) =>
-        (mapa[b.id]?.enviado_en || "").localeCompare(mapa[a.id]?.enviado_en || ""),
-      );
-      setAmigos(ordenados);
+      const visibles = lista.filter((a) => mapa[a.id] && !e.ocultos.includes(a.id));
+      visibles.sort((a, b) => (mapa[b.id]?.enviado_en || "").localeCompare(mapa[a.id]?.enviado_en || ""));
+      const fijados = visibles.filter((a) => e.fijados.includes(a.id));
+      const resto = visibles.filter((a) => !e.fijados.includes(a.id));
+      setAmigos([...fijados, ...resto]);
       setConvs(mapa);
     }
     catch (e)
@@ -109,6 +89,41 @@ export default function Chats()
       setCargando(false);
     }
   }, []);
+
+  useEffect(() =>
+  {
+    let socket;
+    (async () =>
+    {
+      const token = await leer(TOKEN);
+      if (!token)
+      {
+        router.replace("/");
+        return;
+      }
+      socket = conectarSocket(token);
+      setEstado(socket.connected ? "conectado" : "conectando…");
+      socket.on("connect", () => setEstado("conectado"));
+      socket.on("disconnect", () => setEstado("sin conexión"));
+      socket.on("connect_error", () => setEstado("sin conexión"));
+      socket.on("mensaje:recibido", async (fila) =>
+      {
+        await mostrar(fila.remitente_id);
+        cargar();
+      });
+    })();
+
+    return () =>
+    {
+      if (socket)
+      {
+        socket.off("connect");
+        socket.off("disconnect");
+        socket.off("connect_error");
+        socket.off("mensaje:recibido");
+      }
+    };
+  }, [cargar]);
 
   useFocusEffect(
     useCallback(() =>
@@ -130,19 +145,74 @@ export default function Chats()
     setRefrescando(false);
   }
 
+  async function fijar()
+  {
+    await alternarFijado(sel);
+    cargar();
+  }
+
+  async function silenciar()
+  {
+    await alternarSilenciado(sel);
+    cargar();
+  }
+
+  async function quitarDeLista()
+  {
+    await ocultar(sel);
+    setBorrando(false);
+    setSel(null);
+    cargar();
+  }
+
+  async function borrarConversacion()
+  {
+    try
+    {
+      await api.limpiarConversacion(sel);
+    }
+    catch (e)
+    {
+    }
+    setBorrando(false);
+    setSel(null);
+    cargar();
+  }
+
   const conectado = estado === "conectado";
+  const selFijado = sel ? estados.fijados.includes(sel) : false;
+  const selSilenciado = sel ? estados.silenciados.includes(sel) : false;
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
-      <View style={estilos.cabecera}>
-        <View style={estilos.marca}>
-          <Logo alto={24} />
-          <Text style={[estilos.titulo, { color: colores.texto }]}>Vixxer</Text>
+      {sel ? (
+        <View style={estilos.cabecera}>
+          <Pressable onPress={() => setSel(null)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+            <Text style={{ color: colores.texto, fontSize: 22 }}>{"✕"}</Text>
+          </Pressable>
+          <View style={estilos.herramientas}>
+            <Pressable onPress={fijar} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+              <Pin color={selFijado ? colores.texto : colores.muted} />
+            </Pressable>
+            <Pressable onPress={silenciar} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+              <Silencio color={selSilenciado ? colores.texto : colores.muted} />
+            </Pressable>
+            <Pressable onPress={() => setBorrando(true)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+              <Bote color={colores.error} />
+            </Pressable>
+          </View>
         </View>
-        <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
-          <Engrane color={colores.texto} />
-        </Pressable>
-      </View>
+      ) : (
+        <View style={estilos.cabecera}>
+          <View style={estilos.marca}>
+            <Logo alto={24} />
+            <Text style={[estilos.titulo, { color: colores.texto }]}>Vixxer</Text>
+          </View>
+          <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+            <Engrane color={colores.texto} />
+          </Pressable>
+        </View>
+      )}
 
       <View style={estilos.estado}>
         <View style={[estilos.punto, { backgroundColor: conectado ? "#22C55E" : colores.muted }]} />
@@ -167,14 +237,27 @@ export default function Chats()
         renderItem={({ item }) =>
         {
           const c = convs[item.id];
+          const fijado = estados.fijados.includes(item.id);
+          const silenciado = estados.silenciados.includes(item.id);
+          const elegido = sel === item.id;
           return (
             <Pressable
-              onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } })}
-              style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
+              onPress={() => (sel ? setSel(item.id) : router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } }))}
+              onLongPress={() => setSel(item.id)}
+              delayLongPress={250}
+              style={({ pressed }) => [
+                estilos.fila,
+                { backgroundColor: elegido ? colores.surfaceStrong || colores.borde : colores.surface, borderColor: elegido ? colores.texto : colores.borde },
+                pressed && estilos.presionado,
+              ]}
             >
               <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
               <View style={estilos.centro}>
-                <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
+                <View style={estilos.lineaNombre}>
+                  {fijado ? <Pin color={colores.muted} tamano={13} /> : null}
+                  <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
+                  {silenciado ? <Silencio color={colores.muted} tamano={13} /> : null}
+                </View>
                 {c ? (
                   <Text style={[estilos.preview, { color: colores.muted }]} numberOfLines={1}>{c.preview}</Text>
                 ) : null}
@@ -193,26 +276,50 @@ export default function Chats()
           );
         }}
       />
+
+      <Modal transparent visible={borrando} animationType="fade" onRequestClose={() => setBorrando(false)}>
+        <Pressable style={estilos.fondoModal} onPress={() => setBorrando(false)}>
+          <Pressable style={[estilos.hoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Pressable onPress={quitarDeLista} style={({ pressed }) => [estilos.opcion, pressed && estilos.presionado]}>
+              <Text style={[estilos.opcionTxt, { color: colores.texto }]}>Quitar de la lista</Text>
+              <Text style={[estilos.opcionSub, { color: colores.muted }]}>La conversación se conserva</Text>
+            </Pressable>
+            <View style={[estilos.separador, { backgroundColor: colores.borde }]} />
+            <Pressable onPress={borrarConversacion} style={({ pressed }) => [estilos.opcion, pressed && estilos.presionado]}>
+              <Text style={[estilos.opcionTxt, { color: colores.error }]}>Borrar conversación</Text>
+              <Text style={[estilos.opcionSub, { color: colores.muted }]}>Se borra solo para ti</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
-  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 34 },
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
+  herramientas: { flexDirection: "row", alignItems: "center", gap: 20 },
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },
   lista: { flex: 1 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
   centro: { flex: 1, gap: 2 },
-  nombre: { fontSize: 16 },
+  lineaNombre: { flexDirection: "row", alignItems: "center", gap: 6 },
+  nombre: { fontSize: 16, flexShrink: 1 },
   preview: { fontSize: 13 },
   derecha: { alignItems: "flex-end", gap: 4 },
   hora: { fontSize: 11 },
   badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
   badgeTxt: { fontSize: 12, fontFamily: fuentes.semibold },
   presionado: { opacity: 0.6 },
+  fondoModal: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  hoja: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, paddingVertical: 8, paddingBottom: 32 },
+  opcion: { paddingVertical: 14, paddingHorizontal: 24, gap: 2 },
+  opcionTxt: { fontSize: 16 },
+  opcionSub: { fontSize: 12 },
+  separador: { height: 1, marginHorizontal: 16 },
 });

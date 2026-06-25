@@ -53,7 +53,8 @@ function hora(iso)
 function agrupar(reacciones)
 {
   const conteo = {};
-  for (const e of reacciones || [])
+  const lista = Array.isArray(reacciones) ? reacciones : Object.values(reacciones || {});
+  for (const e of lista)
   {
     conteo[e] = (conteo[e] || 0) + 1;
   }
@@ -195,12 +196,21 @@ export default function Chat()
       }
     }
 
+    function alReaccion(data)
+    {
+      if (activo)
+      {
+        setMensajes((prev) => prev.map((m) => (m.id === data.id ? { ...m, reacciones: data.reacciones } : m)));
+      }
+    }
+
     if (socket)
     {
       socket.on("mensaje:recibido", alRecibir);
       socket.on("usuario:escribiendo", alEscribir);
       socket.on("mensaje:entregado", alEstado);
       socket.on("mensaje:leido", alEstado);
+      socket.on("mensaje:reaccion", alReaccion);
     }
 
     return () =>
@@ -212,6 +222,7 @@ export default function Chat()
         socket.off("usuario:escribiendo", alEscribir);
         socket.off("mensaje:entregado", alEstado);
         socket.off("mensaje:leido", alEstado);
+        socket.off("mensaje:reaccion", alReaccion);
       }
     };
   }, [otroId]);
@@ -286,9 +297,16 @@ export default function Chat()
         {
           return m;
         }
-        const actuales = m.reacciones || [];
-        const nuevas = actuales.includes(emoji) ? actuales.filter((e) => e !== emoji) : [...actuales, emoji];
-        return { ...m, reacciones: nuevas };
+        const r = { ...(m.reacciones || {}) };
+        if (r[miId.current] === emoji)
+        {
+          delete r[miId.current];
+        }
+        else
+        {
+          r[miId.current] = emoji;
+        }
+        return { ...m, reacciones: r };
       }),
     );
     setSel(null);

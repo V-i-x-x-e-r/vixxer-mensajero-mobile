@@ -8,6 +8,8 @@ import { fuentes } from "../../assets/themes/temas";
 import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
 import { Badge } from "../../components/Badge";
+import { Bote } from "../../components/Bote";
+import { Confirmacion } from "../../components/Confirmacion";
 import { EstadoLista } from "../../components/EstadoLista";
 import { useSolicitudes } from "../../components/Solicitudes";
 
@@ -20,6 +22,8 @@ export default function AmigosPantalla()
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
+  const [sel, setSel] = useState(null);
+  const [confirmar, setConfirmar] = useState(false);
 
   const cargar = useCallback(async () =>
   {
@@ -59,14 +63,40 @@ export default function AmigosPantalla()
     setRefrescando(false);
   }
 
+  async function borrarAmigo()
+  {
+    try
+    {
+      await api.eliminarAmigo(sel);
+    }
+    catch (e)
+    {
+    }
+    setConfirmar(false);
+    setSel(null);
+    cargar();
+  }
+
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
-      <View style={estilos.cabecera}>
-        <Text style={[estilos.titulo, { color: colores.texto }]}>Amigos</Text>
-        <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
-          <Engrane color={colores.texto} />
-        </Pressable>
-      </View>
+      {sel ? (
+        <View style={estilos.cabecera}>
+          <Pressable onPress={() => setSel(null)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+            <Text style={{ color: colores.texto, fontSize: 22 }}>{"✕"}</Text>
+          </Pressable>
+          <Pressable onPress={() => setConfirmar(true)} hitSlop={8} style={({ pressed }) => [estilos.borrar, pressed && estilos.presionado]}>
+            <Bote color={colores.error} />
+            <Text style={[estilos.borrarTxt, { color: colores.error }]}>Borrar amigo</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View style={estilos.cabecera}>
+          <Text style={[estilos.titulo, { color: colores.texto }]}>Amigos</Text>
+          <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+            <Engrane color={colores.texto} />
+          </Pressable>
+        </View>
+      )}
 
       <FlatList
         data={lista}
@@ -103,15 +133,31 @@ export default function AmigosPantalla()
             onReintentar={reintentar}
           />
         }
-        renderItem={({ item }) => (
-          <Pressable
-            onPress={() => router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } })}
-            style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
-          >
-            <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
-            <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
-          </Pressable>
-        )}
+        renderItem={({ item }) =>
+        {
+          const elegido = sel === item.id;
+          return (
+            <Pressable
+              onPress={() => (sel ? setSel(item.id) : router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } }))}
+              onLongPress={() => setSel(item.id)}
+              delayLongPress={250}
+              style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: elegido ? colores.texto : colores.borde }, pressed && estilos.presionado]}
+            >
+              <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
+              <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
+            </Pressable>
+          );
+        }}
+      />
+
+      <Confirmacion
+        visible={confirmar}
+        titulo="Borrar amigo"
+        mensaje="Dejarán de ser amigos y la conversación se borrará de tu lista. La otra persona conserva su copia."
+        textoConfirmar="Borrar"
+        destructivo
+        onConfirmar={borrarAmigo}
+        onCancelar={() => setConfirmar(false)}
       />
     </View>
   );
@@ -119,8 +165,10 @@ export default function AmigosPantalla()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
-  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 34 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
+  borrar: { flexDirection: "row", alignItems: "center", gap: 8 },
+  borrarTxt: { fontSize: 15, fontFamily: fuentes.media },
   lista: { flex: 1 },
   acciones: { flexDirection: "row", gap: 10, marginBottom: 4 },
   accion: { flex: 1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 16 },
