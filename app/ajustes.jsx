@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, Switch, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -7,9 +7,8 @@ import * as api from "../lib/api";
 import { cerrarSesion } from "../lib/storage";
 import { desconectarSocket } from "../lib/socket";
 import { useTema } from "../components/tema";
-import { fuentes } from "../assets/themes/temas";
+import { fuentes, barras } from "../assets/themes/temas";
 import { BotonTema } from "../components/BotonTema";
-import { Interruptor } from "../components/Interruptor";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
 
@@ -112,11 +111,21 @@ export default function Ajustes()
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>PRIVACIDAD</Text>
       <View style={[estilos.fila, { borderColor: colores.borde }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mostrar mi conexión</Text>
-        <Interruptor valor={prefs.mostrar_conexion} onCambiar={(v) => cambiar("mostrar_conexion", v)} />
+        <Switch
+          value={prefs.mostrar_conexion}
+          onValueChange={(v) => cambiar("mostrar_conexion", v)}
+          trackColor={{ true: barras[0], false: colores.borde }}
+          ios_backgroundColor={colores.borde}
+        />
       </View>
       <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Acuses de lectura</Text>
-        <Interruptor valor={prefs.mostrar_acuses} onCambiar={(v) => cambiar("mostrar_acuses", v)} />
+        <Switch
+          value={prefs.mostrar_acuses}
+          onValueChange={(v) => cambiar("mostrar_acuses", v)}
+          trackColor={{ true: barras[0], false: colores.borde }}
+          ios_backgroundColor={colores.borde}
+        />
       </View>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
