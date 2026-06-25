@@ -374,6 +374,8 @@ export default function Chat()
           const prev = mensajes[index - 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const reacciones = agrupar(item.reacciones);
+          const citado = item.respuestaTexto
+            ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
 
           return (
             <View>
@@ -395,10 +397,10 @@ export default function Chat()
                     : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
                 ]}
               >
-                {item.respuestaTexto ? (
+                {citado ? (
                   <View style={[estilos.cita, { borderColor: mio ? colores.botonTexto : colores.borde }]}>
                     <Text numberOfLines={1} style={{ color: mio ? colores.botonTexto : colores.muted, fontSize: 13, opacity: 0.8 }}>
-                      {item.respuestaTexto}
+                      {citado}
                     </Text>
                   </View>
                 ) : null}
