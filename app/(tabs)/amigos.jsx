@@ -9,6 +9,7 @@ import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
 import { Badge } from "../../components/Badge";
 import { Bote } from "../../components/Bote";
+import { Presionable } from "../../components/Presionable";
 import { Confirmacion } from "../../components/Confirmacion";
 import { EstadoLista } from "../../components/EstadoLista";
 import { useSolicitudes } from "../../components/Solicitudes";
@@ -108,19 +109,21 @@ export default function AmigosPantalla()
         ListHeaderComponent={
           <View>
             <View style={estilos.acciones}>
-              <Pressable
+              <Presionable
+                contenedor={estilos.mitad}
                 onPress={() => router.push("/agregar")}
-                style={({ pressed }) => [estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
+                style={[estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }]}
               >
                 <Text style={[estilos.accionTxt, { color: colores.texto }]}>Agregar por código</Text>
-              </Pressable>
-              <Pressable
+              </Presionable>
+              <Presionable
+                contenedor={estilos.mitad}
                 onPress={() => router.push("/solicitudes")}
-                style={({ pressed }) => [estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionado]}
+                style={[estilos.accion, { backgroundColor: colores.surface, borderColor: colores.borde }]}
               >
                 <Text style={[estilos.accionTxt, { color: colores.texto }]}>Solicitudes</Text>
                 <Badge cantidad={pendientes} estilo={{ position: "absolute", top: -7, right: -7 }} />
-              </Pressable>
+              </Presionable>
             </View>
             <Text style={[estilos.seccion, { color: colores.muted }]}>TUS CONTACTOS</Text>
           </View>
@@ -133,19 +136,20 @@ export default function AmigosPantalla()
             onReintentar={reintentar}
           />
         }
+        ItemSeparatorComponent={() => <View style={[estilos.separadorFila, { backgroundColor: colores.borde }]} />}
         renderItem={({ item }) =>
         {
           const elegido = sel === item.id;
           return (
-            <Pressable
+            <Presionable
               onPress={() => (sel ? setSel(item.id) : router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } }))}
               onLongPress={() => setSel(item.id)}
               delayLongPress={250}
-              style={({ pressed }) => [estilos.fila, { backgroundColor: colores.surface, borderColor: elegido ? colores.texto : colores.borde }, pressed && estilos.presionado]}
+              style={[estilos.fila, elegido && { backgroundColor: colores.surface }]}
             >
               <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
               <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
-            </Pressable>
+            </Presionable>
           );
         }}
       />
@@ -171,10 +175,12 @@ const estilos = StyleSheet.create({
   borrarTxt: { fontSize: 15, fontFamily: fuentes.media },
   lista: { flex: 1 },
   acciones: { flexDirection: "row", gap: 10, marginBottom: 4 },
-  accion: { flex: 1, alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 16 },
+  mitad: { flex: 1 },
+  accion: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 16 },
   accionTxt: { fontSize: 14 },
   seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginTop: 16, marginBottom: 4 },
-  fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
+  separadorFila: { height: 1, marginLeft: 66 },
   nombre: { fontSize: 16, flex: 1 },
   presionado: { opacity: 0.6 },
 });

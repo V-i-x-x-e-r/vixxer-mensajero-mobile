@@ -290,6 +290,7 @@ export default function Chat()
   function reaccionar(mensaje, emoji)
   {
     socket_emit("mensaje:reaccionar", { id: mensaje.id, emoji });
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setMensajes((prev) =>
       prev.map((m) =>
       {
@@ -310,6 +311,10 @@ export default function Chat()
       }),
     );
     setSel(null);
+    if (abajo)
+    {
+      setTimeout(() => lista.current?.scrollToEnd({ animated: false }), 0);
+    }
   }
 
   function socket_emit(evento, datos)
@@ -352,7 +357,7 @@ export default function Chat()
   function alDesplazar(e)
   {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    setAbajo(contentOffset.y + layoutMeasurement.height >= contentSize.height - 80);
+    setAbajo(contentOffset.y + layoutMeasurement.height >= contentSize.height - 140);
   }
 
   const sub = escribiendo
@@ -393,7 +398,7 @@ export default function Chat()
         {
           if (abajo)
           {
-            lista.current?.scrollToEnd({ animated: true });
+            lista.current?.scrollToEnd({ animated: false });
           }
         }}
         ListHeaderComponent={

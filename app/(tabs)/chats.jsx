@@ -13,6 +13,7 @@ import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
 import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
+import { Presionable } from "../../components/Presionable";
 import { Pin } from "../../components/Pin";
 import { Silencio } from "../../components/Silencio";
 import { Bote } from "../../components/Bote";
@@ -234,6 +235,7 @@ export default function Chats()
             onReintentar={reintentar}
           />
         }
+        ItemSeparatorComponent={() => <View style={[estilos.separadorFila, { backgroundColor: colores.borde }]} />}
         renderItem={({ item }) =>
         {
           const c = convs[item.id];
@@ -241,15 +243,11 @@ export default function Chats()
           const silenciado = estados.silenciados.includes(item.id);
           const elegido = sel === item.id;
           return (
-            <Pressable
+            <Presionable
               onPress={() => (sel ? setSel(item.id) : router.push({ pathname: "/chat/[id]", params: { id: item.id, usuario: item.usuario, avatar: item.avatar_url || "" } }))}
               onLongPress={() => setSel(item.id)}
               delayLongPress={250}
-              style={({ pressed }) => [
-                estilos.fila,
-                { backgroundColor: elegido ? colores.surfaceStrong || colores.borde : colores.surface, borderColor: elegido ? colores.texto : colores.borde },
-                pressed && estilos.presionado,
-              ]}
+              style={[estilos.fila, elegido && { backgroundColor: colores.surface }]}
             >
               <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
               <View style={estilos.centro}>
@@ -272,7 +270,7 @@ export default function Chats()
                   ) : null}
                 </View>
               ) : null}
-            </Pressable>
+            </Presionable>
           );
         }}
       />
@@ -306,7 +304,8 @@ const estilos = StyleSheet.create({
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },
   lista: { flex: 1 },
-  fila: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, borderWidth: 1, marginBottom: 8 },
+  fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
+  separadorFila: { height: 1, marginLeft: 66 },
   centro: { flex: 1, gap: 2 },
   lineaNombre: { flexDirection: "row", alignItems: "center", gap: 6 },
   nombre: { fontSize: 16, flexShrink: 1 },
