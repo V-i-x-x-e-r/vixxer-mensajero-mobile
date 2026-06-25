@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, LayoutAnimation, UIManager, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, KeyboardAvoidingView, Platform, LayoutAnimation, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../../lib/api";
@@ -13,11 +13,8 @@ import { Candado } from "../../components/Candado";
 import { Visto } from "../../components/Visto";
 import { Avatar } from "../../components/Avatar";
 import { Reloj } from "../../components/Reloj";
-
-if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental)
-{
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+import { Flecha } from "../../components/Flecha";
+import { Check } from "../../components/Check";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 
 function aFecha(iso)
@@ -478,10 +475,19 @@ export default function Chat()
           onChangeText={escribir}
           placeholder="Mensaje"
           placeholderTextColor={colores.placeholder}
+          multiline
           style={[estilos.campo, { backgroundColor: colores.surface, borderColor: colores.borde, color: colores.texto }]}
         />
-        <Pressable onPress={enviar} style={[estilos.enviar, { backgroundColor: colores.botonFondo }]}>
-          <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>{editando ? "Guardar" : "Enviar"}</Text>
+        <Pressable
+          onPress={enviar}
+          disabled={!texto.trim()}
+          style={({ pressed }) => [
+            estilos.enviar,
+            { backgroundColor: colores.botonFondo, opacity: texto.trim() ? 1 : 0.4 },
+            pressed && estilos.enviarPresionado,
+          ]}
+        >
+          {editando ? <Check color={colores.botonTexto} tamano={20} /> : <Flecha color={colores.botonTexto} tamano={20} />}
         </Pressable>
       </View>
 
@@ -542,7 +548,8 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
   },
   avisoTxt: { flex: 1, fontSize: 13, marginRight: 8 },
-  inputFila: { flexDirection: "row", gap: 8, padding: 12, borderTopWidth: 1 },
-  campo: { flex: 1, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
-  enviar: { borderRadius: 10, paddingHorizontal: 18, justifyContent: "center" },
+  inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, borderTopWidth: 1 },
+  campo: { flex: 1, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, maxHeight: 120, fontSize: 15 },
+  enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  enviarPresionado: { transform: [{ scale: 0.92 }] },
 });
