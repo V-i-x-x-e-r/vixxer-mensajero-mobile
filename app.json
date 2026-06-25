@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "dev.vixxer.mensajero",
-      "softwareKeyboardLayoutMode": "pan",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#14110F",
         "foregroundImage": "./assets/adaptive-foreground.png"

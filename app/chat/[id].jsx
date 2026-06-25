@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Keyboard, Platform, LayoutAnimation, StyleSheet } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, TextInput, Pressable, FlatList, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as api from "../../lib/api";
-import { obtenerSocket, conectarSocket } from "../../lib/socket";
+import { obtenerSocket, asegurarSocket } from "../../lib/socket";
 import { cifrar, descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
-import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
+import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
@@ -84,23 +84,20 @@ export default function Chat()
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
-  const [tecladoAlto, setTecladoAlto] = useState(0);
-  const [alturaVista, setAlturaVista] = useState(0);
-  const baseVista = useRef(0);
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
   const [presencia, setPresencia] = useState(null);
-  const [abajo, setAbajo] = useState(true);
+  const [lejos, setLejos] = useState(false);
   const [sel, setSel] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null);
   const [editando, setEditando] = useState(null);
   const miId = useRef(null);
   const lista = useRef(null);
   const tecleando = useRef(null);
-  const abajoRef = useRef(true);
-  const cantidadRef = useRef(0);
+
+  const invertidos = useMemo(() => mensajes.slice().reverse(), [mensajes]);
 
   function marcarLeidos(filas)
   {
@@ -139,30 +136,6 @@ export default function Chat()
 
   useEffect(() =>
   {
-    const verShow = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const verHide = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const mostrar = Keyboard.addListener(verShow, (e) =>
-    {
-      setTecladoAlto(e.endCoordinates.height);
-      if (abajoRef.current)
-      {
-        abajoRef.current = true;
-        setTimeout(() =>
-        {
-          lista.current?.scrollToEnd({ animated: true });
-        }, 250);
-      }
-    });
-    const ocultar = Keyboard.addListener(verHide, () => setTecladoAlto(0));
-    return () =>
-    {
-      mostrar.remove();
-      ocultar.remove();
-    };
-  }, []);
-
-  useEffect(() =>
-  {
     api.presencia(otroId).then(setPresencia).catch(() => {});
   }, [otroId]);
 
@@ -182,48 +155,22 @@ export default function Chat()
   useEffect(() =>
   {
     let activo = true;
+    let socket = null;
 
-    (async () =>
-    {
-      miId.current = await leer(MI_ID);
-      try
-      {
-        const filas = await api.historial(otroId);
-        const priv = await leer(CLAVE_PRIVADA);
-        let pub = await llavePublicaDe(otroId);
-        let descifrados = filas.map((m) => ({ ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) }));
-        if (descifrados.some((m) => m.texto === null))
-        {
-          pub = await llavePublicaDe(otroId, true);
-          descifrados = descifrados.map((m) => (m.texto === null ? { ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) } : m));
-        }
-        descifrados = descifrados.map((m) => ({ ...m, texto: m.texto ?? "No se pudo descifrar este mensaje" }));
-        if (activo)
-        {
-          setMensajes(descifrados);
-          marcarLeidos(descifrados);
-        }
-      }
-      catch (e)
-      {
-      }
-    })();
-
-    const socket = obtenerSocket();
-
-    async function alRecibir(fila)
+    function alRecibir(fila)
     {
       if (fila.remitente_id !== otroId)
       {
         return;
       }
-      const t = await abrir(fila);
-      if (activo)
+      abrir(fila).then((t) =>
       {
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        setMensajes((prev) => [...prev, { ...fila, texto: t }]);
-        marcarLeidos([fila]);
-      }
+        if (activo)
+        {
+          setMensajes((prev) => [...prev, { ...fila, texto: t }]);
+          marcarLeidos([fila]);
+        }
+      });
     }
 
     function alEscribir(data)
@@ -250,14 +197,41 @@ export default function Chat()
       }
     }
 
-    if (socket)
+    (async () =>
     {
-      socket.on("mensaje:recibido", alRecibir);
-      socket.on("usuario:escribiendo", alEscribir);
-      socket.on("mensaje:entregado", alEstado);
-      socket.on("mensaje:leido", alEstado);
-      socket.on("mensaje:reaccion", alReaccion);
-    }
+      miId.current = await leer(MI_ID);
+      try
+      {
+        const filas = await api.historial(otroId);
+        const priv = await leer(CLAVE_PRIVADA);
+        let pub = await llavePublicaDe(otroId);
+        let descifrados = filas.map((m) => ({ ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) }));
+        if (descifrados.some((m) => m.texto === null))
+        {
+          pub = await llavePublicaDe(otroId, true);
+          descifrados = descifrados.map((m) => (m.texto === null ? { ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) } : m));
+        }
+        descifrados = descifrados.map((m) => ({ ...m, texto: m.texto ?? "No se pudo descifrar este mensaje" }));
+        if (activo)
+        {
+          setMensajes(descifrados);
+          marcarLeidos(descifrados);
+        }
+      }
+      catch (e)
+      {
+      }
+
+      socket = await asegurarSocket();
+      if (socket && activo)
+      {
+        socket.on("mensaje:recibido", alRecibir);
+        socket.on("usuario:escribiendo", alEscribir);
+        socket.on("mensaje:entregado", alEstado);
+        socket.on("mensaje:leido", alEstado);
+        socket.on("mensaje:reaccion", alReaccion);
+      }
+    })();
 
     return () =>
     {
@@ -280,11 +254,7 @@ export default function Chat()
     {
       return;
     }
-    let socket = obtenerSocket();
-    if (!socket)
-    {
-      socket = conectarSocket(await leer(TOKEN));
-    }
+    const socket = await asegurarSocket();
     if (!socket)
     {
       return;
@@ -304,7 +274,6 @@ export default function Chat()
     }
 
     const localId = `local-${Date.now()}`;
-    abajoRef.current = true;
     socket.emit(
       "mensaje:enviar",
       {
@@ -326,7 +295,6 @@ export default function Chat()
       clearTimeout(tecleando.current);
     }
     socket.emit("usuario:escribiendo", { para: otroId, activo: false });
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setMensajes((prev) => [
       ...prev,
       {
@@ -340,6 +308,7 @@ export default function Chat()
     ]);
     setRespondiendo(null);
     setTexto("");
+    lista.current?.scrollToOffset({ offset: 0, animated: true });
   }
 
   function reaccionar(mensaje, emoji)
@@ -406,20 +375,8 @@ export default function Chat()
 
   function alDesplazar(e)
   {
-    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const cerca = contentOffset.y + layoutMeasurement.height >= contentSize.height - 220;
-    abajoRef.current = cerca;
-    setAbajo(cerca);
+    setLejos(e.nativeEvent.contentOffset.y > 240);
   }
-
-  useEffect(() =>
-  {
-    if (mensajes.length > cantidadRef.current && abajoRef.current)
-    {
-      setTimeout(() => lista.current?.scrollToEnd({ animated: true }), 60);
-    }
-    cantidadRef.current = mensajes.length;
-  }, [mensajes]);
 
   const sub = escribiendo
     ? "escribiendo…"
@@ -429,25 +386,8 @@ export default function Chat()
         ? `últ. vez ${hora(presencia.ultima_conexion)}`
         : null;
 
-  const osRedimensiona = tecladoAlto > 0 && baseVista.current > 0 && baseVista.current - alturaVista > tecladoAlto * 0.4;
-  const padInferior = tecladoAlto > 0 ? (osRedimensiona ? 0 : tecladoAlto) : insets.bottom;
-
   return (
-    <View
-      onLayout={(e) =>
-      {
-        const h = e.nativeEvent.layout.height;
-        setAlturaVista(h);
-        if (tecladoAlto === 0)
-        {
-          baseVista.current = h;
-        }
-      }}
-      style={[
-        estilos.pantalla,
-        { backgroundColor: colores.fondo, paddingBottom: padInferior },
-      ]}
-    >
+    <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <Stack.Screen
         options={{
           headerTitle: () => (
@@ -464,13 +404,14 @@ export default function Chat()
 
       <FlatList
         ref={lista}
-        data={mensajes}
+        data={invertidos}
         keyExtractor={(m) => m.id}
+        inverted
         style={estilos.flex}
         contentContainerStyle={estilos.lista}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
-        ListHeaderComponent={
+        ListFooterComponent={
           <View style={estilos.banner}>
             <Candado color={colores.muted} tamano={12} />
             <Text style={[estilos.bannerTxt, { color: colores.muted }]}>Cifrado de extremo a extremo</Text>
@@ -479,7 +420,7 @@ export default function Chat()
         renderItem={({ item, index }) =>
         {
           const mio = item.remitente_id === miId.current;
-          const prev = mensajes[index - 1];
+          const prev = invertidos[index + 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const reacciones = agrupar(item.reacciones);
           const citado = item.respuestaTexto
@@ -541,15 +482,14 @@ export default function Chat()
         }}
       />
 
-      {!abajo ? (
+      {lejos ? (
         <Pressable
-          onPress={() => lista.current?.scrollToEnd({ animated: true })}
+          onPress={() => lista.current?.scrollToOffset({ offset: 0, animated: true })}
           style={[estilos.bajar, { backgroundColor: colores.surface, borderColor: colores.borde }]}
         >
           <Text style={{ color: colores.texto, fontSize: 18 }}>{"↓"}</Text>
         </Pressable>
       ) : null}
-
 
       {respondiendo ? (
         <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -578,7 +518,7 @@ export default function Chat()
         </View>
       ) : null}
 
-      <View style={[estilos.inputFila, { borderTopColor: colores.borde }]}>
+      <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
         <TextInput
           value={texto}
           onChangeText={escribir}
@@ -658,7 +598,7 @@ const estilos = StyleSheet.create({
     borderWidth: 1,
   },
   avisoTxt: { flex: 1, fontSize: 13, marginRight: 8 },
-  inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, padding: 12, borderTopWidth: 1 },
+  inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
   campo: { flex: 1, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, maxHeight: 120, fontSize: 15 },
   enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   enviarPresionado: { transform: [{ scale: 0.92 }] },
