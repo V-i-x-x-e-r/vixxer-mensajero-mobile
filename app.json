@@ -39,6 +39,13 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "e796f5a3-5274-418a-bd51-d93a919b715b"
+      }
+    },
+    "owner": "xecsarin"
   }
 }
