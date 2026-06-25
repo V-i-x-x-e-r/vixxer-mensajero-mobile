@@ -85,6 +85,8 @@ export default function Chat()
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
   const [tecladoAlto, setTecladoAlto] = useState(0);
+  const [alturaVista, setAlturaVista] = useState(0);
+  const baseVista = useRef(0);
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
@@ -139,7 +141,14 @@ export default function Chat()
   {
     const verShow = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const verHide = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const mostrar = Keyboard.addListener(verShow, (e) => setTecladoAlto(e.endCoordinates.height));
+    const mostrar = Keyboard.addListener(verShow, (e) =>
+    {
+      setTecladoAlto(e.endCoordinates.height);
+      if (abajoRef.current)
+      {
+        requestAnimationFrame(() => lista.current?.scrollToEnd({ animated: true }));
+      }
+    });
     const ocultar = Keyboard.addListener(verHide, () => setTecladoAlto(0));
     return () =>
     {
@@ -176,7 +185,15 @@ export default function Chat()
       try
       {
         const filas = await api.historial(otroId);
-        const descifrados = await Promise.all(filas.map(async (m) => ({ ...m, texto: await abrir(m) })));
+        const priv = await leer(CLAVE_PRIVADA);
+        let pub = await llavePublicaDe(otroId);
+        let descifrados = filas.map((m) => ({ ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) }));
+        if (descifrados.some((m) => m.texto === null))
+        {
+          pub = await llavePublicaDe(otroId, true);
+          descifrados = descifrados.map((m) => (m.texto === null ? { ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) } : m));
+        }
+        descifrados = descifrados.map((m) => ({ ...m, texto: m.texto ?? "No se pudo descifrar este mensaje" }));
         if (activo)
         {
           setMensajes(descifrados);
@@ -407,11 +424,23 @@ export default function Chat()
         ? `últ. vez ${hora(presencia.ultima_conexion)}`
         : null;
 
+  const osRedimensiona = tecladoAlto > 0 && baseVista.current > 0 && baseVista.current - alturaVista > tecladoAlto * 0.4;
+  const padInferior = tecladoAlto > 0 ? (osRedimensiona ? 0 : tecladoAlto) : insets.bottom;
+
   return (
     <View
+      onLayout={(e) =>
+      {
+        const h = e.nativeEvent.layout.height;
+        setAlturaVista(h);
+        if (tecladoAlto === 0)
+        {
+          baseVista.current = h;
+        }
+      }}
       style={[
         estilos.pantalla,
-        { backgroundColor: colores.fondo, paddingBottom: tecladoAlto > 0 ? tecladoAlto : insets.bottom },
+        { backgroundColor: colores.fondo, paddingBottom: padInferior },
       ]}
     >
       <Stack.Screen
