@@ -176,7 +176,7 @@ const estilos = StyleSheet.create({
   lista: { flex: 1 },
   acciones: { flexDirection: "row", gap: 10, marginBottom: 4 },
   mitad: { flex: 1 },
-  accion: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 16 },
+  accion: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
   accionTxt: { fontSize: 14 },
   seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginTop: 16, marginBottom: 4 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
