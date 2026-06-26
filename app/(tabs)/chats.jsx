@@ -73,9 +73,11 @@ export default function Chats()
           claro = descifrar(c.ultimo_cifrado, c.ultimo_nonce, fresca, priv);
         }
         let texto = claro ?? "Mensaje cifrado";
-        if (texto[0] === "{" && texto.includes("\"t\":\"img\""))
+        if (texto[0] === "{")
         {
-          texto = "Foto";
+          if (texto.includes("\"t\":\"img\"")) { texto = "Foto"; }
+          else if (texto.includes("\"t\":\"video\"")) { texto = "Video"; }
+          else if (texto.includes("\"t\":\"audio\"")) { texto = "Audio"; }
         }
         mapa[c.otro_id] = {
           preview: c.ultimo_remitente_id === miId ? `Tú: ${texto}` : texto,

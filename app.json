@@ -26,6 +26,13 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
+      "expo-video",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Vixxer usa el micrófono para grabar notas de voz."
+        }
+      ],
       [
         "expo-splash-screen",
         {

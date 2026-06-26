@@ -4,9 +4,11 @@ import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
+import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
 import { obtenerSocket, asegurarSocket } from "../../lib/socket";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
+import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { useTema } from "../../components/tema";
@@ -18,6 +20,7 @@ import { Reloj } from "../../components/Reloj";
 import { Flecha } from "../../components/Flecha";
 import { Check } from "../../components/Check";
 import { Clip } from "../../components/Clip";
+import { Microfono } from "../../components/Microfono";
 import { Adjunto } from "../../components/Adjunto";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 
@@ -32,7 +35,7 @@ function leerMedia(texto)
   try
   {
     const obj = JSON.parse(texto);
-    return obj && obj.t === "img" ? obj : null;
+    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio") ? obj : null;
   }
   catch (e)
   {
@@ -114,6 +117,8 @@ export default function Chat()
   const [respondiendo, setRespondiendo] = useState(null);
   const [editando, setEditando] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
+  const [grabando, setGrabando] = useState(false);
+  const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const lista = useRef(null);
   const tecleando = useRef(null);
@@ -346,24 +351,33 @@ export default function Chat()
     await mandar(limpio);
   }
 
-  async function adjuntarImagen()
+  async function adjuntar()
   {
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permiso.granted)
     {
       return;
     }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.6, base64: true });
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.6, videoMaxDuration: 20 });
     if (r.canceled)
     {
       return;
     }
+    const asset = r.assets[0];
+    const esVideo = asset.type === "video";
     setSubiendo(true);
     try
     {
-      const cif = cifrarArchivo(r.assets[0].base64);
+      const base64 = await leerBase64(asset.uri);
+      const cif = cifrarArchivo(base64);
       const { path } = await api.subirMedia(cif.datos);
-      await mandar(JSON.stringify({ t: "img", path, mime: "image/jpeg", k: cif.clave, n: cif.nonce }));
+      await mandar(JSON.stringify({
+        t: esVideo ? "video" : "img",
+        path,
+        mime: asset.mimeType || (esVideo ? "video/mp4" : "image/jpeg"),
+        k: cif.clave,
+        n: cif.nonce,
+      }));
     }
     catch (e)
     {
@@ -371,6 +385,50 @@ export default function Chat()
     finally
     {
       setSubiendo(false);
+    }
+  }
+
+  async function grabarToggle()
+  {
+    if (grabando)
+    {
+      setGrabando(false);
+      setSubiendo(true);
+      try
+      {
+        await grabadora.stop();
+        const uri = grabadora.uri;
+        if (uri)
+        {
+          const base64 = await leerBase64(uri);
+          const cif = cifrarArchivo(base64);
+          const { path } = await api.subirMedia(cif.datos);
+          await mandar(JSON.stringify({ t: "audio", path, mime: "audio/mp4", k: cif.clave, n: cif.nonce }));
+        }
+      }
+      catch (e)
+      {
+      }
+      finally
+      {
+        setSubiendo(false);
+      }
+      return;
+    }
+
+    const permiso = await AudioModule.requestRecordingPermissionsAsync();
+    if (!permiso.granted)
+    {
+      return;
+    }
+    try
+    {
+      await grabadora.prepareToRecordAsync();
+      grabadora.record();
+      setGrabando(true);
+    }
+    catch (e)
+    {
     }
   }
 
@@ -589,32 +647,38 @@ export default function Chat()
 
       <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
         <Pressable
-          onPress={adjuntarImagen}
-          disabled={subiendo}
+          onPress={adjuntar}
+          disabled={subiendo || grabando}
           hitSlop={6}
-          style={({ pressed }) => [estilos.clip, { opacity: subiendo ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
+          style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
         >
           <Clip color={colores.muted} tamano={24} />
         </Pressable>
         <TextInput
           value={texto}
           onChangeText={escribir}
-          placeholder="Mensaje"
-          placeholderTextColor={colores.placeholder}
+          placeholder={grabando ? "Grabando…" : "Mensaje"}
+          placeholderTextColor={grabando ? colores.error : colores.placeholder}
+          editable={!grabando}
           multiline
           style={[estilos.campo, { backgroundColor: colores.surface, borderColor: colores.borde, color: colores.texto }]}
         />
-        <Pressable
-          onPress={enviar}
-          disabled={!texto.trim()}
-          style={({ pressed }) => [
-            estilos.enviar,
-            { backgroundColor: colores.botonFondo, opacity: texto.trim() ? 1 : 0.4 },
-            pressed && estilos.enviarPresionado,
-          ]}
-        >
-          {editando ? <Check color={colores.botonTexto} tamano={20} /> : <Flecha color={colores.botonTexto} tamano={20} />}
-        </Pressable>
+        {texto.trim() || editando ? (
+          <Pressable
+            onPress={enviar}
+            style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && estilos.enviarPresionado]}
+          >
+            {editando ? <Check color={colores.botonTexto} tamano={20} /> : <Flecha color={colores.botonTexto} tamano={20} />}
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={grabarToggle}
+            disabled={subiendo}
+            style={({ pressed }) => [estilos.enviar, { backgroundColor: grabando ? colores.error : colores.botonFondo }, pressed && estilos.enviarPresionado]}
+          >
+            <Microfono color={colores.botonTexto} tamano={20} />
+          </Pressable>
+        )}
       </View>
 
       <AccionesMensaje
