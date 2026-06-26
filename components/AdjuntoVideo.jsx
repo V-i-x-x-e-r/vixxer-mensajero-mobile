@@ -5,10 +5,11 @@ import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
 import { escribirTemp } from "../lib/archivos";
+import { leerCache, guardarCache } from "../lib/mediaCache";
 
 export function AdjuntoVideo({ media, color })
 {
-  const [uri, setUri] = useState(null);
+  const [uri, setUri] = useState(() => leerCache(media.path) || null);
   const player = useVideoPlayer(null, (p) =>
   {
     p.loop = false;
@@ -16,6 +17,10 @@ export function AdjuntoVideo({ media, color })
 
   useEffect(() =>
   {
+    if (uri)
+    {
+      return;
+    }
     let activo = true;
     (async () =>
     {
@@ -28,6 +33,7 @@ export function AdjuntoVideo({ media, color })
         if (claro)
         {
           const archivo = await escribirTemp(claro, "mp4");
+          guardarCache(media.path, archivo);
           if (activo)
           {
             setUri(archivo);
