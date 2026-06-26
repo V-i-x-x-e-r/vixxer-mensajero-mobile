@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Image, Modal, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -118,6 +118,7 @@ export default function Chat()
   const [editando, setEditando] = useState(null);
   const [subiendo, setSubiendo] = useState(false);
   const [grabando, setGrabando] = useState(false);
+  const [previo, setPrevio] = useState(null);
   const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const lista = useRef(null);
@@ -364,17 +365,31 @@ export default function Chat()
       return;
     }
     const asset = r.assets[0];
-    const esVideo = asset.type === "video";
+    setPrevio({
+      uri: asset.uri,
+      esVideo: asset.type === "video",
+      mime: asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg"),
+    });
+  }
+
+  async function confirmarEnvio()
+  {
+    if (!previo)
+    {
+      return;
+    }
+    const actual = previo;
+    setPrevio(null);
     setSubiendo(true);
     try
     {
-      const base64 = await leerBase64(asset.uri);
+      const base64 = await leerBase64(actual.uri);
       const cif = cifrarArchivo(base64);
       const { path } = await api.subirMedia(cif.datos);
       await mandar(JSON.stringify({
-        t: esVideo ? "video" : "img",
+        t: actual.esVideo ? "video" : "img",
         path,
-        mime: asset.mimeType || (esVideo ? "video/mp4" : "image/jpeg"),
+        mime: actual.mime,
         k: cif.clave,
         n: cif.nonce,
       }));
@@ -652,7 +667,7 @@ export default function Chat()
           hitSlop={6}
           style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
         >
-          <Clip color={colores.muted} tamano={24} />
+          <Clip color={colores.muted} tamano={20} />
         </Pressable>
         <TextInput
           value={texto}
@@ -668,7 +683,7 @@ export default function Chat()
             onPress={enviar}
             style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && estilos.enviarPresionado]}
           >
-            {editando ? <Check color={colores.botonTexto} tamano={20} /> : <Flecha color={colores.botonTexto} tamano={20} />}
+            {editando ? <Check color={colores.botonTexto} tamano={18} /> : <Flecha color={colores.botonTexto} tamano={18} />}
           </Pressable>
         ) : (
           <Pressable
@@ -676,7 +691,7 @@ export default function Chat()
             disabled={subiendo}
             style={({ pressed }) => [estilos.enviar, { backgroundColor: grabando ? colores.error : colores.botonFondo }, pressed && estilos.enviarPresionado]}
           >
-            <Microfono color={colores.botonTexto} tamano={20} />
+            <Microfono color={colores.botonTexto} tamano={18} />
           </Pressable>
         )}
       </View>
@@ -691,6 +706,30 @@ export default function Chat()
         onBorrar={borrar}
         onCerrar={() => setSel(null)}
       />
+
+      <Modal visible={!!previo} transparent animationType="fade" onRequestClose={() => setPrevio(null)}>
+        <View style={estilos.previoFondo}>
+          <View style={[estilos.previoTarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            {previo ? (
+              previo.esVideo ? (
+                <View style={estilos.previoVideo}>
+                  <Text style={{ color: colores.muted }}>Video listo para enviar</Text>
+                </View>
+              ) : (
+                <Image source={{ uri: previo.uri }} style={estilos.previoImagen} resizeMode="cover" />
+              )
+            ) : null}
+            <View style={estilos.previoAcciones}>
+              <Pressable onPress={() => setPrevio(null)} style={({ pressed }) => [estilos.previoBoton, { borderColor: colores.borde }, pressed && estilos.enviarPresionado]}>
+                <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={confirmarEnvio} style={({ pressed }) => [estilos.previoBoton, { backgroundColor: colores.botonFondo, borderColor: colores.botonFondo }, pressed && estilos.enviarPresionado]}>
+                <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>Enviar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -741,7 +780,13 @@ const estilos = StyleSheet.create({
   avisoTxt: { flex: 1, fontSize: 13, marginRight: 8 },
   inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
   campo: { flex: 1, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, maxHeight: 120, fontSize: 15 },
-  enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  clip: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
+  enviar: { width: 38, height: 38, borderRadius: 19, alignItems: "center", justifyContent: "center" },
+  clip: { width: 32, height: 38, alignItems: "center", justifyContent: "center" },
   enviarPresionado: { transform: [{ scale: 0.92 }] },
+  previoFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 24 },
+  previoTarjeta: { width: "100%", maxWidth: 360, borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
+  previoImagen: { width: "100%", height: 360, borderRadius: 12 },
+  previoVideo: { width: "100%", height: 160, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  previoAcciones: { flexDirection: "row", gap: 10 },
+  previoBoton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
 });

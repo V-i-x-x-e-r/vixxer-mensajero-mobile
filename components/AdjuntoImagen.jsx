@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Image, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Image, Pressable, Modal, ActivityIndicator, StyleSheet } from "react-native";
 import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
@@ -8,6 +8,7 @@ export function AdjuntoImagen({ media, color })
 {
   const [uri, setUri] = useState(null);
   const [error, setError] = useState(false);
+  const [abierta, setAbierta] = useState(false);
 
   useEffect(() =>
   {
@@ -40,19 +41,32 @@ export function AdjuntoImagen({ media, color })
     return () => { activo = false; };
   }, [media.path]);
 
-  if (uri)
+  if (!uri)
   {
-    return <Image source={{ uri }} style={estilos.imagen} resizeMode="cover" />;
+    return (
+      <View style={estilos.caja}>
+        {!error ? <ActivityIndicator color={color} /> : null}
+      </View>
+    );
   }
 
   return (
-    <View style={estilos.caja}>
-      {!error ? <ActivityIndicator color={color} /> : null}
-    </View>
+    <>
+      <Pressable onPress={() => setAbierta(true)}>
+        <Image source={{ uri }} style={estilos.imagen} resizeMode="cover" />
+      </Pressable>
+      <Modal visible={abierta} transparent animationType="fade" onRequestClose={() => setAbierta(false)}>
+        <Pressable style={estilos.fondo} onPress={() => setAbierta(false)}>
+          <Image source={{ uri }} style={estilos.completa} resizeMode="contain" />
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
 const estilos = StyleSheet.create({
   imagen: { width: 210, height: 260, borderRadius: 12 },
   caja: { width: 210, height: 260, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  completa: { width: "100%", height: "100%" },
 });
