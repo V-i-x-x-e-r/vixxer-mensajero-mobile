@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Image, Modal, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -107,6 +107,7 @@ export default function Chat()
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
+  const esWeb = Platform.OS === "web";
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [texto, setTexto] = useState("");
@@ -224,6 +225,25 @@ export default function Chat()
       }
     }
 
+    function alEditado(data)
+    {
+      abrir({ contenido_cifrado: data.contenido_cifrado, nonce: data.nonce }).then((t) =>
+      {
+        if (activo)
+        {
+          setMensajes((prev) => prev.map((m) => (m.id === data.id ? { ...m, texto: t, editado: true } : m)));
+        }
+      });
+    }
+
+    function alBorrado(data)
+    {
+      if (activo)
+      {
+        setMensajes((prev) => prev.filter((m) => m.id !== data.id));
+      }
+    }
+
     (async () =>
     {
       miId.current = await leer(MI_ID);
@@ -257,6 +277,8 @@ export default function Chat()
         socket.on("mensaje:entregado", alEstado);
         socket.on("mensaje:leido", alEstado);
         socket.on("mensaje:reaccion", alReaccion);
+        socket.on("mensaje:editado", alEditado);
+        socket.on("mensaje:borrado", alBorrado);
       }
     })();
 
@@ -270,6 +292,8 @@ export default function Chat()
         socket.off("mensaje:entregado", alEstado);
         socket.off("mensaje:leido", alEstado);
         socket.off("mensaje:reaccion", alReaccion);
+        socket.off("mensaje:editado", alEditado);
+        socket.off("mensaje:borrado", alBorrado);
       }
     };
   }, [otroId]);
@@ -396,6 +420,7 @@ export default function Chat()
     }
     catch (e)
     {
+      Alert.alert("No se pudo enviar el archivo", "Revisa tu conexión e intenta de nuevo.");
     }
     finally
     {
@@ -423,6 +448,7 @@ export default function Chat()
       }
       catch (e)
       {
+        Alert.alert("No se pudo enviar la nota de voz", "Revisa tu conexión e intenta de nuevo.");
       }
       finally
       {
@@ -661,14 +687,16 @@ export default function Chat()
       ) : null}
 
       <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
-        <Pressable
-          onPress={adjuntar}
-          disabled={subiendo || grabando}
-          hitSlop={6}
-          style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
-        >
-          <Clip color={colores.muted} tamano={20} />
-        </Pressable>
+        {!esWeb ? (
+          <Pressable
+            onPress={adjuntar}
+            disabled={subiendo || grabando}
+            hitSlop={6}
+            style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
+          >
+            <Clip color={colores.muted} tamano={20} />
+          </Pressable>
+        ) : null}
         <TextInput
           value={texto}
           onChangeText={escribir}
@@ -678,10 +706,11 @@ export default function Chat()
           multiline
           style={[estilos.campo, { backgroundColor: colores.surface, borderColor: colores.borde, color: colores.texto }]}
         />
-        {texto.trim() || editando ? (
+        {texto.trim() || editando || esWeb ? (
           <Pressable
             onPress={enviar}
-            style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && estilos.enviarPresionado]}
+            disabled={esWeb && !texto.trim() && !editando}
+            style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo, opacity: esWeb && !texto.trim() && !editando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
           >
             {editando ? <Check color={colores.botonTexto} tamano={18} /> : <Flecha color={colores.botonTexto} tamano={18} />}
           </Pressable>

@@ -3,15 +3,20 @@ import { View, Image, Pressable, Modal, ActivityIndicator, StyleSheet } from "re
 import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
+import { leerCache, guardarCache } from "../lib/mediaCache";
 
 export function AdjuntoImagen({ media, color })
 {
-  const [uri, setUri] = useState(null);
+  const [uri, setUri] = useState(() => leerCache(media.path) || null);
   const [error, setError] = useState(false);
   const [abierta, setAbierta] = useState(false);
 
   useEffect(() =>
   {
+    if (uri)
+    {
+      return;
+    }
     let activo = true;
     (async () =>
     {
@@ -23,7 +28,9 @@ export function AdjuntoImagen({ media, color })
         const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
         if (activo && claro)
         {
-          setUri(`data:${media.mime};base64,${claro}`);
+          const dataUri = `data:${media.mime};base64,${claro}`;
+          guardarCache(media.path, dataUri);
+          setUri(dataUri);
         }
         else if (activo)
         {
