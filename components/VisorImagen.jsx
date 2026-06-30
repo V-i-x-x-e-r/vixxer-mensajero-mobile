@@ -1,5 +1,7 @@
-import { useRef } from "react";
-import { Animated, PanResponder, StyleSheet } from "react-native";
+import { useRef, useState } from "react";
+import { Animated, PanResponder, Pressable, Text, StyleSheet } from "react-native";
+import * as MediaLibrary from "expo-media-library";
+import { escribirTemp } from "../lib/archivos";
 
 const ZOOM = 2.5;
 
@@ -8,6 +10,30 @@ export function VisorImagen({ uri, onCerrar })
   const escala = useRef(new Animated.Value(1)).current;
   const trasladar = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   const estado = useRef({ zoom: false, baseX: 0, baseY: 0, ultimoTap: 0 }).current;
+  const [guardado, setGuardado] = useState("");
+
+  async function guardar()
+  {
+    setGuardado("Guardando…");
+    try
+    {
+      const permiso = await MediaLibrary.requestPermissionsAsync();
+      if (!permiso.granted)
+      {
+        setGuardado("Sin permiso");
+        return;
+      }
+      const base64 = uri.includes(",") ? uri.split(",")[1] : uri;
+      const archivo = await escribirTemp(base64, "jpg");
+      await MediaLibrary.saveToLibraryAsync(archivo);
+      setGuardado("Guardado ✓");
+    }
+    catch (e)
+    {
+      setGuardado("No se pudo guardar");
+    }
+    setTimeout(() => setGuardado(""), 1800);
+  }
 
   function alternarZoom()
   {
@@ -67,20 +93,29 @@ export function VisorImagen({ uri, onCerrar })
   })).current;
 
   return (
-    <Animated.View style={estilos.fondo} {...responder.panHandlers}>
-      <Animated.Image
-        source={{ uri }}
-        resizeMode="contain"
-        style={[
-          estilos.img,
-          { transform: [{ translateX: trasladar.x }, { translateY: trasladar.y }, { scale: escala }] },
-        ]}
-      />
+    <Animated.View style={estilos.fondo}>
+      <Animated.View style={estilos.zona} {...responder.panHandlers}>
+        <Animated.Image
+          source={{ uri }}
+          resizeMode="contain"
+          style={[
+            estilos.img,
+            { transform: [{ translateX: trasladar.x }, { translateY: trasladar.y }, { scale: escala }] },
+          ]}
+        />
+      </Animated.View>
+
+      <Pressable onPress={guardar} style={({ pressed }) => [estilos.guardar, pressed && { opacity: 0.6 }]}>
+        <Text style={estilos.guardarTxt}>{guardado || "Guardar"}</Text>
+      </Pressable>
     </Animated.View>
   );
 }
 
 const estilos = StyleSheet.create({
-  fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", alignItems: "center", justifyContent: "center" },
+  fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)" },
+  zona: { flex: 1, alignItems: "center", justifyContent: "center" },
   img: { width: "100%", height: "100%" },
+  guardar: { position: "absolute", bottom: 48, alignSelf: "center", paddingVertical: 12, paddingHorizontal: 28, borderRadius: 24, backgroundColor: "rgba(0,0,0,0.6)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
+  guardarTxt: { color: "#FFF", fontSize: 15, fontWeight: "600" },
 });

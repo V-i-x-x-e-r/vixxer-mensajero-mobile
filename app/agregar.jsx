@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import * as api from "../lib/api";
 import { useTema } from "../components/tema";
+import { fuentes } from "../assets/themes/temas";
 import { Campo } from "../components/Campo";
 import { Boton } from "../components/Boton";
+import { EscanerQR } from "../components/EscanerQR";
 
 export default function Agregar()
 {
@@ -11,15 +13,21 @@ export default function Agregar()
   const [codigo, setCodigo] = useState("");
   const [estado, setEstado] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [escaneando, setEscaneando] = useState(false);
 
-  async function enviar()
+  async function enviar(valor)
   {
+    const codigoFinal = (valor ?? codigo).trim();
+    if (!codigoFinal)
+    {
+      return;
+    }
     setEstado("");
     setCargando(true);
 
     try
     {
-      await api.solicitarAmigo(codigo.trim());
+      await api.solicitarAmigo(codigoFinal);
       setEstado("Solicitud enviada");
       setCodigo("");
     }
@@ -48,12 +56,19 @@ export default function Agregar()
     }
   }
 
+  function alLeerQR(valor)
+  {
+    setEscaneando(false);
+    setCodigo(valor);
+    enviar(valor);
+  }
+
   const ok = estado === "Solicitud enviada";
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <Text style={[estilos.ayuda, { color: colores.muted }]}>
-        Pide a tu contacto su código de amigo y escríbelo aquí.
+        Pide a tu contacto su código de amigo y escríbelo, o escanea su código QR.
       </Text>
       <Campo
         valor={codigo}
@@ -63,7 +78,13 @@ export default function Agregar()
         autoCorrect={false}
       />
       {estado ? <Text style={{ color: ok ? colores.texto : colores.error, fontSize: 14 }}>{estado}</Text> : null}
-      <Boton titulo="Enviar solicitud" onPress={enviar} cargando={cargando} />
+      <Boton titulo="Enviar solicitud" onPress={() => enviar()} cargando={cargando} />
+
+      <Pressable onPress={() => setEscaneando(true)} style={({ pressed }) => [estilos.escanear, { borderColor: colores.borde }, pressed && { opacity: 0.6 }]}>
+        <Text style={[estilos.escanearTxt, { color: colores.texto }]}>Escanear código QR</Text>
+      </Pressable>
+
+      <EscanerQR visible={escaneando} onLeido={alLeerQR} onCerrar={() => setEscaneando(false)} />
     </View>
   );
 }
@@ -71,4 +92,6 @@ export default function Agregar()
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, padding: 20, gap: 16 },
   ayuda: { fontSize: 14, lineHeight: 20 },
+  escanear: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
+  escanearTxt: { fontSize: 15, fontFamily: fuentes.media },
 });
