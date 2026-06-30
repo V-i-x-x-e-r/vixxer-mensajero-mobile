@@ -13,6 +13,8 @@ import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
 import { CodigoQR } from "../components/CodigoQR";
+import { ConfigurarPin } from "../components/ConfigurarPin";
+import { tienePin, quitarPin } from "../lib/pin";
 
 export default function Ajustes()
 {
@@ -22,6 +24,8 @@ export default function Ajustes()
   const [avatar, setAvatar] = useState(null);
   const [copiado, setCopiado] = useState(false);
   const [qr, setQr] = useState(false);
+  const [pinActivo, setPinActivo] = useState(false);
+  const [configPin, setConfigPin] = useState(false);
   const [prefs, setPrefs] = useState({ mostrar_conexion: true, mostrar_acuses: true });
   const [confirmar, setConfirmar] = useState(false);
 
@@ -34,7 +38,21 @@ export default function Ajustes()
       setAvatar(d.avatar_url);
     }).catch(() => {});
     api.preferencias().then(setPrefs).catch(() => {});
+    tienePin().then(setPinActivo);
   }, []);
+
+  function alternarPin(valor)
+  {
+    if (valor)
+    {
+      setConfigPin(true);
+    }
+    else
+    {
+      quitarPin();
+      setPinActivo(false);
+    }
+  }
 
   async function cambiarFoto()
   {
@@ -136,6 +154,16 @@ export default function Ajustes()
           ios_backgroundColor={colores.borde}
         />
       </View>
+      <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Bloqueo con PIN</Text>
+        <Switch
+          value={pinActivo}
+          onValueChange={alternarPin}
+          trackColor={{ true: colores.texto, false: colores.borde }}
+          thumbColor={colores.fondo}
+          ios_backgroundColor={colores.borde}
+        />
+      </View>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
       <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
@@ -146,6 +174,12 @@ export default function Ajustes()
       </ScrollView>
 
       <CodigoQR visible={qr} codigo={codigo} onCerrar={() => setQr(false)} />
+
+      <ConfigurarPin
+        visible={configPin}
+        onListo={() => { setConfigPin(false); setPinActivo(true); }}
+        onCerrar={() => setConfigPin(false)}
+      />
 
       <Confirmacion
         visible={confirmar}
