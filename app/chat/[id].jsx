@@ -29,6 +29,7 @@ import { AccionesMensaje } from "../../components/AccionesMensaje";
 import { SelectorContacto } from "../../components/SelectorContacto";
 import { Reenviar } from "../../components/Reenviar";
 import { Bote } from "../../components/Bote";
+import { Lupa } from "../../components/Lupa";
 
 const GRIS_VISTO = "#8E8E93";
 
@@ -132,6 +133,8 @@ export default function Chat()
   const [reenviadoA, setReenviadoA] = useState(null);
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccionados, setSeleccionados] = useState([]);
+  const [buscando, setBuscando] = useState(false);
+  const [consulta, setConsulta] = useState("");
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -141,7 +144,13 @@ export default function Chat()
   const tecleando = useRef(null);
   const cargandoMas = useRef(false);
 
-  const invertidos = useMemo(() => mensajes.slice().reverse(), [mensajes]);
+  const invertidos = useMemo(() =>
+  {
+    const base = buscando && consulta.trim()
+      ? mensajes.filter((m) => !leerMedia(m.texto) && m.texto.toLowerCase().includes(consulta.trim().toLowerCase()))
+      : mensajes;
+    return base.slice().reverse();
+  }, [mensajes, buscando, consulta]);
 
   function marcarLeidos(filas)
   {
@@ -824,8 +833,38 @@ export default function Chat()
               </View>
             </Pressable>
           ),
+          headerRight: () => (
+            <Pressable
+              onPress={() =>
+              {
+                setBuscando((b) => !b);
+                setConsulta("");
+              }}
+              hitSlop={8}
+              style={({ pressed }) => pressed && estilos.presionadoLeve}
+            >
+              <Lupa color={colores.texto} tamano={20} />
+            </Pressable>
+          ),
         }}
       />
+
+      {buscando ? (
+        <View style={[estilos.buscar, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Lupa color={colores.muted} tamano={16} />
+          <TextInput
+            value={consulta}
+            onChangeText={setConsulta}
+            placeholder="Buscar en la conversación"
+            placeholderTextColor={colores.placeholder}
+            autoFocus
+            style={[estilos.buscarCampo, { color: colores.texto }]}
+          />
+          <Pressable onPress={() => { setBuscando(false); setConsulta(""); }} hitSlop={8}>
+            <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <FlatList
         ref={lista}
@@ -937,6 +976,12 @@ export default function Chat()
         <View style={[estilos.capa, estilos.vacioCentro]} pointerEvents="none">
           <Text style={[estilos.vacioTitulo, { color: colores.texto }]}>Aquí empieza tu conversación</Text>
           <Text style={[estilos.vacioTxt, { color: colores.muted }]}>Envía el primer mensaje para comenzar.</Text>
+        </View>
+      ) : null}
+
+      {buscando && consulta.trim() && invertidos.length === 0 ? (
+        <View style={[estilos.capa, estilos.vacioCentro]} pointerEvents="none">
+          <Text style={[estilos.vacioTxt, { color: colores.muted }]}>Sin resultados.</Text>
         </View>
       ) : null}
 
@@ -1130,6 +1175,8 @@ const estilos = StyleSheet.create({
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
+  buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 42, marginHorizontal: 12, marginTop: 8 },
+  buscarCampo: { flex: 1, fontSize: 15, paddingVertical: 0 },
   selBar: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
   selCount: { flex: 1, fontSize: 16, fontFamily: fuentes.semibold },
   selAcciones: { flexDirection: "row", alignItems: "center", gap: 22 },
