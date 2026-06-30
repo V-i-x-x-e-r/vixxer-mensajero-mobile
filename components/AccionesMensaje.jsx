@@ -7,6 +7,7 @@ import { Reenviar } from "./Reenviar";
 import { Copiar } from "./Copiar";
 import { Lapiz } from "./Lapiz";
 import { Bote } from "./Bote";
+import { Check } from "./Check";
 
 const REACCIONES = ["\u{1F44D}", "❤️", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
 const ANCHO = 300;
@@ -22,7 +23,7 @@ function Accion({ icono, etiqueta, onPress, color })
   );
 }
 
-export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder, onReenviar, onCopiar, onEditar, onBorrar, onCerrar })
+export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onCerrar })
 {
   const { colores } = useTema();
   const entrada = useRef(null);
@@ -79,6 +80,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder
           <View style={estilos.acciones}>
             <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} />
             <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} />
+            <Accion icono={<Check color={colores.texto} tamano={20} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} />
             {esMedia ? null : <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />}
             {esMio && !esMedia ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
             {esMio ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
@@ -116,8 +118,8 @@ const estilos = StyleSheet.create({
   emoji: { fontSize: 24 },
   mas: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   separador: { height: 1, marginVertical: 2 },
-  acciones: { flexDirection: "row", justifyContent: "space-around" },
-  accion: { alignItems: "center", gap: 3, paddingVertical: 4, paddingHorizontal: 6 },
+  acciones: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", rowGap: 6 },
+  accion: { width: 68, alignItems: "center", gap: 3, paddingVertical: 4 },
   accionTxt: { fontSize: 11, fontFamily: fuentes.media },
   presionado: { opacity: 0.6 },
   oculto: { position: "absolute", width: 1, height: 1, opacity: 0 },
