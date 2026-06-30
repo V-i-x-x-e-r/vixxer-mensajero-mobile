@@ -83,6 +83,20 @@ function hora(iso)
   return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
 }
 
+function detalleTexto(item, mio)
+{
+  const partes = [`Enviado ${hora(item.enviado_en)}`];
+  if (mio && item.entregado_en)
+  {
+    partes.push(`Entregado ${hora(item.entregado_en)}`);
+  }
+  if (mio && item.leido_en)
+  {
+    partes.push(`Visto ${hora(item.leido_en)}`);
+  }
+  return partes.join("  ·  ");
+}
+
 function agrupar(reacciones)
 {
   const conteo = {};
@@ -135,6 +149,7 @@ export default function Chat()
   const [seleccionados, setSeleccionados] = useState([]);
   const [buscando, setBuscando] = useState(false);
   const [consulta, setConsulta] = useState("");
+  const [detalle, setDetalle] = useState(null);
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -913,7 +928,7 @@ export default function Chat()
 
               <BurbujaMedible
                 onSeleccionar={seleccionando ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
-                onPress={seleccionando ? () => alternarSeleccion(item) : undefined}
+                onPress={seleccionando ? () => alternarSeleccion(item) : () => setDetalle((p) => (p === item.id ? null : item.id))}
                 style={[
                   estilos.burbuja,
                   mediaSolo
@@ -985,8 +1000,10 @@ export default function Chat()
                 </View>
               ) : null}
 
-              {mio && index === 0 && item.leido_en ? (
-                <Text style={[estilos.visto, { color: colores.muted }]}>Visto {hora(item.leido_en)}</Text>
+              {detalle === item.id && !String(item.id).startsWith("local-") ? (
+                <Text style={[estilos.visto, mio ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" }, { color: colores.muted }]}>
+                  {detalleTexto(item, mio)}
+                </Text>
               ) : null}
             </View>
           );
