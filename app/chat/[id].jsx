@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, StyleSheet } from "react-native";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, Keyboard, StyleSheet } from "react-native";
+import { Stack, useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -123,6 +123,7 @@ export default function Chat()
   const [subiendo, setSubiendo] = useState(false);
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
+  const [tecladoAlto, setTecladoAlto] = useState(0);
   const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const lista = useRef(null);
@@ -169,6 +170,19 @@ export default function Chat()
   {
     api.presencia(otroId).then(setPresencia).catch(() => {});
   }, [otroId]);
+
+  useEffect(() =>
+  {
+    const abrir = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const cerrar = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const subir = Keyboard.addListener(abrir, (e) => setTecladoAlto(e.endCoordinates.height));
+    const bajar = Keyboard.addListener(cerrar, () => setTecladoAlto(0));
+    return () =>
+    {
+      subir.remove();
+      bajar.remove();
+    };
+  }, []);
 
   async function abrir(fila)
   {
@@ -391,6 +405,15 @@ export default function Chat()
     await mandar(limpio);
   }
 
+  function aMedia(asset)
+  {
+    return {
+      uri: asset.uri,
+      esVideo: asset.type === "video",
+      mime: asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg"),
+    };
+  }
+
   async function adjuntar()
   {
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -398,17 +421,57 @@ export default function Chat()
     {
       return;
     }
-    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images", "videos"], quality: 0.6, videoMaxDuration: 20 });
+    const r = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      quality: 0.6,
+      videoMaxDuration: 20,
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
+    });
     if (r.canceled)
     {
       return;
     }
-    const asset = r.assets[0];
-    setPrevio({
-      uri: asset.uri,
-      esVideo: asset.type === "video",
-      mime: asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg"),
-    });
+    if (r.assets.length === 1)
+    {
+      setPrevio(aMedia(r.assets[0]));
+      return;
+    }
+    await enviarVarios(r.assets.map(aMedia));
+  }
+
+  async function enviarArchivo(actual)
+  {
+    const base64 = await leerBase64(actual.uri);
+    const cif = cifrarArchivo(base64);
+    const { path } = await api.subirMedia(cif.datos);
+    await mandar(JSON.stringify({
+      t: actual.esVideo ? "video" : "img",
+      path,
+      mime: actual.mime,
+      k: cif.clave,
+      n: cif.nonce,
+    }));
+  }
+
+  async function enviarVarios(archivos)
+  {
+    setSubiendo(true);
+    try
+    {
+      for (const actual of archivos)
+      {
+        await enviarArchivo(actual);
+      }
+    }
+    catch (e)
+    {
+      Alert.alert("No se pudieron enviar todos los archivos", "Revisa tu conexión e intenta de nuevo.");
+    }
+    finally
+    {
+      setSubiendo(false);
+    }
   }
 
   async function confirmarEnvio()
@@ -422,16 +485,7 @@ export default function Chat()
     setSubiendo(true);
     try
     {
-      const base64 = await leerBase64(actual.uri);
-      const cif = cifrarArchivo(base64);
-      const { path } = await api.subirMedia(cif.datos);
-      await mandar(JSON.stringify({
-        t: actual.esVideo ? "video" : "img",
-        path,
-        mime: actual.mime,
-        k: cif.clave,
-        n: cif.nonce,
-      }));
+      await enviarArchivo(actual);
     }
     catch (e)
     {
@@ -568,13 +622,16 @@ export default function Chat()
       <Stack.Screen
         options={{
           headerTitle: () => (
-            <View style={estilos.encabezado}>
+            <Pressable
+              onPress={() => router.push({ pathname: "/perfil/[id]", params: { id: otroId, usuario: usuario || "", avatar: avatar || "" } })}
+              style={({ pressed }) => [estilos.encabezado, pressed && estilos.presionadoLeve]}
+            >
               <Avatar nombre={usuario || ""} uri={avatar || null} tamano={32} />
               <View>
                 <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{usuario || "Conversación"}</Text>
                 {sub ? <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{sub}</Text> : null}
               </View>
-            </View>
+            </Pressable>
           ),
         }}
       />
@@ -714,7 +771,7 @@ export default function Chat()
         </View>
       ) : null}
 
-      <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
+      <View style={[estilos.inputFila, { borderTopColor: colores.borde, marginBottom: tecladoAlto, paddingBottom: 12 + (tecladoAlto > 0 ? 0 : insets.bottom) }]}>
         {!esWeb ? (
           <Pressable
             onPress={adjuntar}
@@ -796,6 +853,7 @@ const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
   flex: { flex: 1 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
+  presionadoLeve: { opacity: 0.7 },
   encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
   encabezadoSub: { fontSize: 12 },
   lista: { padding: 14, gap: 6 },

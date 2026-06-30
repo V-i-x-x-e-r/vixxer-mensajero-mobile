@@ -26,6 +26,7 @@ function Navegacion()
       <Stack.Screen name="agregar" options={{ title: "Agregar contacto" }} />
       <Stack.Screen name="solicitudes" options={{ title: "Solicitudes" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "Conversación" }} />
+      <Stack.Screen name="perfil/[id]" options={{ title: "Contacto" }} />
     </Stack>
   );
 }
