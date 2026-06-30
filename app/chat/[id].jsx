@@ -12,6 +12,7 @@ import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
+import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
@@ -111,6 +112,7 @@ export default function Chat()
   const esWeb = Platform.OS === "web";
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
+  const [cargado, setCargado] = useState(false);
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
   const [presencia, setPresencia] = useState(null);
@@ -276,6 +278,10 @@ export default function Chat()
       }
       catch (e)
       {
+      }
+      if (activo)
+      {
+        setCargado(true);
       }
 
       socket = await asegurarSocket();
@@ -659,6 +665,19 @@ export default function Chat()
         }}
       />
 
+      {!cargado && mensajes.length === 0 ? (
+        <View style={estilos.capa} pointerEvents="none">
+          <ChatEsqueleto />
+        </View>
+      ) : null}
+
+      {cargado && mensajes.length === 0 ? (
+        <View style={[estilos.capa, estilos.vacioCentro]} pointerEvents="none">
+          <Text style={[estilos.vacioTitulo, { color: colores.texto }]}>Aquí empieza tu conversación</Text>
+          <Text style={[estilos.vacioTxt, { color: colores.muted }]}>Envía el primer mensaje para comenzar.</Text>
+        </View>
+      ) : null}
+
       {lejos ? (
         <Pressable
           onPress={() => lista.current?.scrollToOffset({ offset: 0, animated: true })}
@@ -737,6 +756,7 @@ export default function Chat()
       <AccionesMensaje
         sel={sel}
         esMio={sel ? sel.mensaje.remitente_id === miId.current : false}
+        esMedia={sel ? !!leerMedia(sel.mensaje.texto) : false}
         onReaccionar={reaccionar}
         onResponder={responder}
         onCopiar={copiar}
@@ -779,6 +799,10 @@ const estilos = StyleSheet.create({
   encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
   encabezadoSub: { fontSize: 12 },
   lista: { padding: 14, gap: 6 },
+  capa: { position: "absolute", top: 0, left: 0, right: 0, bottom: 64 },
+  vacioCentro: { alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 6 },
+  vacioTitulo: { fontSize: 16, fontFamily: fuentes.semibold, textAlign: "center" },
+  vacioTxt: { fontSize: 13, textAlign: "center" },
   banner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
   bannerTxt: { fontSize: 12 },
   dia: { alignItems: "center", marginVertical: 8 },

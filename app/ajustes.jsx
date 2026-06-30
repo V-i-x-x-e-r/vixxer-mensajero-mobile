@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, Pressable, Switch, ScrollView, StyleSheet } from "react-native";
 import { router } from "expo-router";
+import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import * as api from "../lib/api";
@@ -11,6 +12,7 @@ import { fuentes } from "../assets/themes/temas";
 import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
+import { Candado } from "../components/Candado";
 
 export default function Ajustes()
 {
@@ -131,10 +133,21 @@ export default function Ajustes()
         />
       </View>
 
+      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>SEGURIDAD</Text>
+      <View style={[estilos.fila, { borderColor: colores.borde }]}>
+        <View style={estilos.filaIzq}>
+          <Candado color={colores.muted} tamano={16} />
+          <Text style={[estilos.etiqueta, { color: colores.texto }]}>Cifrado de extremo a extremo</Text>
+        </View>
+      </View>
+      <Text style={[estilos.nota, { color: colores.muted }]}>Solo tú y la otra persona pueden leer los mensajes. Ni nosotros podemos.</Text>
+
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
       <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
       </Pressable>
+
+      <Text style={[estilos.version, { color: colores.muted }]}>Vixxer {Constants.expoConfig?.version || ""}</Text>
       </ScrollView>
 
       <Confirmacion
@@ -170,7 +183,10 @@ const estilos = StyleSheet.create({
     paddingVertical: 10,
   },
   etiqueta: { fontSize: 15 },
+  filaIzq: { flexDirection: "row", alignItems: "center", gap: 10 },
+  nota: { fontSize: 12, marginTop: 8, lineHeight: 17 },
   salir: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
   salirTxt: { fontSize: 15, fontWeight: "600" },
+  version: { fontSize: 12, textAlign: "center", marginTop: 28 },
   presionado: { opacity: 0.6 },
 });

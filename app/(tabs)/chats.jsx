@@ -19,6 +19,7 @@ import { Pin } from "../../components/Pin";
 import { Silencio } from "../../components/Silencio";
 import { Bote } from "../../components/Bote";
 import { EstadoLista } from "../../components/EstadoLista";
+import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 
 function cuando(iso)
 {
@@ -267,6 +268,7 @@ export default function Chats()
             error={error}
             vacio="Aún no tienes conversaciones. Ve a Amigos para empezar una."
             onReintentar={reintentar}
+            esqueleto={<ListaChatsEsqueleto />}
           />
         }
         ItemSeparatorComponent={() => <View style={[estilos.separadorFila, { backgroundColor: colores.borde }]} />}
