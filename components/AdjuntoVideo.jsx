@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
@@ -7,9 +7,19 @@ import { descifrarArchivo } from "../lib/crypto";
 import { escribirTemp } from "../lib/archivos";
 import { leerCache, guardarCache } from "../lib/mediaCache";
 
+function Play({ tamano = 52 })
+{
+  return (
+    <View style={[estilos.boton, { width: tamano, height: tamano, borderRadius: tamano / 2 }]}>
+      <View style={estilos.triangulo} />
+    </View>
+  );
+}
+
 export function AdjuntoVideo({ media, color })
 {
   const [uri, setUri] = useState(() => leerCache(media.path) || null);
+  const [reproduciendo, setReproduciendo] = useState(false);
   const player = useVideoPlayer(null, (p) =>
   {
     p.loop = false;
@@ -55,6 +65,30 @@ export function AdjuntoVideo({ media, color })
     }
   }, [uri]);
 
+  useEffect(() =>
+  {
+    const fin = player.addListener("playToEnd", () =>
+    {
+      player.currentTime = 0;
+      setReproduciendo(false);
+    });
+    return () => fin.remove();
+  }, [player]);
+
+  function alternar()
+  {
+    if (reproduciendo)
+    {
+      player.pause();
+      setReproduciendo(false);
+    }
+    else
+    {
+      player.play();
+      setReproduciendo(true);
+    }
+  }
+
   if (!uri)
   {
     return (
@@ -64,10 +98,34 @@ export function AdjuntoVideo({ media, color })
     );
   }
 
-  return <VideoView player={player} style={estilos.video} nativeControls />;
+  return (
+    <Pressable onPress={alternar} style={estilos.miniatura}>
+      <VideoView player={player} style={estilos.video} contentFit="cover" nativeControls={false} />
+      {!reproduciendo ? (
+        <View style={estilos.capa} pointerEvents="none">
+          <Play tamano={52} />
+        </View>
+      ) : null}
+    </Pressable>
+  );
 }
 
 const estilos = StyleSheet.create({
-  video: { width: 210, height: 260, borderRadius: 12, backgroundColor: "#000" },
-  caja: { width: 210, height: 260, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  miniatura: { width: 240, height: 300, borderRadius: 14, overflow: "hidden" },
+  video: { width: "100%", height: "100%", backgroundColor: "#000" },
+  caja: { width: 240, height: 300, borderRadius: 14, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
+  capa: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  boton: { backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
+  triangulo:
+  {
+    width: 0,
+    height: 0,
+    borderTopWidth: 11,
+    borderBottomWidth: 11,
+    borderLeftWidth: 18,
+    borderTopColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "#fff",
+    marginLeft: 5,
+  },
 });

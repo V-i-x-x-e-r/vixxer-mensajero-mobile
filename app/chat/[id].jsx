@@ -898,6 +898,8 @@ export default function Chat()
           const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoCrudo;
 
           const elegido = seleccionados.includes(item.id);
+          const mediaVisual = media && (media.t === "img" || media.t === "video");
+          const mediaSolo = mediaVisual && !citado;
 
           return (
             <View style={elegido ? { backgroundColor: colores.surface } : null}>
@@ -914,9 +916,11 @@ export default function Chat()
                 onPress={seleccionando ? () => alternarSeleccion(item) : undefined}
                 style={[
                   estilos.burbuja,
-                  mio
-                    ? { alignSelf: "flex-end", backgroundColor: colores.botonFondo }
-                    : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
+                  mediaSolo
+                    ? { alignSelf: mio ? "flex-end" : "flex-start", padding: 0, overflow: "hidden" }
+                    : mio
+                      ? { alignSelf: "flex-end", backgroundColor: colores.botonFondo }
+                      : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
                 ]}
               >
                 {citado ? (
@@ -933,23 +937,36 @@ export default function Chat()
                   <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
                 )}
 
-                <View style={estilos.meta}>
-                  {item.editado ? (
-                    <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
-                  ) : null}
-                  <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
-                  {mio ? (
-                    item.estado === "fallido"
-                      ? (
-                          <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
-                            <Text style={[estilos.reintentarTxt, { color: colores.error }]}>no enviado · reintentar</Text>
-                          </Pressable>
-                        )
-                      : item.estado === "enviando"
-                        ? <Reloj color={GRIS_VISTO} tamano={11} />
-                        : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
-                  ) : null}
-                </View>
+                {mediaSolo ? (
+                  <View style={estilos.metaMedia} pointerEvents="box-none">
+                    <Text style={estilos.horaMedia}>{hora(item.enviado_en)}</Text>
+                    {mio ? (
+                      item.estado === "fallido"
+                        ? <Pressable onPress={() => reintentar(item)} hitSlop={8}><Text style={[estilos.reintentarTxt, { color: colores.error }]}>reintentar</Text></Pressable>
+                        : item.estado === "enviando"
+                          ? <Reloj color="#FFF" tamano={11} />
+                          : <Visto color="#FFF" dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
+                    ) : null}
+                  </View>
+                ) : (
+                  <View style={estilos.meta}>
+                    {item.editado ? (
+                      <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
+                    ) : null}
+                    <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
+                    {mio ? (
+                      item.estado === "fallido"
+                        ? (
+                            <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
+                              <Text style={[estilos.reintentarTxt, { color: colores.error }]}>no enviado · reintentar</Text>
+                            </Pressable>
+                          )
+                        : item.estado === "enviando"
+                          ? <Reloj color={GRIS_VISTO} tamano={11} />
+                          : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
+                    ) : null}
+                  </View>
+                )}
               </BurbujaMedible>
 
               {reacciones.length > 0 ? (
@@ -1169,6 +1186,8 @@ const estilos = StyleSheet.create({
   burbuja: { maxWidth: "80%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9 },
   cita: { borderLeftWidth: 2, paddingLeft: 8, marginBottom: 4 },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-end", marginTop: 3 },
+  metaMedia: { position: "absolute", bottom: 8, right: 8, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
+  horaMedia: { fontSize: 10, color: "#FFF" },
   editado: { fontSize: 10, opacity: 0.7, fontStyle: "italic" },
   hora: { fontSize: 10, opacity: 0.7 },
   reintentar: { marginLeft: 2 },
