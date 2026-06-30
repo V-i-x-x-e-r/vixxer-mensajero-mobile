@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, Linking, StyleSheet } from "react-native";
 import { disponible, pedirPermisos, escanear } from "../lib/ble";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
@@ -65,6 +65,10 @@ export default function Ble()
         <Text style={[estilos.botonTxt, { color: colores.botonTexto }]}>{buscando ? "Detener" : "Buscar"}</Text>
       </Pressable>
 
+      <Pressable onPress={() => Linking.openSettings()} style={({ pressed }) => [estilos.botonSec, { borderColor: colores.borde }, pressed && { opacity: 0.6 }]}>
+        <Text style={[estilos.botonSecTxt, { color: colores.texto }]}>Abrir permisos de la app</Text>
+      </Pressable>
+
       <FlatList
         data={dispositivos}
         keyExtractor={(d) => d.id}
@@ -88,6 +92,8 @@ const estilos = StyleSheet.create({
   estadoTxt: { fontSize: 12, fontFamily: fuentes.media },
   boton: { borderRadius: 12, paddingVertical: 14, alignItems: "center" },
   botonTxt: { fontSize: 15, fontFamily: fuentes.semibold },
+  botonSec: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 10 },
+  botonSecTxt: { fontSize: 14, fontFamily: fuentes.media },
   lista: { marginTop: 16 },
   fila: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 8 },
   nombre: { fontSize: 15, fontFamily: fuentes.media },
