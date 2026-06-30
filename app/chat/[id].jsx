@@ -12,6 +12,7 @@ import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
+import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
 import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -352,6 +353,19 @@ export default function Chat()
         socket.on("mensaje:reaccion", alReaccion);
         socket.on("mensaje:editado", alEditado);
         socket.on("mensaje:borrado", alBorrado);
+        socket.on("connect", vaciarOutbox);
+      }
+
+      const pendientes = await leerOutbox(otroId);
+      if (activo && pendientes.length)
+      {
+        setMensajes((prev) => [
+          ...prev,
+          ...pendientes
+            .filter((i) => !prev.some((m) => m.id === i.localId))
+            .map((i) => ({ id: i.localId, remitente_id: miId.current, texto: i.texto, enviado_en: i.enviado_en, estado: "enviando", respuestaTexto: i.respuestaTexto })),
+        ]);
+        pendientes.forEach(intentarEnviar);
       }
     })();
 
@@ -367,51 +381,99 @@ export default function Chat()
         socket.off("mensaje:reaccion", alReaccion);
         socket.off("mensaje:editado", alEditado);
         socket.off("mensaje:borrado", alBorrado);
+        socket.off("connect", vaciarOutbox);
       }
     };
   }, [otroId]);
 
-  async function mandar(plano)
+  function intentarEnviar(item)
   {
-    const socket = await asegurarSocket();
-    if (!socket)
+    const socket = obtenerSocket();
+    if (!socket || !socket.connected)
     {
+      setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, estado: "fallido" } : m)));
       return;
     }
-    const priv = await leer(CLAVE_PRIVADA);
-    const pubDest = await llavePublicaDe(otroId);
-    const { contenidoCifrado, nonce } = cifrar(plano, pubDest, priv);
-    const localId = `local-${Date.now()}`;
-    const resp = respondiendo;
+    let respondido = false;
+    const limite = setTimeout(() =>
+    {
+      if (!respondido)
+      {
+        setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, estado: "fallido" } : m)));
+      }
+    }, 8000);
     socket.emit(
       "mensaje:enviar",
-      {
-        destinatarioId: otroId,
-        contenidoCifrado,
-        nonce,
-        respuestaA: resp ? resp.id : null,
-      },
+      { destinatarioId: otroId, contenidoCifrado: item.contenidoCifrado, nonce: item.nonce, respuestaA: item.respuestaA },
       (r) =>
       {
+        respondido = true;
+        clearTimeout(limite);
         if (r && r.ok)
         {
-          setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, id: r.id, estado: "enviado" } : m)));
+          setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, id: r.id, estado: "enviado" } : m)));
+          quitarOutbox(otroId, item.localId);
+        }
+        else
+        {
+          setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, estado: "fallido" } : m)));
         }
       },
     );
+  }
+
+  async function mandar(plano)
+  {
+    const priv = await leer(CLAVE_PRIVADA);
+    const pubDest = await llavePublicaDe(otroId);
+    const { contenidoCifrado, nonce } = cifrar(plano, pubDest, priv);
+    const resp = respondiendo;
+    const item = {
+      localId: `local-${Date.now()}`,
+      contenidoCifrado,
+      nonce,
+      respuestaA: resp ? resp.id : null,
+      texto: plano,
+      respuestaTexto: resp ? resp.texto : null,
+      enviado_en: new Date().toISOString(),
+    };
     setMensajes((prev) => [
       ...prev,
       {
-        id: localId,
+        id: item.localId,
         remitente_id: miId.current,
-        texto: plano,
-        enviado_en: new Date().toISOString(),
+        texto: item.texto,
+        enviado_en: item.enviado_en,
         estado: "enviando",
-        respuestaTexto: resp ? resp.texto : null,
+        respuestaTexto: item.respuestaTexto,
       },
     ]);
     setRespondiendo(null);
     lista.current?.scrollToOffset({ offset: 0, animated: true });
+    await agregarOutbox(otroId, item);
+    intentarEnviar(item);
+  }
+
+  async function reintentar(mensaje)
+  {
+    const items = await leerOutbox(otroId);
+    const item = items.find((i) => i.localId === mensaje.id);
+    if (!item)
+    {
+      return;
+    }
+    setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "enviando" } : m)));
+    intentarEnviar(item);
+  }
+
+  async function vaciarOutbox()
+  {
+    const items = await leerOutbox(otroId);
+    for (const item of items)
+    {
+      setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, estado: "enviando" } : m)));
+      intentarEnviar(item);
+    }
   }
 
   async function enviar()
@@ -750,9 +812,15 @@ export default function Chat()
                   ) : null}
                   <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
                   {mio ? (
-                    item.estado === "enviando"
-                      ? <Reloj color={GRIS_VISTO} tamano={11} />
-                      : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
+                    item.estado === "fallido"
+                      ? (
+                          <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
+                            <Text style={[estilos.reintentarTxt, { color: colores.error }]}>no enviado · reintentar</Text>
+                          </Pressable>
+                        )
+                      : item.estado === "enviando"
+                        ? <Reloj color={GRIS_VISTO} tamano={11} />
+                        : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
                   ) : null}
                 </View>
               </BurbujaMedible>
@@ -920,6 +988,8 @@ const estilos = StyleSheet.create({
   meta: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-end", marginTop: 3 },
   editado: { fontSize: 10, opacity: 0.7, fontStyle: "italic" },
   hora: { fontSize: 10, opacity: 0.7 },
+  reintentar: { marginLeft: 2 },
+  reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
   reaccionesFila: { flexDirection: "row", gap: 4, marginTop: 2 },
   chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   chipTxt: { fontSize: 12 },
