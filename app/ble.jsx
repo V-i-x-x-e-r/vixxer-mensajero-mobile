@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, FlatList, Linking, StyleSheet } from "react-native";
-import { disponible, pedirPermisos, escanear } from "../lib/ble";
+import { disponible, pedirPermisos, escanear, anunciar, detenerAnuncio } from "../lib/ble";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 
@@ -8,11 +8,32 @@ export default function Ble()
 {
   const { colores } = useTema();
   const [buscando, setBuscando] = useState(false);
+  const [anunciando, setAnunciando] = useState(false);
   const [dispositivos, setDispositivos] = useState([]);
   const [estado, setEstado] = useState(disponible() ? "listo" : "ble-plx no está en este build");
   const detener = useRef(null);
 
-  useEffect(() => () => detener.current && detener.current(), []);
+  useEffect(() => () =>
+  {
+    detener.current && detener.current();
+    detenerAnuncio();
+  }, []);
+
+  function alternarAnuncio()
+  {
+    if (anunciando)
+    {
+      detenerAnuncio();
+      setAnunciando(false);
+      return;
+    }
+    pedirPermisos().then((p) =>
+    {
+      const ok = anunciar();
+      setAnunciando(ok);
+      setEstado(ok ? "anunciando como Vixxer" : "no se pudo anunciar (permiso/adaptador)");
+    });
+  }
 
   async function alternar()
   {
@@ -32,16 +53,17 @@ export default function Ble()
     try
     {
       const permiso = await pedirPermisos();
-      setEstado("permisos: " + permiso.detalle);
       if (!permiso.ok)
       {
+        setEstado("permisos: " + permiso.detalle);
         return;
       }
       setDispositivos([]);
       setBuscando(true);
       detener.current = escanear(
-        (d) => setDispositivos((prev) => (prev.some((x) => x.id === d.id) ? prev : [...prev, { id: d.id, nombre: d.name || d.localName || "—", rssi: d.rssi }])),
+        (d) => setDispositivos((prev) => (prev.some((x) => x.id === d.id) ? prev : [...prev, { id: d.id, nombre: d.name || d.localName || "Vixxer", rssi: d.rssi }])),
         (e) => setEstado(String(e)),
+        true,
       );
     }
     catch (e)
@@ -54,19 +76,23 @@ export default function Ble()
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <Text style={[estilos.nota, { color: colores.muted }]}>
-        Prueba de Bluetooth. Pulsa Buscar y deben aparecer dispositivos BLE cercanos.
+        En un teléfono pulsa Anunciarme. En el otro pulsa Buscar: debe aparecer el primero como teléfono Vixxer cercano.
       </Text>
 
       <View style={[estilos.estado, { borderColor: colores.borde }]}>
         <Text style={[estilos.estadoTxt, { color: colores.texto }]}>Estado: {estado}</Text>
       </View>
 
-      <Pressable onPress={alternar} style={({ pressed }) => [estilos.boton, { backgroundColor: colores.botonFondo }, pressed && { opacity: 0.7 }]}>
-        <Text style={[estilos.botonTxt, { color: colores.botonTexto }]}>{buscando ? "Detener" : "Buscar"}</Text>
+      <Pressable onPress={alternarAnuncio} style={({ pressed }) => [estilos.boton, { backgroundColor: anunciando ? colores.error : colores.botonFondo }, pressed && { opacity: 0.7 }]}>
+        <Text style={[estilos.botonTxt, { color: colores.botonTexto }]}>{anunciando ? "Dejar de anunciar" : "Anunciarme"}</Text>
+      </Pressable>
+
+      <Pressable onPress={alternar} style={({ pressed }) => [estilos.botonSec, { borderColor: colores.borde }, pressed && { opacity: 0.6 }]}>
+        <Text style={[estilos.botonSecTxt, { color: colores.texto }]}>{buscando ? "Detener" : "Buscar Vixxer cercanos"}</Text>
       </Pressable>
 
       <Pressable onPress={() => Linking.openSettings()} style={({ pressed }) => [estilos.botonSec, { borderColor: colores.borde }, pressed && { opacity: 0.6 }]}>
-        <Text style={[estilos.botonSecTxt, { color: colores.texto }]}>Abrir permisos de la app</Text>
+        <Text style={[estilos.botonSecTxt, { color: colores.muted }]}>Abrir permisos de la app</Text>
       </Pressable>
 
       <FlatList
@@ -79,7 +105,7 @@ export default function Ble()
             <Text style={[estilos.detalle, { color: colores.muted }]}>{item.id} · {item.rssi} dBm</Text>
           </View>
         )}
-        ListEmptyComponent={<Text style={[estilos.detalle, { color: colores.muted, textAlign: "center", marginTop: 24 }]}>{buscando ? "Buscando…" : "Sin resultados aún."}</Text>}
+        ListEmptyComponent={<Text style={[estilos.detalle, { color: colores.muted, textAlign: "center", marginTop: 24 }]}>{buscando ? "Buscando teléfonos Vixxer…" : "Sin resultados aún."}</Text>}
       />
     </View>
   );
