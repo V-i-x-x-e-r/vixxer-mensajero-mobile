@@ -10,6 +10,7 @@ import { Logo } from "../components/Logo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { RespaldoCodigo } from "../components/RespaldoCodigo";
+import { Confirmacion } from "../components/Confirmacion";
 
 export default function Recuperar()
 {
@@ -19,6 +20,7 @@ export default function Recuperar()
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const [nuevoCodigo, setNuevoCodigo] = useState("");
+  const [confirmarNuevo, setConfirmarNuevo] = useState(false);
 
   async function recuperar()
   {
@@ -54,6 +56,7 @@ export default function Recuperar()
 
   async function empezarDeNuevo()
   {
+    setConfirmarNuevo(false);
     setError("");
     setCargando(true);
     try
@@ -106,7 +109,7 @@ export default function Recuperar()
 
           <Boton titulo="Recuperar" onPress={recuperar} cargando={cargando} />
 
-          <Text style={[estilos.nuevo, { color: colores.muted }]} onPress={empezarDeNuevo}>
+          <Text style={[estilos.nuevo, { color: colores.muted }]} onPress={() => setConfirmarNuevo(true)}>
             No tengo el código · empezar de nuevo
           </Text>
           <Text style={[estilos.aviso, { color: colores.muted }]}>
@@ -119,6 +122,16 @@ export default function Recuperar()
         visible={!!nuevoCodigo}
         codigo={nuevoCodigo}
         onCerrar={() => router.replace("/chats")}
+      />
+
+      <Confirmacion
+        visible={confirmarNuevo}
+        titulo="Empezar de nuevo"
+        mensaje="Sin tu código de recuperación perderás para siempre el acceso a los mensajes anteriores, tuyos y los de tus chats. Esto no se puede deshacer."
+        textoConfirmar="Crear identidad nueva"
+        destructivo
+        onConfirmar={empezarDeNuevo}
+        onCancelar={() => setConfirmarNuevo(false)}
       />
     </View>
   );
