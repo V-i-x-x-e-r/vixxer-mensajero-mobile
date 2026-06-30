@@ -27,6 +27,8 @@ import { Microfono } from "../../components/Microfono";
 import { Adjunto } from "../../components/Adjunto";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 import { SelectorContacto } from "../../components/SelectorContacto";
+import { Reenviar } from "../../components/Reenviar";
+import { Bote } from "../../components/Bote";
 
 const GRIS_VISTO = "#8E8E93";
 
@@ -91,17 +93,17 @@ function agrupar(reacciones)
   return Object.entries(conteo);
 }
 
-function BurbujaMedible({ style, onSeleccionar, children })
+function BurbujaMedible({ style, onSeleccionar, onPress, children })
 {
   const ref = useRef(null);
 
   function alMantener()
   {
-    ref.current?.measureInWindow((x, y, w, h) => onSeleccionar({ x, y, w, h }));
+    ref.current?.measureInWindow((x, y, w, h) => onSeleccionar?.({ x, y, w, h }));
   }
 
   return (
-    <Pressable ref={ref} onLongPress={alMantener} delayLongPress={250} style={style}>
+    <Pressable ref={ref} onLongPress={alMantener} onPress={onPress} delayLongPress={250} style={style}>
       {children}
     </Pressable>
   );
@@ -126,7 +128,10 @@ export default function Chat()
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
   const [reenviando, setReenviando] = useState(null);
+  const [reenviandoMulti, setReenviandoMulti] = useState(false);
   const [reenviadoA, setReenviadoA] = useState(null);
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccionados, setSeleccionados] = useState([]);
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -733,6 +738,55 @@ export default function Chat()
     setTimeout(() => setReenviadoA(null), 1600);
   }
 
+  function iniciarSeleccion(mensaje)
+  {
+    setSeleccionando(true);
+    setSeleccionados([mensaje.id]);
+    setSel(null);
+  }
+
+  function alternarSeleccion(mensaje)
+  {
+    setSeleccionados((prev) => (prev.includes(mensaje.id) ? prev.filter((x) => x !== mensaje.id) : [...prev, mensaje.id]));
+  }
+
+  function salirSeleccion()
+  {
+    setSeleccionando(false);
+    setSeleccionados([]);
+  }
+
+  function borrarSeleccionados()
+  {
+    const mios = mensajes.filter((m) => seleccionados.includes(m.id) && m.remitente_id === miId.current && !String(m.id).startsWith("local-"));
+    const ids = mios.map((m) => m.id);
+    ids.forEach((id) => socket_emit("mensaje:borrar", { id }));
+    setMensajes((prev) => prev.filter((m) => !ids.includes(m.id)));
+    salirSeleccion();
+  }
+
+  async function hacerReenvioMultiple(amigo)
+  {
+    setReenviandoMulti(false);
+    const elegidos = mensajes.filter((m) => seleccionados.includes(m.id));
+    salirSeleccion();
+    const socket = obtenerSocket();
+    if (!socket || !socket.connected)
+    {
+      Alert.alert("Sin conexión", "Conéctate para reenviar.");
+      return;
+    }
+    const priv = await leer(CLAVE_PRIVADA);
+    const pub = await llavePublicaDe(amigo.id);
+    for (const m of elegidos)
+    {
+      const { contenidoCifrado, nonce } = cifrar(m.texto, pub, priv);
+      socket.emit("mensaje:enviar", { destinatarioId: amigo.id, contenidoCifrado, nonce, respuestaA: null });
+    }
+    setReenviadoA(amigo.usuario);
+    setTimeout(() => setReenviadoA(null), 1600);
+  }
+
   function editar(mensaje)
   {
     setEditando(mensaje);
@@ -804,8 +858,10 @@ export default function Chat()
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
           const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoCrudo;
 
+          const elegido = seleccionados.includes(item.id);
+
           return (
-            <View>
+            <View style={elegido ? { backgroundColor: colores.surface } : null}>
               {nuevoDia ? (
                 <View style={estilos.dia}>
                   <Text style={[estilos.diaTxt, { color: colores.muted, backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -815,7 +871,8 @@ export default function Chat()
               ) : null}
 
               <BurbujaMedible
-                onSeleccionar={(coords) => setSel({ mensaje: item, ...coords })}
+                onSeleccionar={seleccionando ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
+                onPress={seleccionando ? () => alternarSeleccion(item) : undefined}
                 style={[
                   estilos.burbuja,
                   mio
@@ -892,7 +949,34 @@ export default function Chat()
         </Pressable>
       ) : null}
 
-      {respondiendo ? (
+      {seleccionando ? (
+        <View style={[estilos.selBar, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
+          <Pressable onPress={salirSeleccion} hitSlop={8} style={({ pressed }) => pressed && estilos.enviarPresionado}>
+            <Text style={{ color: colores.texto, fontSize: 18 }}>{"✕"}</Text>
+          </Pressable>
+          <Text style={[estilos.selCount, { color: colores.texto }]}>{seleccionados.length}</Text>
+          <View style={estilos.selAcciones}>
+            <Pressable
+              onPress={() => seleccionados.length > 0 && setReenviandoMulti(true)}
+              disabled={seleccionados.length === 0}
+              hitSlop={8}
+              style={({ pressed }) => [{ opacity: seleccionados.length === 0 ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
+            >
+              <Reenviar color={colores.texto} tamano={22} />
+            </Pressable>
+            <Pressable
+              onPress={borrarSeleccionados}
+              disabled={seleccionados.length === 0}
+              hitSlop={8}
+              style={({ pressed }) => [{ opacity: seleccionados.length === 0 ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
+            >
+              <Bote color={colores.error} tamano={22} />
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      {!seleccionando && respondiendo ? (
         <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
           <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
             Respondiendo: {respondiendo.texto}
@@ -903,7 +987,7 @@ export default function Chat()
         </View>
       ) : null}
 
-      {editando ? (
+      {!seleccionando && editando ? (
         <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
           <Text style={[estilos.avisoTxt, { color: colores.muted }]}>Editando mensaje</Text>
           <Pressable
@@ -919,6 +1003,7 @@ export default function Chat()
         </View>
       ) : null}
 
+      {!seleccionando ? (
       <View style={[estilos.inputFila, { borderTopColor: colores.borde, marginBottom: tecladoAlto, paddingBottom: 12 + (tecladoAlto > 0 ? 0 : insets.bottom) }]}>
         {!esWeb ? (
           <Pressable
@@ -957,6 +1042,7 @@ export default function Chat()
           </Pressable>
         )}
       </View>
+      ) : null}
 
       <AccionesMensaje
         sel={sel}
@@ -965,6 +1051,7 @@ export default function Chat()
         onReaccionar={reaccionar}
         onResponder={responder}
         onReenviar={abrirReenvio}
+        onSeleccionar={iniciarSeleccion}
         onCopiar={copiar}
         onEditar={editar}
         onBorrar={borrar}
@@ -972,10 +1059,14 @@ export default function Chat()
       />
 
       <SelectorContacto
-        visible={!!reenviando}
+        visible={!!reenviando || reenviandoMulti}
         titulo="Reenviar a"
-        onElegir={hacerReenvio}
-        onCerrar={() => setReenviando(null)}
+        onElegir={reenviandoMulti ? hacerReenvioMultiple : hacerReenvio}
+        onCerrar={() =>
+        {
+          setReenviando(null);
+          setReenviandoMulti(false);
+        }}
       />
 
       {reenviadoA ? (
@@ -1039,6 +1130,9 @@ const estilos = StyleSheet.create({
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
+  selBar: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
+  selCount: { flex: 1, fontSize: 16, fontFamily: fuentes.semibold },
+  selAcciones: { flexDirection: "row", alignItems: "center", gap: 22 },
   reaccionesFila: { flexDirection: "row", gap: 4, marginTop: 2 },
   chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   chipTxt: { fontSize: 12 },
