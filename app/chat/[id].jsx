@@ -26,6 +26,7 @@ import { Clip } from "../../components/Clip";
 import { Microfono } from "../../components/Microfono";
 import { Adjunto } from "../../components/Adjunto";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
+import { SelectorContacto } from "../../components/SelectorContacto";
 
 const GRIS_VISTO = "#8E8E93";
 
@@ -124,6 +125,8 @@ export default function Chat()
   const [subiendo, setSubiendo] = useState(false);
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
+  const [reenviando, setReenviando] = useState(null);
+  const [reenviadoA, setReenviadoA] = useState(null);
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -702,6 +705,34 @@ export default function Chat()
     setSel(null);
   }
 
+  function abrirReenvio(mensaje)
+  {
+    setReenviando(mensaje);
+    setSel(null);
+  }
+
+  async function hacerReenvio(amigo)
+  {
+    const objetivo = reenviando;
+    setReenviando(null);
+    if (!objetivo)
+    {
+      return;
+    }
+    const socket = obtenerSocket();
+    if (!socket || !socket.connected)
+    {
+      Alert.alert("Sin conexión", "Conéctate para reenviar el mensaje.");
+      return;
+    }
+    const priv = await leer(CLAVE_PRIVADA);
+    const pub = await llavePublicaDe(amigo.id);
+    const { contenidoCifrado, nonce } = cifrar(objetivo.texto, pub, priv);
+    socket.emit("mensaje:enviar", { destinatarioId: amigo.id, contenidoCifrado, nonce, respuestaA: null });
+    setReenviadoA(amigo.usuario);
+    setTimeout(() => setReenviadoA(null), 1600);
+  }
+
   function editar(mensaje)
   {
     setEditando(mensaje);
@@ -933,11 +964,27 @@ export default function Chat()
         esMedia={sel ? !!leerMedia(sel.mensaje.texto) : false}
         onReaccionar={reaccionar}
         onResponder={responder}
+        onReenviar={abrirReenvio}
         onCopiar={copiar}
         onEditar={editar}
         onBorrar={borrar}
         onCerrar={() => setSel(null)}
       />
+
+      <SelectorContacto
+        visible={!!reenviando}
+        titulo="Reenviar a"
+        onElegir={hacerReenvio}
+        onCerrar={() => setReenviando(null)}
+      />
+
+      {reenviadoA ? (
+        <View style={estilos.pill} pointerEvents="none">
+          <Text style={[estilos.pillTxt, { backgroundColor: colores.surface, color: colores.texto, borderColor: colores.borde }]}>
+            Reenviado a {reenviadoA}
+          </Text>
+        </View>
+      ) : null}
 
       <Modal visible={!!previo} transparent animationType="fade" onRequestClose={() => setPrevio(null)}>
         <View style={estilos.previoFondo}>
@@ -990,6 +1037,8 @@ const estilos = StyleSheet.create({
   hora: { fontSize: 10, opacity: 0.7 },
   reintentar: { marginLeft: 2 },
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
+  pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
+  pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
   reaccionesFila: { flexDirection: "row", gap: 4, marginTop: 2 },
   chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   chipTxt: { fontSize: 12 },

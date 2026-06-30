@@ -3,6 +3,7 @@ import { Modal, View, Text, TextInput, Pressable, StyleSheet, Dimensions } from 
 import { useTema } from "./tema";
 import { fuentes } from "../assets/themes/temas";
 import { Responder } from "./Responder";
+import { Reenviar } from "./Reenviar";
 import { Copiar } from "./Copiar";
 import { Lapiz } from "./Lapiz";
 import { Bote } from "./Bote";
@@ -21,7 +22,7 @@ function Accion({ icono, etiqueta, onPress, color })
   );
 }
 
-export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder, onCopiar, onEditar, onBorrar, onCerrar })
+export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder, onReenviar, onCopiar, onEditar, onBorrar, onCerrar })
 {
   const { colores } = useTema();
   const entrada = useRef(null);
@@ -77,6 +78,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder
 
           <View style={estilos.acciones}>
             <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} />
+            <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} />
             {esMedia ? null : <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />}
             {esMio && !esMedia ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
             {esMio ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
