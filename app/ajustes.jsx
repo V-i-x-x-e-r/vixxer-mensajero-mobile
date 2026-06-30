@@ -132,12 +132,6 @@ export default function Ajustes()
         />
       </View>
 
-      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>LABORATORIO</Text>
-      <Pressable onPress={() => router.push("/ble")} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Bluetooth (prueba)</Text>
-        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
-      </Pressable>
-
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
       <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
