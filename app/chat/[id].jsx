@@ -11,6 +11,7 @@ import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
+import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Candado } from "../../components/Candado";
@@ -247,6 +248,13 @@ export default function Chat()
     (async () =>
     {
       miId.current = await leer(MI_ID);
+
+      const cache = await leerCacheChat(otroId);
+      if (cache && activo)
+      {
+        setMensajes(cache);
+      }
+
       try
       {
         const filas = await api.historial(otroId);
@@ -263,6 +271,7 @@ export default function Chat()
         {
           setMensajes(descifrados);
           marcarLeidos(descifrados);
+          guardarCacheChat(otroId, descifrados);
         }
       }
       catch (e)

@@ -8,6 +8,7 @@ import { descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerEstados, alternarFijado, alternarSilenciado, ocultar, mostrar } from "../../lib/chatLocal";
+import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
@@ -90,8 +91,10 @@ export default function Chats()
       visibles.sort((a, b) => (mapa[b.id]?.enviado_en || "").localeCompare(mapa[a.id]?.enviado_en || ""));
       const fijados = visibles.filter((a) => e.fijados.includes(a.id));
       const resto = visibles.filter((a) => !e.fijados.includes(a.id));
-      setAmigos([...fijados, ...resto]);
+      const ordenados = [...fijados, ...resto];
+      setAmigos(ordenados);
       setConvs(mapa);
+      guardarCacheLista({ amigos: ordenados, convs: mapa });
     }
     catch (e)
     {
@@ -101,6 +104,19 @@ export default function Chats()
     {
       setCargando(false);
     }
+  }, []);
+
+  useEffect(() =>
+  {
+    leerCacheLista().then((c) =>
+    {
+      if (c)
+      {
+        setAmigos(c.amigos);
+        setConvs(c.convs);
+        setCargando(false);
+      }
+    });
   }, []);
 
   useEffect(() =>
