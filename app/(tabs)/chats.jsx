@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { View, Text, Pressable, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
+import { View, Text, Pressable, TextInput, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
@@ -20,6 +20,7 @@ import { Silencio } from "../../components/Silencio";
 import { Bote } from "../../components/Bote";
 import { EstadoLista } from "../../components/EstadoLista";
 import { ListaChatsEsqueleto } from "../../components/Esqueleto";
+import { Lupa } from "../../components/Lupa";
 
 function cuando(iso)
 {
@@ -49,6 +50,7 @@ export default function Chats()
   const [estado, setEstado] = useState("conectando…");
   const [sel, setSel] = useState(null);
   const [borrando, setBorrando] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
 
   const cargar = useCallback(async () =>
   {
@@ -218,6 +220,9 @@ export default function Chats()
   const conectado = estado === "conectado";
   const selFijado = sel ? estados.fijados.includes(sel) : false;
   const selSilenciado = sel ? estados.silenciados.includes(sel) : false;
+  const mostrados = busqueda.trim()
+    ? amigos.filter((a) => a.usuario.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    : amigos;
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
@@ -255,8 +260,26 @@ export default function Chats()
         <Text style={[estilos.estadoTxt, { color: colores.muted }]}>{estado}</Text>
       </View>
 
+      {amigos.length > 0 && !sel ? (
+        <View style={[estilos.buscar, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Lupa color={colores.muted} tamano={16} />
+          <TextInput
+            value={busqueda}
+            onChangeText={setBusqueda}
+            placeholder="Buscar"
+            placeholderTextColor={colores.placeholder}
+            style={[estilos.buscarCampo, { color: colores.texto }]}
+          />
+          {busqueda ? (
+            <Pressable onPress={() => setBusqueda("")} hitSlop={8}>
+              <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
+
       <FlatList
-        data={amigos}
+        data={mostrados}
         keyExtractor={(a) => a.id}
         style={estilos.lista}
         refreshControl={
@@ -264,9 +287,9 @@ export default function Chats()
         }
         ListEmptyComponent={
           <EstadoLista
-            cargando={cargando}
+            cargando={cargando && !busqueda}
             error={error}
-            vacio="Aún no tienes conversaciones. Ve a Amigos para empezar una."
+            vacio={busqueda ? "Sin resultados." : "Aún no tienes conversaciones. Ve a Amigos para empezar una."}
             onReintentar={reintentar}
             esqueleto={<ListaChatsEsqueleto />}
           />
@@ -339,6 +362,8 @@ const estilos = StyleSheet.create({
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 13 },
+  buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 42, marginTop: 12 },
+  buscarCampo: { flex: 1, fontSize: 15, paddingVertical: 0 },
   lista: { flex: 1 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
   separadorFila: { height: 1, marginLeft: 66 },
