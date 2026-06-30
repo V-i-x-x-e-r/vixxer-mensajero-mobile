@@ -323,8 +323,8 @@ export default function Chats()
                 <View style={estilos.derecha}>
                   <Text style={[estilos.hora, { color: colores.muted }]}>{cuando(c.enviado_en)}</Text>
                   {c.noLeidos > 0 ? (
-                    <View style={[estilos.badge, { backgroundColor: colores.botonFondo }]}>
-                      <Text style={[estilos.badgeTxt, { color: colores.botonTexto }]}>{c.noLeidos}</Text>
+                    <View style={[estilos.badge, { backgroundColor: silenciado ? colores.muted : colores.botonFondo }]}>
+                      <Text style={[estilos.badgeTxt, { color: silenciado ? colores.fondo : colores.botonTexto }]}>{c.noLeidos}</Text>
                     </View>
                   ) : null}
                 </View>
