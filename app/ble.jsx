@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, FlatList, Linking, StyleSheet } from "react-native";
-import { disponible, pedirPermisos, escanear, anunciar, detenerAnuncio } from "../lib/ble";
+import { disponible, pedirPermisos, escanear, anunciar, detenerAnuncio, anuncioDisponible } from "../lib/ble";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 
@@ -25,6 +25,11 @@ export default function Ble()
     {
       detenerAnuncio();
       setAnunciando(false);
+      return;
+    }
+    if (!anuncioDisponible())
+    {
+      setEstado("módulo de anuncio no está en este build (haz un eas build nuevo)");
       return;
     }
     pedirPermisos().then((p) =>
