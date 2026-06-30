@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, Keyboard, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, Keyboard, ActivityIndicator, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -124,10 +124,13 @@ export default function Chat()
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
   const [tecladoAlto, setTecladoAlto] = useState(0);
+  const [hayMas, setHayMas] = useState(true);
+  const [masCargando, setMasCargando] = useState(false);
   const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const lista = useRef(null);
   const tecleando = useRef(null);
+  const cargandoMas = useRef(false);
 
   const invertidos = useMemo(() => mensajes.slice().reverse(), [mensajes]);
 
@@ -195,6 +198,54 @@ export default function Chat()
       claro = descifrar(fila.contenido_cifrado, fila.nonce, fresca, priv);
     }
     return claro ?? "No se pudo descifrar este mensaje";
+  }
+
+  async function descifrarLote(filas)
+  {
+    const priv = await leer(CLAVE_PRIVADA);
+    let pub = await llavePublicaDe(otroId);
+    let salida = filas.map((m) => ({ ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) }));
+    if (salida.some((m) => m.texto === null))
+    {
+      pub = await llavePublicaDe(otroId, true);
+      salida = salida.map((m) => (m.texto === null ? { ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) } : m));
+    }
+    return salida.map((m) => ({ ...m, texto: m.texto ?? "No se pudo descifrar este mensaje" }));
+  }
+
+  async function cargarMas()
+  {
+    if (cargandoMas.current || !hayMas || mensajes.length === 0)
+    {
+      return;
+    }
+    cargandoMas.current = true;
+    setMasCargando(true);
+    try
+    {
+      const filas = await api.historial(otroId, mensajes[0].enviado_en);
+      if (filas.length === 0)
+      {
+        setHayMas(false);
+      }
+      else
+      {
+        const descifrados = await descifrarLote(filas);
+        setMensajes((prev) => [...descifrados, ...prev]);
+        if (filas.length < 50)
+        {
+          setHayMas(false);
+        }
+      }
+    }
+    catch (e)
+    {
+    }
+    finally
+    {
+      cargandoMas.current = false;
+      setMasCargando(false);
+    }
   }
 
   useEffect(() =>
@@ -274,18 +325,11 @@ export default function Chat()
       try
       {
         const filas = await api.historial(otroId);
-        const priv = await leer(CLAVE_PRIVADA);
-        let pub = await llavePublicaDe(otroId);
-        let descifrados = filas.map((m) => ({ ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) }));
-        if (descifrados.some((m) => m.texto === null))
-        {
-          pub = await llavePublicaDe(otroId, true);
-          descifrados = descifrados.map((m) => (m.texto === null ? { ...m, texto: descifrar(m.contenido_cifrado, m.nonce, pub, priv) } : m));
-        }
-        descifrados = descifrados.map((m) => ({ ...m, texto: m.texto ?? "No se pudo descifrar este mensaje" }));
+        const descifrados = await descifrarLote(filas);
         if (activo)
         {
           setMensajes(descifrados);
+          setHayMas(filas.length >= 50);
           marcarLeidos(descifrados);
           guardarCacheChat(otroId, descifrados);
         }
@@ -645,10 +689,15 @@ export default function Chat()
         contentContainerStyle={estilos.lista}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
+        onEndReached={cargarMas}
+        onEndReachedThreshold={0.3}
         ListFooterComponent={
-          <View style={estilos.banner}>
-            <Candado color={colores.muted} tamano={12} />
-            <Text style={[estilos.bannerTxt, { color: colores.muted }]}>Cifrado de extremo a extremo</Text>
+          <View>
+            {masCargando ? <ActivityIndicator color={colores.muted} style={estilos.masSpinner} /> : null}
+            <View style={estilos.banner}>
+              <Candado color={colores.muted} tamano={12} />
+              <Text style={[estilos.bannerTxt, { color: colores.muted }]}>Cifrado de extremo a extremo</Text>
+            </View>
           </View>
         }
         renderItem={({ item, index }) =>
@@ -861,6 +910,7 @@ const estilos = StyleSheet.create({
   vacioCentro: { alignItems: "center", justifyContent: "center", paddingHorizontal: 40, gap: 6 },
   vacioTitulo: { fontSize: 16, fontFamily: fuentes.semibold, textAlign: "center" },
   vacioTxt: { fontSize: 13, textAlign: "center" },
+  masSpinner: { paddingVertical: 12 },
   banner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10 },
   bannerTxt: { fontSize: 12 },
   dia: { alignItems: "center", marginVertical: 8 },
