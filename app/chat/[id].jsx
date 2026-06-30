@@ -341,7 +341,7 @@ export default function Chat()
     {
       if (activo)
       {
-        setMensajes((prev) => prev.filter((m) => m.id !== data.id));
+        setMensajes((prev) => prev.map((m) => (m.id === data.id ? { ...m, contenido_cifrado: "BORRADO", texto: null } : m)));
       }
     }
 
@@ -717,7 +717,7 @@ export default function Chat()
   function borrar(mensaje)
   {
     socket_emit("mensaje:borrar", { id: mensaje.id });
-    setMensajes((prev) => prev.filter((m) => m.id !== mensaje.id));
+    setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, contenido_cifrado: "BORRADO", texto: null } : m)));
     setSel(null);
   }
 
@@ -913,7 +913,8 @@ export default function Chat()
           const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoCrudo;
 
           const elegido = seleccionados.includes(item.id);
-          const mediaVisual = media && (media.t === "img" || media.t === "video");
+          const borrado = item.contenido_cifrado === "BORRADO";
+          const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video");
           const mediaSolo = mediaVisual && !citado;
 
           return (
@@ -927,7 +928,7 @@ export default function Chat()
               ) : null}
 
               <BurbujaMedible
-                onSeleccionar={seleccionando ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
+                onSeleccionar={seleccionando || borrado ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
                 onPress={seleccionando ? () => alternarSeleccion(item) : () => setDetalle((p) => (p === item.id ? null : item.id))}
                 style={[
                   estilos.burbuja,
@@ -946,7 +947,9 @@ export default function Chat()
                   </View>
                 ) : null}
 
-                {media ? (
+                {borrado ? (
+                  <Text style={{ color: mio ? colores.botonTexto : colores.muted, fontSize: 15, fontStyle: "italic", opacity: 0.8 }}>Este mensaje fue eliminado</Text>
+                ) : media ? (
                   <Adjunto
                     media={media}
                     color={mio ? colores.botonTexto : colores.texto}
