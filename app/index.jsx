@@ -3,6 +3,7 @@ import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
+import { registrarPush } from "../lib/push";
 import { guardar, leer, TOKEN, MI_ID, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
@@ -27,6 +28,7 @@ export default function Login()
     {
       const pub = await leer(CLAVE_PUBLICA);
       api.actualizarLlavePublica(pub).catch(() => {});
+      registrarPush();
       router.replace("/chats");
       return;
     }

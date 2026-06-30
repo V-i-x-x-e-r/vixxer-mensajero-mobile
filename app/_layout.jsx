@@ -1,4 +1,6 @@
-import { Stack } from "expo-router";
+import { useEffect } from "react";
+import { Stack, router } from "expo-router";
+import * as Notifications from "expo-notifications";
 import { useFonts, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { ProveedorTema, useTema } from "../components/tema";
 import { ProveedorSolicitudes } from "../components/Solicitudes";
@@ -34,6 +36,19 @@ function Navegacion()
 export default function RootLayout()
 {
   const [listas] = useFonts({ Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold });
+
+  useEffect(() =>
+  {
+    const sub = Notifications.addNotificationResponseReceivedListener((resp) =>
+    {
+      const de = resp.notification.request.content.data?.de;
+      if (de)
+      {
+        router.push({ pathname: "/chat/[id]", params: { id: de } });
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   if (!listas)
   {
