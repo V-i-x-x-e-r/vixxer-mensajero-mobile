@@ -1,12 +1,33 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as api from "../../lib/api";
+import { descifrar } from "../../lib/crypto";
+import { llavePublicaDe } from "../../lib/llaves";
+import { leer, CLAVE_PRIVADA } from "../../lib/storage";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Avatar } from "../../components/Avatar";
 import { Confirmacion } from "../../components/Confirmacion";
+import { AdjuntoImagen } from "../../components/AdjuntoImagen";
 import { Bote } from "../../components/Bote";
+
+function leerMedia(texto)
+{
+  if (!texto || texto[0] !== "{")
+  {
+    return null;
+  }
+  try
+  {
+    const obj = JSON.parse(texto);
+    return obj && (obj.t === "img" || obj.t === "video") ? obj : null;
+  }
+  catch (e)
+  {
+    return null;
+  }
+}
 
 function estadoTexto(presencia)
 {
@@ -41,10 +62,43 @@ export default function Perfil()
   const { id, usuario, avatar } = useLocalSearchParams();
   const [presencia, setPresencia] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
+  const [media, setMedia] = useState([]);
 
   useEffect(() =>
   {
     api.presencia(id).then(setPresencia).catch(() => {});
+  }, [id]);
+
+  useEffect(() =>
+  {
+    let activo = true;
+    (async () =>
+    {
+      try
+      {
+        const filas = await api.historial(id);
+        const priv = await leer(CLAVE_PRIVADA);
+        const pub = await llavePublicaDe(id);
+        const items = [];
+        for (const f of filas)
+        {
+          const claro = descifrar(f.contenido_cifrado, f.nonce, pub, priv);
+          const m = leerMedia(claro);
+          if (m && m.t === "img")
+          {
+            items.push({ id: f.id, media: m });
+          }
+        }
+        if (activo)
+        {
+          setMedia(items.reverse());
+        }
+      }
+      catch (e)
+      {
+      }
+    })();
+    return () => { activo = false; };
   }, [id]);
 
   async function borrarConversacion()
@@ -89,7 +143,21 @@ export default function Perfil()
         ) : null}
       </View>
 
-      <View style={estilos.cuerpo}>
+      {media.length > 0 ? (
+        <View style={estilos.cuerpo}>
+          <Text style={[estilos.seccion, { color: colores.muted }]}>MEDIA COMPARTIDA</Text>
+          <FlatList
+            data={media}
+            keyExtractor={(m) => m.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
+            renderItem={({ item }) => <AdjuntoImagen media={item.media} color={colores.muted} cuadrado={84} />}
+          />
+        </View>
+      ) : null}
+
+      <View style={[estilos.cuerpo, { marginTop: 24 }]}>
         <Text style={[estilos.seccion, { color: colores.muted }]}>CONVERSACIÓN</Text>
         <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
           <Fila
