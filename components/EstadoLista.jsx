@@ -1,12 +1,16 @@
 import { View, Text, ActivityIndicator, Pressable, StyleSheet } from "react-native";
 import { useTema } from "./tema";
 
-export function EstadoLista({ cargando, error, vacio, onReintentar })
+export function EstadoLista({ cargando, error, vacio, onReintentar, esqueleto })
 {
   const { colores } = useTema();
 
   if (cargando)
   {
+    if (esqueleto)
+    {
+      return esqueleto;
+    }
     return (
       <View style={estilos.centro}>
         <ActivityIndicator color={colores.muted} />
