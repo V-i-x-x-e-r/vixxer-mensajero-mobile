@@ -1,9 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AppState, View, StyleSheet } from "react-native";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { useFonts, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { ProveedorTema, useTema } from "../components/tema";
 import { ProveedorSolicitudes } from "../components/Solicitudes";
+import { BloqueoPin } from "../components/BloqueoPin";
+import { tienePin } from "../lib/pin";
 import { fuentes } from "../assets/themes/temas";
 
 function Navegacion()
@@ -34,6 +37,40 @@ function Navegacion()
   );
 }
 
+function Contenido()
+{
+  const [bloqueado, setBloqueado] = useState(false);
+  const tiene = useRef(false);
+
+  useEffect(() =>
+  {
+    tienePin().then((t) =>
+    {
+      tiene.current = t;
+      setBloqueado(t);
+    });
+    const sub = AppState.addEventListener("change", (estado) =>
+    {
+      if (estado === "active" && tiene.current)
+      {
+        setBloqueado(true);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  return (
+    <>
+      <Navegacion />
+      {bloqueado ? (
+        <View style={StyleSheet.absoluteFill}>
+          <BloqueoPin onDesbloquear={() => setBloqueado(false)} />
+        </View>
+      ) : null}
+    </>
+  );
+}
+
 export default function RootLayout()
 {
   const [listas] = useFonts({ Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold });
@@ -59,7 +96,7 @@ export default function RootLayout()
   return (
     <ProveedorTema>
       <ProveedorSolicitudes>
-        <Navegacion />
+        <Contenido />
       </ProveedorSolicitudes>
     </ProveedorTema>
   );
