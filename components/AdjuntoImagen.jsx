@@ -15,7 +15,7 @@ function medida(w, h)
   return { width: Math.round(w * escala), height: Math.round(h * escala) };
 }
 
-export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle })
+export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, cuadrado })
 {
   const [uri, setUri] = useState(() => leerCache(media.path) || null);
   const [dims, setDims] = useState(null);
@@ -75,10 +75,10 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle })
     return () => { activo = false; };
   }, [uri]);
 
-  if (!uri || !dims)
+  if (!uri || (!cuadrado && !dims))
   {
     return (
-      <View style={estilos.caja}>
+      <View style={[estilos.caja, cuadrado ? { width: cuadrado, height: cuadrado } : null]}>
         {!error ? <ActivityIndicator color={color} /> : null}
       </View>
     );
@@ -92,7 +92,7 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle })
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
         delayLongPress={250}
       >
-        <Image source={{ uri }} style={[estilos.imagen, dims]} resizeMode="cover" />
+        <Image source={{ uri }} style={cuadrado ? { width: cuadrado, height: cuadrado, borderRadius: 10 } : [estilos.imagen, dims]} resizeMode="cover" />
       </Pressable>
       <Modal visible={abierta} transparent animationType="fade" onRequestClose={() => setAbierta(false)}>
         <VisorImagen uri={uri} onCerrar={() => setAbierta(false)} />
