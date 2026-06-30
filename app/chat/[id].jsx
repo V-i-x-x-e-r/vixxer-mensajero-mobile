@@ -984,6 +984,10 @@ export default function Chat()
                   ))}
                 </View>
               ) : null}
+
+              {mio && index === 0 && item.leido_en ? (
+                <Text style={[estilos.visto, { color: colores.muted }]}>Visto {hora(item.leido_en)}</Text>
+              ) : null}
             </View>
           );
         }}
@@ -1205,6 +1209,7 @@ const estilos = StyleSheet.create({
   selBar: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
   selCount: { flex: 1, fontSize: 16, fontFamily: fuentes.semibold },
   selAcciones: { flexDirection: "row", alignItems: "center", gap: 22 },
+  visto: { alignSelf: "flex-end", fontSize: 10, marginTop: 2, marginRight: 2 },
   reaccionesFila: { flexDirection: "row", gap: 4, marginTop: 2 },
   chip: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
   chipTxt: { fontSize: 12 },
