@@ -917,7 +917,7 @@ export default function Chat()
                 style={[
                   estilos.burbuja,
                   mediaSolo
-                    ? { alignSelf: mio ? "flex-end" : "flex-start", padding: 0, overflow: "hidden" }
+                    ? { alignSelf: mio ? "flex-end" : "flex-start", paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }
                     : mio
                       ? { alignSelf: "flex-end", backgroundColor: colores.botonFondo }
                       : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
@@ -932,7 +932,13 @@ export default function Chat()
                 ) : null}
 
                 {media ? (
-                  <Adjunto media={media} color={mio ? colores.botonTexto : colores.texto} />
+                  <Adjunto
+                    media={media}
+                    color={mio ? colores.botonTexto : colores.texto}
+                    seleccionando={seleccionando}
+                    onToggle={() => alternarSeleccion(item)}
+                    onMenu={seleccionando ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
+                  />
                 ) : (
                   <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
                 )}
