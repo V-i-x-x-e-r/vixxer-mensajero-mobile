@@ -35,6 +35,19 @@
       "expo-video",
       "expo-notifications",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Vixxer usa la cámara para escanear códigos QR de amigos."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Vixxer guarda las fotos que recibes en tu galería.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
         "expo-audio",
         {
           "microphonePermission": "Vixxer usa el micrófono para grabar notas de voz."
