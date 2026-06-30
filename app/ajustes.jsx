@@ -12,6 +12,7 @@ import { fuentes } from "../assets/themes/temas";
 import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
+import { CodigoQR } from "../components/CodigoQR";
 
 export default function Ajustes()
 {
@@ -20,6 +21,7 @@ export default function Ajustes()
   const [codigo, setCodigo] = useState("");
   const [avatar, setAvatar] = useState(null);
   const [copiado, setCopiado] = useState(false);
+  const [qr, setQr] = useState(false);
   const [prefs, setPrefs] = useState({ mostrar_conexion: true, mostrar_acuses: true });
   const [confirmar, setConfirmar] = useState(false);
 
@@ -103,6 +105,9 @@ export default function Ajustes()
         <Text style={[estilos.codigo, { color: colores.texto }]}>{codigo || "…"}</Text>
         <Text style={[estilos.copiar, { color: colores.muted }]}>{copiado ? "copiado" : "tocar para copiar"}</Text>
       </Pressable>
+      <Pressable onPress={() => setQr(true)} disabled={!codigo} style={({ pressed }) => [estilos.qrBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+        <Text style={[estilos.qrBotonTxt, { color: colores.texto }]}>Mostrar código QR</Text>
+      </Pressable>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>APARIENCIA</Text>
       <View style={[estilos.fila, { borderColor: colores.borde }]}>
@@ -140,6 +145,8 @@ export default function Ajustes()
       <Text style={[estilos.version, { color: colores.muted }]}>Vixxer {Constants.expoConfig?.version || ""}</Text>
       </ScrollView>
 
+      <CodigoQR visible={qr} codigo={codigo} onCerrar={() => setQr(false)} />
+
       <Confirmacion
         visible={confirmar}
         titulo="Cerrar sesión"
@@ -162,6 +169,8 @@ const estilos = StyleSheet.create({
   codigoCaja: { borderWidth: 1, borderRadius: 12, paddingVertical: 18, alignItems: "center", gap: 6 },
   codigo: { fontSize: 28, fontFamily: fuentes.bold, letterSpacing: 4 },
   copiar: { fontSize: 12 },
+  qrBoton: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 8 },
+  qrBotonTxt: { fontSize: 14, fontFamily: fuentes.media },
   fila:
   {
     flexDirection: "row",
