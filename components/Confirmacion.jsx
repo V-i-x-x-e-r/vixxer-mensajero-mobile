@@ -56,6 +56,6 @@ const estilos = StyleSheet.create({
   mensaje: { fontSize: 14, lineHeight: 20 },
   acciones: { flexDirection: "row", gap: 10, marginTop: 16 },
   boton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
-  botonTxt: { fontSize: 15, fontFamily: fuentes.semibold },
+  botonTxt: { fontSize: 15, fontFamily: fuentes.semibold, textAlign: "center" },
   presionado: { opacity: 0.6 },
 });
