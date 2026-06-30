@@ -6,12 +6,13 @@ import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Avatar } from "../../components/Avatar";
 import { Confirmacion } from "../../components/Confirmacion";
+import { Bote } from "../../components/Bote";
 
 function estadoTexto(presencia)
 {
   if (!presencia)
   {
-    return "";
+    return null;
   }
   if (presencia.en_linea)
   {
@@ -21,7 +22,17 @@ function estadoTexto(presencia)
   {
     return `últ. vez ${new Date(presencia.ultima_conexion).toLocaleString()}`;
   }
-  return "";
+  return null;
+}
+
+function Fila({ etiqueta, icono, color, onPress })
+{
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado]}>
+      <Text style={[estilos.filaTxt, { color }]}>{etiqueta}</Text>
+      {icono}
+    </Pressable>
+  );
 }
 
 export default function Perfil()
@@ -29,16 +40,16 @@ export default function Perfil()
   const { colores } = useTema();
   const { id, usuario, avatar } = useLocalSearchParams();
   const [presencia, setPresencia] = useState(null);
-  const [confirmar, setConfirmar] = useState(false);
+  const [confirmar, setConfirmar] = useState(null);
 
   useEffect(() =>
   {
     api.presencia(id).then(setPresencia).catch(() => {});
   }, [id]);
 
-  async function borrar()
+  async function borrarConversacion()
   {
-    setConfirmar(false);
+    setConfirmar(null);
     try
     {
       await api.limpiarConversacion(id);
@@ -49,41 +60,94 @@ export default function Perfil()
     router.back();
   }
 
+  async function bloquear()
+  {
+    setConfirmar(null);
+    try
+    {
+      await api.bloquear(id);
+    }
+    catch (e)
+    {
+    }
+    router.dismissAll();
+  }
+
   const sub = estadoTexto(presencia);
+  const enLinea = presencia && presencia.en_linea;
 
   return (
     <View style={{ flex: 1, backgroundColor: colores.fondo }}>
       <View style={estilos.cabecera}>
-        <Avatar nombre={usuario || ""} uri={avatar || null} tamano={104} />
+        <Avatar nombre={usuario || ""} uri={avatar || null} tamano={108} />
         <Text style={[estilos.nombre, { color: colores.texto }]}>{usuario}</Text>
-        {sub ? <Text style={[estilos.sub, { color: colores.muted }]}>{sub}</Text> : null}
+        {sub ? (
+          <View style={estilos.presencia}>
+            {enLinea ? <View style={estilos.punto} /> : null}
+            <Text style={[estilos.sub, { color: colores.muted }]}>{sub}</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={estilos.cuerpo}>
-        <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.accion, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-          <Text style={[estilos.accionTxt, { color: colores.error }]}>Borrar conversación</Text>
-        </Pressable>
+        <Text style={[estilos.seccion, { color: colores.muted }]}>CONVERSACIÓN</Text>
+        <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Fila
+            etiqueta="Borrar conversación"
+            color={colores.texto}
+            icono={<Bote color={colores.muted} tamano={18} />}
+            onPress={() => setConfirmar("borrar")}
+          />
+        </View>
+
+        <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>PRIVACIDAD</Text>
+        <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Fila
+            etiqueta="Bloquear contacto"
+            color={colores.error}
+            icono={null}
+            onPress={() => setConfirmar("bloquear")}
+          />
+        </View>
+        <Text style={[estilos.nota, { color: colores.muted }]}>
+          Al bloquear, esta persona no podrá escribirte y se quitará de tus chats.
+        </Text>
       </View>
 
       <Confirmacion
-        visible={confirmar}
+        visible={confirmar === "borrar"}
         titulo="Borrar conversación"
         mensaje="Se quitarán los mensajes de este chat en tu dispositivo."
         textoConfirmar="Borrar"
         destructivo
-        onConfirmar={borrar}
-        onCancelar={() => setConfirmar(false)}
+        onConfirmar={borrarConversacion}
+        onCancelar={() => setConfirmar(null)}
+      />
+
+      <Confirmacion
+        visible={confirmar === "bloquear"}
+        titulo={`Bloquear a ${usuario || "este contacto"}`}
+        mensaje="No podrá escribirte ni volver a agregarte, y se quitará de tus chats. Podrás desbloquearlo más adelante."
+        textoConfirmar="Bloquear"
+        destructivo
+        onConfirmar={bloquear}
+        onCancelar={() => setConfirmar(null)}
       />
     </View>
   );
 }
 
 const estilos = StyleSheet.create({
-  cabecera: { alignItems: "center", gap: 8, paddingTop: 32, paddingBottom: 28 },
+  cabecera: { alignItems: "center", gap: 10, paddingTop: 36, paddingBottom: 28 },
   nombre: { fontSize: 22, fontFamily: fuentes.semibold },
+  presencia: { flexDirection: "row", alignItems: "center", gap: 6 },
+  punto: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" },
   sub: { fontSize: 13 },
   cuerpo: { paddingHorizontal: 20 },
-  accion: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  accionTxt: { fontSize: 15, fontWeight: "600" },
+  seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginBottom: 10 },
+  tarjeta: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
+  fila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 15 },
+  filaTxt: { fontSize: 15 },
+  nota: { fontSize: 12, marginTop: 10, lineHeight: 17 },
   presionado: { opacity: 0.6 },
 });

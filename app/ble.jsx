@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, FlatList, Linking, StyleSheet } from "react-native";
+import { View, Text, Pressable, Switch, FlatList, Linking, StyleSheet } from "react-native";
 import { disponible, pedirPermisos, escanear, anunciar, detenerAnuncio, anuncioDisponible } from "../lib/ble";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
@@ -8,6 +8,7 @@ export default function Ble()
 {
   const { colores } = useTema();
   const [buscando, setBuscando] = useState(false);
+  const [soloVixxer, setSoloVixxer] = useState(false);
   const [anunciando, setAnunciando] = useState(false);
   const [dispositivos, setDispositivos] = useState([]);
   const [estado, setEstado] = useState(disponible() ? "listo" : "ble-plx no está en este build");
@@ -66,9 +67,9 @@ export default function Ble()
       setDispositivos([]);
       setBuscando(true);
       detener.current = escanear(
-        (d) => setDispositivos((prev) => (prev.some((x) => x.id === d.id) ? prev : [...prev, { id: d.id, nombre: d.name || d.localName || "Vixxer", rssi: d.rssi }])),
+        (d) => setDispositivos((prev) => (prev.some((x) => x.id === d.id) ? prev : [...prev, { id: d.id, nombre: d.name || d.localName || (soloVixxer ? "Vixxer" : "—"), rssi: d.rssi }])),
         (e) => setEstado(String(e)),
-        true,
+        soloVixxer,
       );
     }
     catch (e)
@@ -93,8 +94,19 @@ export default function Ble()
       </Pressable>
 
       <Pressable onPress={alternar} style={({ pressed }) => [estilos.botonSec, { borderColor: colores.borde }, pressed && { opacity: 0.6 }]}>
-        <Text style={[estilos.botonSecTxt, { color: colores.texto }]}>{buscando ? "Detener" : "Buscar Vixxer cercanos"}</Text>
+        <Text style={[estilos.botonSecTxt, { color: colores.texto }]}>{buscando ? "Detener" : "Buscar dispositivos"}</Text>
       </Pressable>
+
+      <View style={[estilos.switchFila, { borderColor: colores.borde }]}>
+        <Text style={[estilos.switchTxt, { color: colores.texto }]}>Solo teléfonos Vixxer</Text>
+        <Switch
+          value={soloVixxer}
+          onValueChange={setSoloVixxer}
+          disabled={buscando}
+          trackColor={{ true: colores.texto, false: colores.borde }}
+          thumbColor={colores.fondo}
+        />
+      </View>
 
       <Pressable onPress={() => Linking.openSettings()} style={({ pressed }) => [estilos.botonSec, { borderColor: colores.borde }, pressed && { opacity: 0.6 }]}>
         <Text style={[estilos.botonSecTxt, { color: colores.muted }]}>Abrir permisos de la app</Text>
@@ -125,6 +137,8 @@ const estilos = StyleSheet.create({
   botonTxt: { fontSize: 15, fontFamily: fuentes.semibold },
   botonSec: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 10 },
   botonSecTxt: { fontSize: 14, fontFamily: fuentes.media },
+  switchFila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 8, marginTop: 10 },
+  switchTxt: { fontSize: 14 },
   lista: { marginTop: 16 },
   fila: { borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 8 },
   nombre: { fontSize: 15, fontFamily: fuentes.media },
