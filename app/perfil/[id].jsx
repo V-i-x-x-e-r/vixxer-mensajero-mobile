@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as api from "../../lib/api";
-import { descifrar } from "../../lib/crypto";
+import { descifrar, numeroSeguridad } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
-import { leer, CLAVE_PRIVADA } from "../../lib/storage";
+import { leer, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../../lib/storage";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Avatar } from "../../components/Avatar";
@@ -63,10 +63,21 @@ export default function Perfil()
   const [presencia, setPresencia] = useState(null);
   const [confirmar, setConfirmar] = useState(null);
   const [media, setMedia] = useState([]);
+  const [seguridad, setSeguridad] = useState(null);
 
   useEffect(() =>
   {
     api.presencia(id).then(setPresencia).catch(() => {});
+  }, [id]);
+
+  useEffect(() =>
+  {
+    (async () =>
+    {
+      const mia = await leer(CLAVE_PUBLICA);
+      const suya = await llavePublicaDe(id).catch(() => null);
+      setSeguridad(numeroSeguridad(mia, suya));
+    })();
   }, [id]);
 
   useEffect(() =>
@@ -180,6 +191,18 @@ export default function Perfil()
         <Text style={[estilos.nota, { color: colores.muted }]}>
           Al bloquear, esta persona no podrá escribirte y se quitará de tus chats.
         </Text>
+
+        {seguridad ? (
+          <>
+            <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>SEGURIDAD</Text>
+            <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde, padding: 16 }]}>
+              <Text style={[estilos.numero, { color: colores.texto }]}>{seguridad}</Text>
+            </View>
+            <Text style={[estilos.nota, { color: colores.muted }]}>
+              Número de seguridad. Si coincide con el que ve tu contacto, nadie intercepta su conversación.
+            </Text>
+          </>
+        ) : null}
       </View>
 
       <Confirmacion
@@ -218,4 +241,5 @@ const estilos = StyleSheet.create({
   filaTxt: { fontSize: 15 },
   nota: { fontSize: 12, marginTop: 10, lineHeight: 17 },
   presionado: { opacity: 0.6 },
+  numero: { fontSize: 17, fontFamily: fuentes.media, letterSpacing: 2, lineHeight: 28, textAlign: "center" },
 });

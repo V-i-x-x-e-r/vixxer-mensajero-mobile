@@ -69,6 +69,11 @@ export default function Chats()
       const mapa = {};
       for (const c of conversaciones)
       {
+        if (c.ultimo_cifrado === "BORRADO")
+        {
+          mapa[c.otro_id] = { preview: "Mensaje eliminado", enviado_en: c.enviado_en, noLeidos: c.no_leidos };
+          continue;
+        }
         const pub = await llavePublicaDe(c.otro_id);
         let claro = descifrar(c.ultimo_cifrado, c.ultimo_nonce, pub, priv);
         if (claro === null)
