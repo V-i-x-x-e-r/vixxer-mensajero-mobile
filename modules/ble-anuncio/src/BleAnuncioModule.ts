@@ -1,8 +1,8 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { NativeModule, requireOptionalNativeModule } from 'expo';
 
 declare class BleAnuncioModule extends NativeModule<{}> {
   iniciar(servicioUuid: string): boolean;
   detener(): boolean;
 }
 
-export default requireNativeModule<BleAnuncioModule>('BleAnuncio');
+export default requireOptionalNativeModule<BleAnuncioModule>('BleAnuncio');
