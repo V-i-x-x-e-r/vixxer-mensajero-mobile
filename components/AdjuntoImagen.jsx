@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Image, Pressable, Modal, ActivityIndicator, StyleSheet } from "react-native";
 import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
 import { leerCache, guardarCache } from "../lib/mediaCache";
+import { VisorImagen } from "./VisorImagen";
 
 const MAX_ANCHO = 248;
 const MAX_ALTO = 320;
@@ -14,12 +15,13 @@ function medida(w, h)
   return { width: Math.round(w * escala), height: Math.round(h * escala) };
 }
 
-export function AdjuntoImagen({ media, color })
+export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle })
 {
   const [uri, setUri] = useState(() => leerCache(media.path) || null);
   const [dims, setDims] = useState(null);
   const [error, setError] = useState(false);
   const [abierta, setAbierta] = useState(false);
+  const ref = useRef(null);
 
   useEffect(() =>
   {
@@ -84,13 +86,16 @@ export function AdjuntoImagen({ media, color })
 
   return (
     <>
-      <Pressable onPress={() => setAbierta(true)}>
+      <Pressable
+        ref={ref}
+        onPress={() => (seleccionando ? onToggle?.() : setAbierta(true))}
+        onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
+        delayLongPress={250}
+      >
         <Image source={{ uri }} style={[estilos.imagen, dims]} resizeMode="cover" />
       </Pressable>
       <Modal visible={abierta} transparent animationType="fade" onRequestClose={() => setAbierta(false)}>
-        <Pressable style={estilos.fondo} onPress={() => setAbierta(false)}>
-          <Image source={{ uri }} style={estilos.completa} resizeMode="contain" />
-        </Pressable>
+        <VisorImagen uri={uri} onCerrar={() => setAbierta(false)} />
       </Modal>
     </>
   );

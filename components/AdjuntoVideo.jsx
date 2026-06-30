@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { encodeBase64 } from "tweetnacl-util";
@@ -16,10 +16,11 @@ function Play({ tamano = 52 })
   );
 }
 
-export function AdjuntoVideo({ media, color })
+export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle })
 {
   const [uri, setUri] = useState(() => leerCache(media.path) || null);
   const [reproduciendo, setReproduciendo] = useState(false);
+  const ref = useRef(null);
   const player = useVideoPlayer(null, (p) =>
   {
     p.loop = false;
@@ -99,7 +100,13 @@ export function AdjuntoVideo({ media, color })
   }
 
   return (
-    <Pressable onPress={alternar} style={estilos.miniatura}>
+    <Pressable
+      ref={ref}
+      onPress={() => (seleccionando ? onToggle?.() : alternar())}
+      onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
+      delayLongPress={250}
+      style={estilos.miniatura}
+    >
       <VideoView player={player} style={estilos.video} contentFit="cover" nativeControls={false} />
       {!reproduciendo ? (
         <View style={estilos.capa} pointerEvents="none">
