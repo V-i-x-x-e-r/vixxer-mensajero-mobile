@@ -8,6 +8,7 @@ import { Copiar } from "./Copiar";
 import { Lapiz } from "./Lapiz";
 import { Bote } from "./Bote";
 import { Check } from "./Check";
+import { Pin } from "./Pin";
 
 const REACCIONES = ["\u{1F44D}", "❤️", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
 const ANCHO = 300;
@@ -23,7 +24,7 @@ function Accion({ icono, etiqueta, onPress, color })
   );
 }
 
-export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onCerrar })
+export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onFijar, onCerrar })
 {
   const { colores } = useTema();
   const entrada = useRef(null);
@@ -81,6 +82,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, onReaccionar, onResponder
             <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} />
             <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} />
             <Accion icono={<Check color={colores.texto} tamano={20} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} />
+            <Accion icono={<Pin color={colores.texto} tamano={20} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} />
             {esMedia ? null : <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />}
             {esMio && !esMedia ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
             {esMio ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
