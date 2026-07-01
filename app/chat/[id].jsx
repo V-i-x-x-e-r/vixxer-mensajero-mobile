@@ -15,6 +15,7 @@ import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
 import { leerFijado, fijarMensaje, quitarFijado } from "../../lib/mensajeFijado";
 import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion } from "../../lib/efimero";
+import { aliasDe } from "../../lib/alias";
 import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -156,6 +157,7 @@ export default function Chat()
   const [fijado, setFijado] = useState(null);
   const [temporizador, setTemporizador] = useState(0);
   const [pickerTemp, setPickerTemp] = useState(false);
+  const [alias, setAlias] = useState(null);
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -214,6 +216,7 @@ export default function Chat()
     api.presencia(otroId).then(setPresencia).catch(() => {});
     leerFijado(otroId).then(setFijado);
     leerTemporizador(otroId).then(setTemporizador);
+    aliasDe(otroId).then(setAlias);
   }, [otroId]);
 
   function elegirTemporizador(segundos)
@@ -930,9 +933,9 @@ export default function Chat()
               onPress={() => router.push({ pathname: "/perfil/[id]", params: { id: otroId, usuario: usuario || "", avatar: avatar || "" } })}
               style={({ pressed }) => [estilos.encabezado, pressed && estilos.presionadoLeve]}
             >
-              <Avatar nombre={usuario || ""} uri={avatar || null} tamano={32} />
+              <Avatar nombre={alias || usuario || ""} uri={avatar || null} tamano={32} />
               <View>
-                <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{usuario || "Conversación"}</Text>
+                <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{alias || usuario || "Conversación"}</Text>
                 {sub ? <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{sub}</Text> : null}
               </View>
             </Pressable>

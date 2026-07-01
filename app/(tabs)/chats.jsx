@@ -9,6 +9,7 @@ import { llavePublicaDe } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, ocultar, mostrar } from "../../lib/chatLocal";
 import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
+import { leerAlias } from "../../lib/alias";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
@@ -53,6 +54,7 @@ export default function Chats()
   const [sel, setSel] = useState(null);
   const [borrando, setBorrando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [alias, setAlias] = useState({});
 
   const cargar = useCallback(async () =>
   {
@@ -61,6 +63,7 @@ export default function Chats()
     {
       const e = await leerEstados();
       setEstados(e);
+      leerAlias().then(setAlias);
       const [lista, conversaciones] = await Promise.all([
         api.amigos(),
         api.conversaciones(),
@@ -241,7 +244,7 @@ export default function Chats()
     ? amigos.filter((a) => archivados.includes(a.id))
     : amigos.filter((a) => !archivados.includes(a.id));
   const mostrados = busqueda.trim()
-    ? enSeccion.filter((a) => a.usuario.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    ? enSeccion.filter((a) => (alias[a.id] || a.usuario).toLowerCase().includes(busqueda.trim().toLowerCase()))
     : enSeccion;
   const numArchivados = amigos.filter((a) => archivados.includes(a.id)).length;
 
@@ -354,6 +357,7 @@ export default function Chats()
           const c = convs[item.id];
           const fijado = estados.fijados.includes(item.id);
           const silenciado = estados.silenciados.includes(item.id);
+          const nombre = alias[item.id] || item.usuario;
           const elegido = sel === item.id;
           return (
             <Presionable
@@ -362,11 +366,11 @@ export default function Chats()
               delayLongPress={250}
               style={[estilos.fila, elegido && { backgroundColor: colores.surface }]}
             >
-              <Avatar nombre={item.usuario} uri={item.avatar_url} tamano={44} />
+              <Avatar nombre={nombre} uri={item.avatar_url} tamano={44} />
               <View style={estilos.centro}>
                 <View style={estilos.lineaNombre}>
                   {fijado ? <Pin color={colores.muted} tamano={13} /> : null}
-                  <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.usuario}</Text>
+                  <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{nombre}</Text>
                   {silenciado ? <Silencio color={colores.muted} tamano={13} /> : null}
                 </View>
                 {c ? (

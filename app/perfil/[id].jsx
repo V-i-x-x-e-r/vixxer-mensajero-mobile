@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Modal, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as api from "../../lib/api";
 import { descifrar, numeroSeguridad } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../../lib/storage";
+import { aliasDe, guardarAlias } from "../../lib/alias";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Avatar } from "../../components/Avatar";
 import { Confirmacion } from "../../components/Confirmacion";
 import { AdjuntoImagen } from "../../components/AdjuntoImagen";
 import { Bote } from "../../components/Bote";
+import { Lapiz } from "../../components/Lapiz";
 
 function leerMedia(texto)
 {
@@ -64,11 +66,29 @@ export default function Perfil()
   const [confirmar, setConfirmar] = useState(null);
   const [media, setMedia] = useState([]);
   const [seguridad, setSeguridad] = useState(null);
+  const [alias, setAlias] = useState(null);
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState("");
 
   useEffect(() =>
   {
     api.presencia(id).then(setPresencia).catch(() => {});
+    aliasDe(id).then(setAlias);
   }, [id]);
+
+  function abrirEditor()
+  {
+    setBorrador(alias || "");
+    setEditando(true);
+  }
+
+  async function guardarNombre()
+  {
+    const limpio = borrador.trim();
+    await guardarAlias(id, limpio);
+    setAlias(limpio || null);
+    setEditando(false);
+  }
 
   useEffect(() =>
   {
@@ -144,8 +164,12 @@ export default function Perfil()
   return (
     <View style={{ flex: 1, backgroundColor: colores.fondo }}>
       <View style={estilos.cabecera}>
-        <Avatar nombre={usuario || ""} uri={avatar || null} tamano={108} />
-        <Text style={[estilos.nombre, { color: colores.texto }]}>{usuario}</Text>
+        <Avatar nombre={alias || usuario || ""} uri={avatar || null} tamano={108} />
+        <Pressable onPress={abrirEditor} style={({ pressed }) => [estilos.nombreFila, pressed && estilos.presionado]}>
+          <Text style={[estilos.nombre, { color: colores.texto }]}>{alias || usuario}</Text>
+          <Lapiz color={colores.muted} tamano={16} />
+        </Pressable>
+        {alias ? <Text style={[estilos.arroba, { color: colores.muted }]}>@{usuario}</Text> : null}
         {sub ? (
           <View style={estilos.presencia}>
             {enLinea ? <View style={estilos.punto} /> : null}
@@ -205,6 +229,32 @@ export default function Perfil()
         ) : null}
       </View>
 
+      <Modal transparent visible={editando} animationType="fade" onRequestClose={() => setEditando(false)}>
+        <Pressable style={estilos.modalFondo} onPress={() => setEditando(false)}>
+          <Pressable style={[estilos.modalCaja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.modalTitulo, { color: colores.texto }]}>Nombre para mostrar</Text>
+            <TextInput
+              value={borrador}
+              onChangeText={setBorrador}
+              placeholder={usuario}
+              placeholderTextColor={colores.placeholder}
+              autoFocus
+              maxLength={40}
+              style={[estilos.modalCampo, { color: colores.texto, borderColor: colores.borde }]}
+            />
+            <Text style={[estilos.nota, { color: colores.muted, marginTop: 0 }]}>Solo tú ves este nombre. Déjalo vacío para usar @{usuario}.</Text>
+            <View style={estilos.modalAcciones}>
+              <Pressable onPress={() => setEditando(false)} style={({ pressed }) => [estilos.modalBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+                <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={guardarNombre} style={({ pressed }) => [estilos.modalBoton, { backgroundColor: colores.botonFondo, borderColor: colores.botonFondo }, pressed && estilos.presionado]}>
+                <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>Guardar</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <Confirmacion
         visible={confirmar === "borrar"}
         titulo="Borrar conversación"
@@ -230,7 +280,9 @@ export default function Perfil()
 
 const estilos = StyleSheet.create({
   cabecera: { alignItems: "center", gap: 10, paddingTop: 36, paddingBottom: 28 },
+  nombreFila: { flexDirection: "row", alignItems: "center", gap: 8 },
   nombre: { fontSize: 22, fontFamily: fuentes.semibold },
+  arroba: { fontSize: 14, marginTop: -4 },
   presencia: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" },
   sub: { fontSize: 13 },
@@ -242,4 +294,10 @@ const estilos = StyleSheet.create({
   nota: { fontSize: 12, marginTop: 10, lineHeight: 17 },
   presionado: { opacity: 0.6 },
   numero: { fontSize: 17, fontFamily: fuentes.media, letterSpacing: 2, lineHeight: 28, textAlign: "center" },
+  modalFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 28 },
+  modalCaja: { width: "100%", maxWidth: 360, borderWidth: 1, borderRadius: 16, padding: 20, gap: 12 },
+  modalTitulo: { fontSize: 17, fontFamily: fuentes.semibold },
+  modalCampo: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+  modalAcciones: { flexDirection: "row", gap: 10, marginTop: 4 },
+  modalBoton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
 });
