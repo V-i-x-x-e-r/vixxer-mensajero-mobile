@@ -7,6 +7,7 @@ import { ProveedorTema, useTema } from "../components/tema";
 import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { BloqueoPin } from "../components/BloqueoPin";
 import { tienePin } from "../lib/pin";
+import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
 
 function Navegacion()
@@ -74,6 +75,11 @@ function Contenido()
 export default function RootLayout()
 {
   const [listas] = useFonts({ Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold });
+
+  useEffect(() =>
+  {
+    capturasBloqueadas().then((v) => v && aplicarBloqueoCapturas(true));
+  }, []);
 
   useEffect(() =>
   {
