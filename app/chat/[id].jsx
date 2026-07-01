@@ -102,6 +102,11 @@ function detalleTexto(item, mio)
   return partes.join("  ·  ");
 }
 
+function existente(lista, m)
+{
+  return lista.some((x) => x.id === m.id || (m.cliente_id && (x.cliente_id === m.cliente_id || x.id === m.cliente_id)));
+}
+
 function agrupar(reacciones)
 {
   const conteo = {};
@@ -303,7 +308,7 @@ export default function Chat()
       {
         return;
       }
-      setMensajes((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+      setMensajes((prev) => (existente(prev, m) ? prev : [...prev, m]));
     });
     return quitar;
   }, [otroId]);
@@ -397,7 +402,7 @@ export default function Chat()
       {
         if (activo)
         {
-          setMensajes((prev) => [...prev, { ...fila, texto: t }]);
+          setMensajes((prev) => (existente(prev, fila) ? prev : [...prev, { ...fila, texto: t }]));
           marcarLeidos([fila]);
         }
       });
@@ -537,7 +542,7 @@ export default function Chat()
     }, 8000);
     socket.emit(
       "mensaje:enviar",
-      { destinatarioId: otroId, contenidoCifrado: item.contenidoCifrado, nonce: item.nonce, respuestaA: item.respuestaA },
+      { destinatarioId: otroId, contenidoCifrado: item.contenidoCifrado, nonce: item.nonce, respuestaA: item.respuestaA, clienteId: item.localId },
       (r) =>
       {
         respondido = true;
