@@ -14,6 +14,7 @@ import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
 import { leerFijado, fijarMensaje, quitarFijado } from "../../lib/mensajeFijado";
+import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion } from "../../lib/efimero";
 import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -153,6 +154,8 @@ export default function Chat()
   const [consulta, setConsulta] = useState("");
   const [detalle, setDetalle] = useState(null);
   const [fijado, setFijado] = useState(null);
+  const [temporizador, setTemporizador] = useState(0);
+  const [pickerTemp, setPickerTemp] = useState(false);
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -161,6 +164,7 @@ export default function Chat()
   const lista = useRef(null);
   const tecleando = useRef(null);
   const cargandoMas = useRef(false);
+  const purgados = useRef(new Set());
 
   const invertidos = useMemo(() =>
   {
@@ -209,7 +213,15 @@ export default function Chat()
   {
     api.presencia(otroId).then(setPresencia).catch(() => {});
     leerFijado(otroId).then(setFijado);
+    leerTemporizador(otroId).then(setTemporizador);
   }, [otroId]);
+
+  function elegirTemporizador(segundos)
+  {
+    setTemporizador(segundos);
+    guardarTemporizador(otroId, segundos);
+    setPickerTemp(false);
+  }
 
   async function alternarFijar(mensaje)
   {
@@ -244,6 +256,40 @@ export default function Chat()
       lista.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
     }
   }
+
+  useEffect(() =>
+  {
+    const barrer = () =>
+    {
+      const ahora = Date.now();
+      setMensajes((prev) =>
+      {
+        const vivos = prev.filter((m) =>
+        {
+          const lim = expiraEn(m);
+          if (lim === null || lim > ahora)
+          {
+            return true;
+          }
+          if (m.remitente_id === miId.current && !String(m.id).startsWith("local-") && !purgados.current.has(m.id))
+          {
+            purgados.current.add(m.id);
+            socket_emit("mensaje:borrar", { id: m.id });
+          }
+          return false;
+        });
+        if (vivos.length !== prev.length)
+        {
+          guardarCacheChat(otroId, vivos);
+          return vivos;
+        }
+        return prev;
+      });
+    };
+    barrer();
+    const t = setInterval(barrer, 5000);
+    return () => clearInterval(t);
+  }, [otroId]);
 
   useEffect(() =>
   {
@@ -578,7 +624,7 @@ export default function Chat()
     }
     socket_emit("usuario:escribiendo", { para: otroId, activo: false });
     setTexto("");
-    await mandar(limpio);
+    await mandar(temporizador > 0 ? envolver(limpio, temporizador) : limpio);
   }
 
   function aMedia(asset)
@@ -765,7 +811,8 @@ export default function Chat()
 
   async function copiar(mensaje)
   {
-    await Clipboard.setStringAsync(mensaje.texto);
+    const ef = leerEfimero(mensaje.texto);
+    await Clipboard.setStringAsync(ef ? ef.m : mensaje.texto);
     setSel(null);
   }
 
@@ -891,17 +938,22 @@ export default function Chat()
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable
-              onPress={() =>
-              {
-                setBuscando((b) => !b);
-                setConsulta("");
-              }}
-              hitSlop={8}
-              style={({ pressed }) => pressed && estilos.presionadoLeve}
-            >
-              <Lupa color={colores.texto} tamano={20} />
-            </Pressable>
+            <View style={estilos.headerAcciones}>
+              <Pressable onPress={() => setPickerTemp(true)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionadoLeve}>
+                <Reloj color={temporizador > 0 ? colores.botonFondo : colores.texto} tamano={20} />
+              </Pressable>
+              <Pressable
+                onPress={() =>
+                {
+                  setBuscando((b) => !b);
+                  setConsulta("");
+                }}
+                hitSlop={8}
+                style={({ pressed }) => pressed && estilos.presionadoLeve}
+              >
+                <Lupa color={colores.texto} tamano={20} />
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -966,8 +1018,11 @@ export default function Chat()
           const media = leerMedia(item.texto);
           const citadoCrudo = item.respuestaTexto
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
-          const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoCrudo;
+          const citadoEf = citadoCrudo ? leerEfimero(citadoCrudo) : null;
+          const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoEf ? citadoEf.m : citadoCrudo;
 
+          const ef = leerEfimero(item.texto);
+          const textoMostrar = ef ? ef.m : item.texto;
           const elegido = seleccionados.includes(item.id);
           const borrado = item.contenido_cifrado === "BORRADO";
           const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video");
@@ -1014,7 +1069,7 @@ export default function Chat()
                     onMenu={seleccionando ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
                   />
                 ) : (
-                  <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
+                  <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{textoMostrar}</Text>
                 )}
 
                 {mediaSolo ? (
@@ -1030,6 +1085,7 @@ export default function Chat()
                   </View>
                 ) : (
                   <View style={estilos.meta}>
+                    {ef ? <Reloj color={mio ? colores.botonTexto : colores.muted} tamano={11} /> : null}
                     {item.editado ? (
                       <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
                     ) : null}
@@ -1121,6 +1177,16 @@ export default function Chat()
               <Bote color={colores.error} tamano={22} />
             </Pressable>
           </View>
+        </View>
+      ) : null}
+
+      {!seleccionando && temporizador > 0 ? (
+        <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Reloj color={colores.muted} tamano={14} />
+          <Text style={[estilos.avisoTxt, { color: colores.muted, marginLeft: 8 }]}>Mensajes temporales: {etiquetaDuracion(temporizador)}</Text>
+          <Pressable onPress={() => elegirTemporizador(0)} hitSlop={8}>
+            <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+          </Pressable>
         </View>
       ) : null}
 
@@ -1227,6 +1293,21 @@ export default function Chat()
         </View>
       ) : null}
 
+      <Modal transparent visible={pickerTemp} animationType="fade" onRequestClose={() => setPickerTemp(false)}>
+        <Pressable style={estilos.tempFondo} onPress={() => setPickerTemp(false)}>
+          <Pressable style={[estilos.tempHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.tempTitulo, { color: colores.texto }]}>Mensajes temporales</Text>
+            <Text style={[estilos.tempSub, { color: colores.muted }]}>Los mensajes de texto nuevos se borran en ambos dispositivos al cumplirse el tiempo.</Text>
+            {OPCIONES.map((o) => (
+              <Pressable key={o.valor} onPress={() => elegirTemporizador(o.valor)} style={({ pressed }) => [estilos.tempOpcion, pressed && estilos.presionadoLeve]}>
+                <Text style={[estilos.tempOpcionTxt, { color: colores.texto }]}>{o.etiqueta}</Text>
+                {temporizador === o.valor ? <Check color={colores.botonFondo} tamano={18} /> : null}
+              </Pressable>
+            ))}
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <Modal visible={!!previo} transparent animationType="fade" onRequestClose={() => setPrevio(null)}>
         <View style={estilos.previoFondo}>
           <View style={[estilos.previoTarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -1258,6 +1339,7 @@ const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
   flex: { flex: 1 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerAcciones: { flexDirection: "row", alignItems: "center", gap: 18 },
   presionadoLeve: { opacity: 0.7 },
   encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
   encabezadoSub: { fontSize: 12 },
@@ -1331,4 +1413,10 @@ const estilos = StyleSheet.create({
   previoVideo: { width: "100%", height: 160, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   previoAcciones: { flexDirection: "row", gap: 10 },
   previoBoton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
+  tempFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  tempHoja: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, padding: 20, paddingBottom: 32, gap: 4 },
+  tempTitulo: { fontSize: 17, fontFamily: fuentes.semibold },
+  tempSub: { fontSize: 13, marginBottom: 8 },
+  tempOpcion: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 14 },
+  tempOpcionTxt: { fontSize: 16 },
 });
