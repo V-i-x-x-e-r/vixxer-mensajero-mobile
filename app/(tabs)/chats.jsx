@@ -89,6 +89,7 @@ export default function Chats()
           if (texto.includes("\"t\":\"img\"")) { texto = "Foto"; }
           else if (texto.includes("\"t\":\"video\"")) { texto = "Video"; }
           else if (texto.includes("\"t\":\"audio\"")) { texto = "Audio"; }
+          else if (texto.includes("\"t\":\"tmp\"")) { try { texto = JSON.parse(texto).m; } catch (err) { texto = "Mensaje"; } }
         }
         mapa[c.otro_id] = {
           preview: c.ultimo_remitente_id === miId ? `Tú: ${texto}` : texto,
