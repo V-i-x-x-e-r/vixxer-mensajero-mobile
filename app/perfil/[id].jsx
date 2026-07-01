@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Modal, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Modal, ScrollView, StyleSheet } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import * as api from "../../lib/api";
 import { descifrar, numeroSeguridad } from "../../lib/crypto";
@@ -163,6 +163,7 @@ export default function Perfil()
 
   return (
     <View style={{ flex: 1, backgroundColor: colores.fondo }}>
+      <ScrollView contentContainerStyle={estilos.scroll} showsVerticalScrollIndicator={false}>
       <View style={estilos.cabecera}>
         <Avatar nombre={alias || usuario || ""} uri={avatar || null} tamano={108} />
         <Pressable onPress={abrirEditor} style={({ pressed }) => [estilos.nombreFila, pressed && estilos.presionado]}>
@@ -228,6 +229,7 @@ export default function Perfil()
           </>
         ) : null}
       </View>
+      </ScrollView>
 
       <Modal transparent visible={editando} animationType="fade" onRequestClose={() => setEditando(false)}>
         <Pressable style={estilos.modalFondo} onPress={() => setEditando(false)}>
@@ -279,6 +281,7 @@ export default function Perfil()
 }
 
 const estilos = StyleSheet.create({
+  scroll: { paddingBottom: 40 },
   cabecera: { alignItems: "center", gap: 10, paddingTop: 36, paddingBottom: 28 },
   nombreFila: { flexDirection: "row", alignItems: "center", gap: 8 },
   nombre: { fontSize: 22, fontFamily: fuentes.semibold },

@@ -13,7 +13,7 @@ import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
-import { leerFijado, fijarMensaje, quitarFijado } from "../../lib/mensajeFijado";
+import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion } from "../../lib/efimero";
 import { aliasDe } from "../../lib/alias";
 import { alEntrante, enviarPorCercania } from "../../lib/bleMensajeria";
@@ -160,7 +160,8 @@ export default function Chat()
   const [buscando, setBuscando] = useState(false);
   const [consulta, setConsulta] = useState("");
   const [detalle, setDetalle] = useState(null);
-  const [fijado, setFijado] = useState(null);
+  const [fijados, setFijados] = useState([]);
+  const [indiceFijado, setIndiceFijado] = useState(0);
   const [temporizador, setTemporizador] = useState(0);
   const [pickerTemp, setPickerTemp] = useState(false);
   const [alias, setAlias] = useState(null);
@@ -220,7 +221,7 @@ export default function Chat()
   useEffect(() =>
   {
     api.presencia(otroId).then(setPresencia).catch(() => {});
-    leerFijado(otroId).then(setFijado);
+    leerFijados(otroId).then(setFijados);
     leerTemporizador(otroId).then(setTemporizador);
     aliasDe(otroId).then(setAlias);
   }, [otroId]);
@@ -235,34 +236,35 @@ export default function Chat()
   async function alternarFijar(mensaje)
   {
     setSel(null);
-    if (fijado && fijado.id === mensaje.id)
-    {
-      await quitarFijado(otroId);
-      setFijado(null);
-      return;
-    }
-    const texto = leerMedia(mensaje.texto) ? "Multimedia" : mensaje.texto;
-    const dato = { id: mensaje.id, texto, remitente_id: mensaje.remitente_id };
-    await fijarMensaje(otroId, dato);
-    setFijado(dato);
+    const ef = leerEfimero(mensaje.texto);
+    const texto = leerMedia(mensaje.texto) ? "Multimedia" : ef ? ef.m : mensaje.texto;
+    const nueva = await alternarFijado(otroId, { id: mensaje.id, texto, remitente_id: mensaje.remitente_id });
+    setFijados(nueva);
+    setIndiceFijado(0);
   }
 
-  async function quitarFijar()
+  async function quitarFijar(id)
   {
-    await quitarFijado(otroId);
-    setFijado(null);
+    const nueva = await quitarFijado(otroId, id);
+    setFijados(nueva);
+    setIndiceFijado(0);
   }
 
   function irAFijado()
   {
-    if (!fijado)
+    if (fijados.length === 0)
     {
       return;
     }
-    const idx = invertidos.findIndex((m) => m.id === fijado.id);
+    const actual = fijados[indiceFijado % fijados.length];
+    const idx = invertidos.findIndex((m) => m.id === actual.id);
     if (idx >= 0)
     {
       lista.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+    }
+    if (fijados.length > 1)
+    {
+      setIndiceFijado((i) => (i + 1) % fijados.length);
     }
   }
 
@@ -845,9 +847,9 @@ export default function Chat()
   {
     socket_emit("mensaje:borrar", { id: mensaje.id });
     setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, contenido_cifrado: "BORRADO", texto: null } : m)));
-    if (fijado && fijado.id === mensaje.id)
+    if (fijados.some((f) => f.id === mensaje.id))
     {
-      quitarFijar();
+      quitarFijar(mensaje.id);
     }
     setSel(null);
   }
@@ -956,6 +958,7 @@ export default function Chat()
     setLejos(e.nativeEvent.contentOffset.y > 240);
   }
 
+  const fijadoActual = fijados.length ? fijados[indiceFijado % fijados.length] : null;
   const sub = escribiendo
     ? "escribiendo…"
     : presencia && presencia.en_linea
@@ -1018,14 +1021,14 @@ export default function Chat()
         </View>
       ) : null}
 
-      {fijado && !buscando ? (
+      {fijadoActual && !buscando ? (
         <Pressable onPress={irAFijado} style={[estilos.fijado, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
           <Pin color={colores.muted} tamano={15} />
           <View style={estilos.fijadoCentro}>
-            <Text style={[estilos.fijadoTitulo, { color: colores.muted }]}>Mensaje fijado</Text>
-            <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{fijado.texto}</Text>
+            <Text style={[estilos.fijadoTitulo, { color: colores.muted }]}>{fijados.length > 1 ? `Fijados (${fijados.length})` : "Mensaje fijado"}</Text>
+            <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{fijadoActual.texto}</Text>
           </View>
-          <Pressable onPress={quitarFijar} hitSlop={8}>
+          <Pressable onPress={() => quitarFijar(fijadoActual.id)} hitSlop={8}>
             <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
           </Pressable>
         </Pressable>
@@ -1310,7 +1313,7 @@ export default function Chat()
         sel={sel}
         esMio={sel ? sel.mensaje.remitente_id === miId.current : false}
         esMedia={sel ? !!leerMedia(sel.mensaje.texto) : false}
-        fijado={sel && fijado ? fijado.id === sel.mensaje.id : false}
+        fijado={sel ? fijados.some((f) => f.id === sel.mensaje.id) : false}
         onReaccionar={reaccionar}
         onResponder={responder}
         onReenviar={abrirReenvio}
