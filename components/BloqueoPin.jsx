@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { verificarPin } from "../lib/pin";
+import { biometricoActivo, biometricoDisponible, autenticar } from "../lib/biometrico";
 import { useTema } from "./tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "./Logo";
+import { Huella } from "./Huella";
 
 const TECLAS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "←"];
 
@@ -14,6 +16,32 @@ export function BloqueoPin({ onDesbloquear })
   const insets = useSafeAreaInsets();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
+  const [conBio, setConBio] = useState(false);
+  const intentado = useRef(false);
+
+  async function probarBiometrico()
+  {
+    const activo = await biometricoActivo();
+    const hay = await biometricoDisponible();
+    if (!activo || !hay)
+    {
+      return;
+    }
+    setConBio(true);
+    if (await autenticar())
+    {
+      onDesbloquear();
+    }
+  }
+
+  useEffect(() =>
+  {
+    if (!intentado.current)
+    {
+      intentado.current = true;
+      probarBiometrico();
+    }
+  }, []);
 
   async function pulsar(tecla)
   {
@@ -65,6 +93,15 @@ export function BloqueoPin({ onDesbloquear })
           </Pressable>
         ))}
       </View>
+
+      {conBio ? (
+        <Pressable onPress={probarBiometrico} hitSlop={8} style={({ pressed }) => [estilos.bio, pressed && { opacity: 0.6 }]}>
+          <Huella color={colores.muted} tamano={22} />
+          <Text style={[estilos.bioTxt, { color: colores.muted }]}>Usar biometría</Text>
+        </Pressable>
+      ) : (
+        <View style={estilos.bio} />
+      )}
     </View>
   );
 }
@@ -79,4 +116,6 @@ const estilos = StyleSheet.create({
   teclado: { width: 300, flexDirection: "row", flexWrap: "wrap", justifyContent: "center" },
   tecla: { width: 90, height: 76, alignItems: "center", justifyContent: "center", borderRadius: 16 },
   teclaTxt: { fontSize: 26, fontFamily: fuentes.media },
+  bio: { minHeight: 30, flexDirection: "row", alignItems: "center", gap: 8 },
+  bioTxt: { fontSize: 14, fontFamily: fuentes.media },
 });

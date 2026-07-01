@@ -15,6 +15,8 @@ import { Avatar } from "../components/Avatar";
 import { CodigoQR } from "../components/CodigoQR";
 import { ConfigurarPin } from "../components/ConfigurarPin";
 import { tienePin, quitarPin } from "../lib/pin";
+import { biometricoDisponible, biometricoActivo, activarBiometrico } from "../lib/biometrico";
+import { capturasBloqueadas, guardarBloqueoCapturas } from "../lib/privacidad";
 
 export default function Ajustes()
 {
@@ -26,6 +28,9 @@ export default function Ajustes()
   const [qr, setQr] = useState(false);
   const [pinActivo, setPinActivo] = useState(false);
   const [configPin, setConfigPin] = useState(false);
+  const [bioActivo, setBioActivo] = useState(false);
+  const [bioHay, setBioHay] = useState(false);
+  const [capturas, setCapturas] = useState(false);
   const [prefs, setPrefs] = useState({ mostrar_conexion: true, mostrar_acuses: true });
   const [confirmar, setConfirmar] = useState(false);
 
@@ -39,7 +44,22 @@ export default function Ajustes()
     }).catch(() => {});
     api.preferencias().then(setPrefs).catch(() => {});
     tienePin().then(setPinActivo);
+    biometricoDisponible().then(setBioHay);
+    biometricoActivo().then(setBioActivo);
+    capturasBloqueadas().then(setCapturas);
   }, []);
+
+  function alternarBio(valor)
+  {
+    setBioActivo(valor);
+    activarBiometrico(valor);
+  }
+
+  function alternarCapturas(valor)
+  {
+    setCapturas(valor);
+    guardarBloqueoCapturas(valor);
+  }
 
   function alternarPin(valor)
   {
@@ -51,6 +71,8 @@ export default function Ajustes()
     {
       quitarPin();
       setPinActivo(false);
+      setBioActivo(false);
+      activarBiometrico(false);
     }
   }
 
@@ -159,6 +181,28 @@ export default function Ajustes()
         <Switch
           value={pinActivo}
           onValueChange={alternarPin}
+          trackColor={{ true: colores.texto, false: colores.borde }}
+          thumbColor={colores.fondo}
+          ios_backgroundColor={colores.borde}
+        />
+      </View>
+      {pinActivo && bioHay ? (
+        <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
+          <Text style={[estilos.etiqueta, { color: colores.texto }]}>Desbloqueo biométrico</Text>
+          <Switch
+            value={bioActivo}
+            onValueChange={alternarBio}
+            trackColor={{ true: colores.texto, false: colores.borde }}
+            thumbColor={colores.fondo}
+            ios_backgroundColor={colores.borde}
+          />
+        </View>
+      ) : null}
+      <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Bloquear capturas de pantalla</Text>
+        <Switch
+          value={capturas}
+          onValueChange={alternarCapturas}
           trackColor={{ true: colores.texto, false: colores.borde }}
           thumbColor={colores.fondo}
           ios_backgroundColor={colores.borde}
