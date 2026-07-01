@@ -1,6 +1,5 @@
 import { useRef, useState } from "react";
-import { Animated, PanResponder, Pressable, Text, StyleSheet } from "react-native";
-import * as MediaLibrary from "expo-media-library";
+import { Animated, PanResponder, Pressable, Text, Platform, StyleSheet } from "react-native";
 import { escribirTemp } from "../lib/archivos";
 
 const ZOOM = 2.5;
@@ -14,9 +13,16 @@ export function VisorImagen({ uri, onCerrar })
 
   async function guardar()
   {
+    if (Platform.OS === "web")
+    {
+      setGuardado("No disponible en web");
+      setTimeout(() => setGuardado(""), 1800);
+      return;
+    }
     setGuardado("Guardando…");
     try
     {
+      const MediaLibrary = require("expo-media-library");
       const permiso = await MediaLibrary.requestPermissionsAsync();
       if (!permiso.granted)
       {
