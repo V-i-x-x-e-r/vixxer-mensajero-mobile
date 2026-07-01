@@ -1,7 +1,11 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
 
-declare class BleAnuncioModule extends NativeModule<{}> {
-  iniciar(servicioUuid: string): boolean;
+type BleAnuncioEventos = {
+  onMensaje: (evento: { texto: string }) => void;
+};
+
+declare class BleAnuncioModule extends NativeModule<BleAnuncioEventos> {
+  iniciar(servicioUuid: string, caracteristicaUuid: string): boolean;
   detener(): boolean;
 }
 

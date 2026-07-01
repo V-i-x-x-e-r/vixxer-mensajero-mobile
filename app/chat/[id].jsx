@@ -16,6 +16,7 @@ import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
 import { leerFijado, fijarMensaje, quitarFijado } from "../../lib/mensajeFijado";
 import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion } from "../../lib/efimero";
 import { aliasDe } from "../../lib/alias";
+import { alEntrante, enviarPorCercania } from "../../lib/bleMensajeria";
 import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -292,6 +293,19 @@ export default function Chat()
     barrer();
     const t = setInterval(barrer, 5000);
     return () => clearInterval(t);
+  }, [otroId]);
+
+  useEffect(() =>
+  {
+    const quitar = alEntrante((m) =>
+    {
+      if (m.remitente_id !== otroId)
+      {
+        return;
+      }
+      setMensajes((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
+    });
+    return quitar;
   }, [otroId]);
 
   useEffect(() =>
@@ -583,6 +597,27 @@ export default function Chat()
     }
     setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "enviando" } : m)));
     intentarEnviar(item);
+  }
+
+  async function enviarPorBle(mensaje)
+  {
+    const items = await leerOutbox(otroId);
+    const item = items.find((i) => i.localId === mensaje.id);
+    if (!item)
+    {
+      return;
+    }
+    setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "enviando" } : m)));
+    const r = await enviarPorCercania(otroId, item.contenidoCifrado, item.nonce);
+    if (r.entregados > 0)
+    {
+      await quitarOutbox(otroId, item.localId);
+      setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "enviado", porBle: true } : m)));
+    }
+    else
+    {
+      setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "fallido" } : m)));
+    }
   }
 
   async function vaciarOutbox()
@@ -1096,9 +1131,14 @@ export default function Chat()
                     {mio ? (
                       item.estado === "fallido"
                         ? (
-                            <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
-                              <Text style={[estilos.reintentarTxt, { color: colores.error }]}>no enviado · reintentar</Text>
-                            </Pressable>
+                            <View style={estilos.fallidoFila}>
+                              <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
+                                <Text style={[estilos.reintentarTxt, { color: colores.error }]}>no enviado · reintentar</Text>
+                              </Pressable>
+                              <Pressable onPress={() => enviarPorBle(item)} hitSlop={8} style={estilos.reintentar}>
+                                <Text style={[estilos.reintentarTxt, { color: mio ? colores.botonTexto : colores.muted }]}>· cercanía</Text>
+                              </Pressable>
+                            </View>
                           )
                         : item.estado === "enviando"
                           ? <Reloj color={GRIS_VISTO} tamano={11} />
@@ -1364,6 +1404,7 @@ const estilos = StyleSheet.create({
   editado: { fontSize: 10, opacity: 0.7, fontStyle: "italic" },
   hora: { fontSize: 10, opacity: 0.7 },
   reintentar: { marginLeft: 2 },
+  fallidoFila: { flexDirection: "row", alignItems: "center", gap: 6 },
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
