@@ -7,7 +7,7 @@ import { conectarSocket, obtenerSocket } from "../../lib/socket";
 import { descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
-import { leerEstados, alternarFijado, alternarSilenciado, ocultar, mostrar } from "../../lib/chatLocal";
+import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, ocultar, mostrar } from "../../lib/chatLocal";
 import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -18,6 +18,7 @@ import { Presionable } from "../../components/Presionable";
 import { Pin } from "../../components/Pin";
 import { Silencio } from "../../components/Silencio";
 import { Bote } from "../../components/Bote";
+import { Archivar } from "../../components/Archivar";
 import { EstadoLista } from "../../components/EstadoLista";
 import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 import { Lupa } from "../../components/Lupa";
@@ -43,7 +44,8 @@ export default function Chats()
   const insets = useSafeAreaInsets();
   const [amigos, setAmigos] = useState([]);
   const [convs, setConvs] = useState({});
-  const [estados, setEstados] = useState({ fijados: [], silenciados: [], ocultos: [] });
+  const [estados, setEstados] = useState({ fijados: [], silenciados: [], ocultos: [], archivados: [] });
+  const [verArchivados, setVerArchivados] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
@@ -200,6 +202,13 @@ export default function Chats()
     cargar();
   }
 
+  async function archivar()
+  {
+    await alternarArchivado(sel);
+    setSel(null);
+    cargar();
+  }
+
   async function quitarDeLista()
   {
     await ocultar(sel);
@@ -225,9 +234,23 @@ export default function Chats()
   const conectado = estado === "conectado";
   const selFijado = sel ? estados.fijados.includes(sel) : false;
   const selSilenciado = sel ? estados.silenciados.includes(sel) : false;
+  const selArchivado = sel ? estados.archivados.includes(sel) : false;
+  const archivados = estados.archivados || [];
+  const enSeccion = verArchivados
+    ? amigos.filter((a) => archivados.includes(a.id))
+    : amigos.filter((a) => !archivados.includes(a.id));
   const mostrados = busqueda.trim()
-    ? amigos.filter((a) => a.usuario.toLowerCase().includes(busqueda.trim().toLowerCase()))
-    : amigos;
+    ? enSeccion.filter((a) => a.usuario.toLowerCase().includes(busqueda.trim().toLowerCase()))
+    : enSeccion;
+  const numArchivados = amigos.filter((a) => archivados.includes(a.id)).length;
+
+  useEffect(() =>
+  {
+    if (verArchivados && numArchivados === 0)
+    {
+      setVerArchivados(false);
+    }
+  }, [verArchivados, numArchivados]);
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
@@ -243,9 +266,21 @@ export default function Chats()
             <Pressable onPress={silenciar} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
               <Silencio color={selSilenciado ? colores.texto : colores.muted} />
             </Pressable>
+            <Pressable onPress={archivar} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+              <Archivar color={selArchivado ? colores.texto : colores.muted} />
+            </Pressable>
             <Pressable onPress={() => setBorrando(true)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
               <Bote color={colores.error} />
             </Pressable>
+          </View>
+        </View>
+      ) : verArchivados ? (
+        <View style={estilos.cabecera}>
+          <View style={estilos.marca}>
+            <Pressable onPress={() => { setVerArchivados(false); setBusqueda(""); }} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+              <Text style={{ color: colores.texto, fontSize: 22 }}>{"‹"}</Text>
+            </Pressable>
+            <Text style={[estilos.titulo, { color: colores.texto }]}>Archivados</Text>
           </View>
         </View>
       ) : (
@@ -300,6 +335,19 @@ export default function Chats()
           />
         }
         ItemSeparatorComponent={() => <View style={[estilos.separadorFila, { backgroundColor: colores.borde }]} />}
+        ListHeaderComponent={
+          !verArchivados && !sel && !busqueda && numArchivados > 0 ? (
+            <Presionable onPress={() => setVerArchivados(true)} style={estilos.fila}>
+              <View style={[estilos.iconoArchivo, { backgroundColor: colores.surface }]}>
+                <Archivar color={colores.muted} tamano={20} />
+              </View>
+              <View style={estilos.centro}>
+                <Text style={[estilos.nombre, { color: colores.texto }]}>Archivados</Text>
+              </View>
+              <Text style={[estilos.hora, { color: colores.muted }]}>{numArchivados}</Text>
+            </Presionable>
+          ) : null
+        }
         renderItem={({ item }) =>
         {
           const c = convs[item.id];
@@ -371,6 +419,7 @@ const estilos = StyleSheet.create({
   buscarCampo: { flex: 1, fontSize: 15, paddingVertical: 0 },
   lista: { flex: 1 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
+  iconoArchivo: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   separadorFila: { height: 1, marginLeft: 66 },
   centro: { flex: 1, gap: 2 },
   lineaNombre: { flexDirection: "row", alignItems: "center", gap: 6 },
