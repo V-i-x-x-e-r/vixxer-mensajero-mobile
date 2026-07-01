@@ -13,6 +13,7 @@ import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
+import { leerFijado, fijarMensaje, quitarFijado } from "../../lib/mensajeFijado";
 import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -30,6 +31,7 @@ import { SelectorContacto } from "../../components/SelectorContacto";
 import { Reenviar } from "../../components/Reenviar";
 import { Bote } from "../../components/Bote";
 import { Lupa } from "../../components/Lupa";
+import { Pin } from "../../components/Pin";
 
 const GRIS_VISTO = "#8E8E93";
 
@@ -150,6 +152,7 @@ export default function Chat()
   const [buscando, setBuscando] = useState(false);
   const [consulta, setConsulta] = useState("");
   const [detalle, setDetalle] = useState(null);
+  const [fijado, setFijado] = useState(null);
   const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
@@ -205,7 +208,42 @@ export default function Chat()
   useEffect(() =>
   {
     api.presencia(otroId).then(setPresencia).catch(() => {});
+    leerFijado(otroId).then(setFijado);
   }, [otroId]);
+
+  async function alternarFijar(mensaje)
+  {
+    setSel(null);
+    if (fijado && fijado.id === mensaje.id)
+    {
+      await quitarFijado(otroId);
+      setFijado(null);
+      return;
+    }
+    const texto = leerMedia(mensaje.texto) ? "Multimedia" : mensaje.texto;
+    const dato = { id: mensaje.id, texto, remitente_id: mensaje.remitente_id };
+    await fijarMensaje(otroId, dato);
+    setFijado(dato);
+  }
+
+  async function quitarFijar()
+  {
+    await quitarFijado(otroId);
+    setFijado(null);
+  }
+
+  function irAFijado()
+  {
+    if (!fijado)
+    {
+      return;
+    }
+    const idx = invertidos.findIndex((m) => m.id === fijado.id);
+    if (idx >= 0)
+    {
+      lista.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+    }
+  }
 
   useEffect(() =>
   {
@@ -718,6 +756,10 @@ export default function Chat()
   {
     socket_emit("mensaje:borrar", { id: mensaje.id });
     setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, contenido_cifrado: "BORRADO", texto: null } : m)));
+    if (fijado && fijado.id === mensaje.id)
+    {
+      quitarFijar();
+    }
     setSel(null);
   }
 
@@ -881,6 +923,19 @@ export default function Chat()
         </View>
       ) : null}
 
+      {fijado && !buscando ? (
+        <Pressable onPress={irAFijado} style={[estilos.fijado, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pin color={colores.muted} tamano={15} />
+          <View style={estilos.fijadoCentro}>
+            <Text style={[estilos.fijadoTitulo, { color: colores.muted }]}>Mensaje fijado</Text>
+            <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{fijado.texto}</Text>
+          </View>
+          <Pressable onPress={quitarFijar} hitSlop={8}>
+            <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
+          </Pressable>
+        </Pressable>
+      ) : null}
+
       <FlatList
         ref={lista}
         data={invertidos}
@@ -892,6 +947,7 @@ export default function Chat()
         scrollEventThrottle={16}
         onEndReached={cargarMas}
         onEndReachedThreshold={0.3}
+        onScrollToIndexFailed={() => {}}
         ListFooterComponent={
           <View>
             {masCargando ? <ActivityIndicator color={colores.muted} style={estilos.masSpinner} /> : null}
@@ -1140,6 +1196,7 @@ export default function Chat()
         sel={sel}
         esMio={sel ? sel.mensaje.remitente_id === miId.current : false}
         esMedia={sel ? !!leerMedia(sel.mensaje.texto) : false}
+        fijado={sel && fijado ? fijado.id === sel.mensaje.id : false}
         onReaccionar={reaccionar}
         onResponder={responder}
         onReenviar={abrirReenvio}
@@ -1147,6 +1204,7 @@ export default function Chat()
         onCopiar={copiar}
         onEditar={editar}
         onBorrar={borrar}
+        onFijar={alternarFijar}
         onCerrar={() => setSel(null)}
       />
 
@@ -1225,6 +1283,10 @@ const estilos = StyleSheet.create({
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
   buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 42, marginHorizontal: 12, marginTop: 8 },
+  fijado: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 12, marginTop: 8 },
+  fijadoCentro: { flex: 1, gap: 1 },
+  fijadoTitulo: { fontSize: 11, fontFamily: fuentes.media },
+  fijadoTxt: { fontSize: 13 },
   buscarCampo: { flex: 1, fontSize: 15, paddingVertical: 0 },
   selBar: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
   selCount: { flex: 1, fontSize: 16, fontFamily: fuentes.semibold },
