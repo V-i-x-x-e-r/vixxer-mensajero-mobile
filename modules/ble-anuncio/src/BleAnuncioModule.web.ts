@@ -1,7 +1,7 @@
 import { registerWebModule, NativeModule } from 'expo';
 
 class BleAnuncioModule extends NativeModule<{}> {
-  iniciar(_servicioUuid: string) { return false; }
+  iniciar(_servicioUuid: string, _caracteristicaUuid: string) { return false; }
   detener() { return false; }
 }
 
