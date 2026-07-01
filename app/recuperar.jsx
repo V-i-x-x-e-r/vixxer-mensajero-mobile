@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { restaurarDeRespaldo, crearIdentidad } from "../lib/crypto";
+import { publicarLlaveFirma } from "../lib/firma";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
@@ -42,6 +43,7 @@ export default function Recuperar()
         return;
       }
       await api.actualizarLlavePublica(pub).catch(() => {});
+      await publicarLlaveFirma().catch(() => {});
       router.replace("/chats");
     }
     catch (e)
@@ -63,6 +65,7 @@ export default function Recuperar()
     {
       const identidad = await crearIdentidad();
       await api.actualizarLlavePublica(identidad.publicKey).catch(() => {});
+      await publicarLlaveFirma().catch(() => {});
       await api.subirRespaldo(identidad.respaldo).catch(() => {});
       setNuevoCodigo(identidad.codigo);
     }

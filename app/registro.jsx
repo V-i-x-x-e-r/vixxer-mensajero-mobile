@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
 import { crearIdentidad } from "../lib/crypto";
+import { asegurarLlaveFirma } from "../lib/firma";
 import { guardar, TOKEN, MI_ID } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
@@ -42,7 +43,8 @@ export default function Registro()
     try
     {
       const identidad = await crearIdentidad();
-      await api.registrar(usuario.trim(), contrasena, identidad.publicKey);
+      const llaveFirma = await asegurarLlaveFirma();
+      await api.registrar(usuario.trim(), contrasena, identidad.publicKey, llaveFirma);
       const data = await api.login(usuario.trim(), contrasena);
       await guardar(TOKEN, data.token);
       await guardar(MI_ID, data.usuario.id);

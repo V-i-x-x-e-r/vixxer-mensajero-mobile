@@ -14,7 +14,7 @@ import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
-import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion } from "../../lib/efimero";
+import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion, envolverAviso, leerAviso, textoAviso } from "../../lib/efimero";
 import { aliasDe } from "../../lib/alias";
 import { alEntrante, enviarPorCercania } from "../../lib/bleMensajeria";
 import { ChatEsqueleto } from "../../components/Esqueleto";
@@ -34,6 +34,8 @@ import { SelectorContacto } from "../../components/SelectorContacto";
 import { Reenviar } from "../../components/Reenviar";
 import { Bote } from "../../components/Bote";
 import { Lupa } from "../../components/Lupa";
+import { Kebab } from "../../components/Kebab";
+import { VistaPreviaVideo } from "../../components/VistaPreviaVideo";
 import { Pin } from "../../components/Pin";
 
 const GRIS_VISTO = "#8E8E93";
@@ -159,6 +161,7 @@ export default function Chat()
   const [seleccionados, setSeleccionados] = useState([]);
   const [buscando, setBuscando] = useState(false);
   const [consulta, setConsulta] = useState("");
+  const [menu, setMenu] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [fijados, setFijados] = useState([]);
   const [indiceFijado, setIndiceFijado] = useState(0);
@@ -178,7 +181,7 @@ export default function Chat()
   const invertidos = useMemo(() =>
   {
     const base = buscando && consulta.trim()
-      ? mensajes.filter((m) => !leerMedia(m.texto) && m.texto.toLowerCase().includes(consulta.trim().toLowerCase()))
+      ? mensajes.filter((m) => !leerMedia(m.texto) && !leerAviso(m.texto) && m.texto.toLowerCase().includes(consulta.trim().toLowerCase()))
       : mensajes;
     return base.slice().reverse();
   }, [mensajes, buscando, consulta]);
@@ -226,11 +229,16 @@ export default function Chat()
     aliasDe(otroId).then(setAlias);
   }, [otroId]);
 
-  function elegirTemporizador(segundos)
+  async function elegirTemporizador(segundos)
   {
+    setPickerTemp(false);
+    if (segundos === temporizador)
+    {
+      return;
+    }
     setTemporizador(segundos);
     guardarTemporizador(otroId, segundos);
-    setPickerTemp(false);
+    await mandar(envolverAviso(segundos));
   }
 
   async function alternarFijar(mensaje)
@@ -985,9 +993,6 @@ export default function Chat()
           ),
           headerRight: () => (
             <View style={estilos.headerAcciones}>
-              <Pressable onPress={() => setPickerTemp(true)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionadoLeve}>
-                <Reloj color={temporizador > 0 ? colores.botonFondo : colores.texto} tamano={20} />
-              </Pressable>
               <Pressable
                 onPress={() =>
                 {
@@ -999,40 +1004,71 @@ export default function Chat()
               >
                 <Lupa color={colores.texto} tamano={20} />
               </Pressable>
+              <Pressable onPress={() => setMenu(true)} hitSlop={8} style={({ pressed }) => pressed && estilos.presionadoLeve}>
+                <Kebab color={temporizador > 0 ? colores.botonFondo : colores.texto} tamano={20} />
+              </Pressable>
             </View>
           ),
         }}
       />
 
-      {buscando ? (
-        <View style={[estilos.buscar, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <Lupa color={colores.muted} tamano={16} />
-          <TextInput
-            value={consulta}
-            onChangeText={setConsulta}
-            placeholder="Buscar en la conversación"
-            placeholderTextColor={colores.placeholder}
-            autoFocus
-            style={[estilos.buscarCampo, { color: colores.texto }]}
-          />
-          <Pressable onPress={() => { setBuscando(false); setConsulta(""); }} hitSlop={8}>
-            <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {fijadoActual && !buscando ? (
-        <Pressable onPress={irAFijado} style={[estilos.fijado, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <Pin color={colores.muted} tamano={15} />
-          <View style={estilos.fijadoCentro}>
-            <Text style={[estilos.fijadoTitulo, { color: colores.muted }]}>{fijados.length > 1 ? `Fijados (${fijados.length})` : "Mensaje fijado"}</Text>
-            <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{fijadoActual.texto}</Text>
+      <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
+        <Pressable style={estilos.menuFondo} onPress={() => setMenu(false)}>
+          <View style={[estilos.menuCaja, { backgroundColor: colores.surface, borderColor: colores.borde, top: insets.top + 48 }]}>
+            <Pressable
+              onPress={() => { setMenu(false); setPickerTemp(true); }}
+              style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}
+            >
+              <Reloj color={temporizador > 0 ? colores.botonFondo : colores.texto} tamano={18} />
+              <View style={{ flex: 1 }}>
+                <Text style={[estilos.menuTxt, { color: colores.texto }]}>Mensajes temporales</Text>
+                <Text style={[estilos.menuSub, { color: colores.muted }]}>{temporizador > 0 ? etiquetaDuracion(temporizador) : "Desactivado"}</Text>
+              </View>
+            </Pressable>
           </View>
-          <Pressable onPress={() => quitarFijar(fijadoActual.id)} hitSlop={8}>
-            <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
-          </Pressable>
         </Pressable>
-      ) : null}
+      </Modal>
+
+      <View style={estilos.topOverlay} pointerEvents="box-none">
+        {buscando ? (
+          <View style={[estilos.buscar, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Lupa color={colores.muted} tamano={16} />
+            <TextInput
+              value={consulta}
+              onChangeText={setConsulta}
+              placeholder="Buscar en la conversación"
+              placeholderTextColor={colores.placeholder}
+              autoFocus
+              style={[estilos.buscarCampo, { color: colores.texto }]}
+            />
+            <Pressable onPress={() => { setBuscando(false); setConsulta(""); }} hitSlop={8}>
+              <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {fijadoActual && !buscando ? (
+          <Pressable onPress={irAFijado} style={[estilos.fijado, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Pin color={colores.muted} tamano={15} />
+            <View style={estilos.fijadoCentro}>
+              <Text style={[estilos.fijadoTitulo, { color: colores.muted }]}>{fijados.length > 1 ? `Fijados (${fijados.length})` : "Mensaje fijado"}</Text>
+              <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{fijadoActual.texto}</Text>
+            </View>
+            <Pressable onPress={() => quitarFijar(fijadoActual.id)} hitSlop={8}>
+              <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
+            </Pressable>
+          </Pressable>
+        ) : null}
+
+        {temporizador > 0 && !buscando ? (
+          <View style={estilos.tempPildoraFila} pointerEvents="box-none">
+            <Pressable onPress={() => setPickerTemp(true)} style={({ pressed }) => [estilos.tempPildora, { backgroundColor: colores.surface, borderColor: colores.borde }, pressed && estilos.presionadoLeve]}>
+              <Reloj color={colores.botonFondo} tamano={11} />
+              <Text style={[estilos.tempPildoraTxt, { color: colores.texto }]}>{etiquetaDuracion(temporizador)}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
 
       <FlatList
         ref={lista}
@@ -1073,6 +1109,28 @@ export default function Chat()
           const borrado = item.contenido_cifrado === "BORRADO";
           const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video");
           const mediaSolo = mediaVisual && !citado;
+          const aviso = leerAviso(item.texto);
+
+          if (aviso)
+          {
+            return (
+              <View>
+                {nuevoDia ? (
+                  <View style={estilos.dia}>
+                    <Text style={[estilos.diaTxt, { color: colores.muted, backgroundColor: colores.surface, borderColor: colores.borde }]}>
+                      {etiquetaDia(item.enviado_en)}
+                    </Text>
+                  </View>
+                ) : null}
+                <View style={estilos.avisoSistema}>
+                  <View style={[estilos.avisoPildora, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+                    <Reloj color={colores.muted} tamano={12} />
+                    <Text style={[estilos.avisoPildoraTxt, { color: colores.muted }]}>{textoAviso(aviso.d)}</Text>
+                  </View>
+                </View>
+              </View>
+            );
+          }
 
           return (
             <View style={elegido ? { backgroundColor: colores.surface } : null}>
@@ -1231,16 +1289,6 @@ export default function Chat()
         </View>
       ) : null}
 
-      {!seleccionando && temporizador > 0 ? (
-        <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <Reloj color={colores.muted} tamano={14} />
-          <Text style={[estilos.avisoTxt, { color: colores.muted, marginLeft: 8 }]}>Mensajes temporales: {etiquetaDuracion(temporizador)}</Text>
-          <Pressable onPress={() => elegirTemporizador(0)} hitSlop={8}>
-            <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
       {!seleccionando && respondiendo ? (
         <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
           <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
@@ -1364,9 +1412,7 @@ export default function Chat()
           <View style={[estilos.previoTarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
             {previo ? (
               previo.esVideo ? (
-                <View style={estilos.previoVideo}>
-                  <Text style={{ color: colores.muted }}>Video listo para enviar</Text>
-                </View>
+                <VistaPreviaVideo uri={previo.uri} estilo={estilos.previoImagen} />
               ) : (
                 <Image source={{ uri: previo.uri }} style={estilos.previoImagen} resizeMode="cover" />
               )
@@ -1391,6 +1437,11 @@ const estilos = StyleSheet.create({
   flex: { flex: 1 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerAcciones: { flexDirection: "row", alignItems: "center", gap: 18 },
+  menuFondo: { flex: 1 },
+  menuCaja: { position: "absolute", right: 10, minWidth: 224, borderWidth: 1, borderRadius: 14, paddingVertical: 6, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+  menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  menuTxt: { fontSize: 15, fontFamily: fuentes.media },
+  menuSub: { fontSize: 12, marginTop: 2 },
   presionadoLeve: { opacity: 0.7 },
   encabezadoTxt: { fontSize: 17, fontFamily: fuentes.semibold },
   encabezadoSub: { fontSize: 12 },
@@ -1404,6 +1455,9 @@ const estilos = StyleSheet.create({
   bannerTxt: { fontSize: 12 },
   dia: { alignItems: "center", marginVertical: 8 },
   diaTxt: { fontSize: 12, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, overflow: "hidden" },
+  avisoSistema: { alignItems: "center", marginVertical: 10 },
+  avisoPildora: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
+  avisoPildoraTxt: { fontSize: 12 },
   burbuja: { maxWidth: "80%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9 },
   cita: { borderLeftWidth: 2, paddingLeft: 8, marginBottom: 4 },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-end", marginTop: 3 },
@@ -1416,12 +1470,16 @@ const estilos = StyleSheet.create({
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
-  buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 42, marginHorizontal: 12, marginTop: 8 },
-  fijado: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 12, marginTop: 8 },
+  topOverlay: { position: "absolute", top: 3, left: 0, right: 0, zIndex: 20 },
+  buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, height: 40, marginHorizontal: 12, shadowColor: "#000", shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
+  fijado: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginHorizontal: 12, shadowColor: "#000", shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 6 },
   fijadoCentro: { flex: 1, gap: 1 },
   fijadoTitulo: { fontSize: 11, fontFamily: fuentes.media },
   fijadoTxt: { fontSize: 13 },
-  buscarCampo: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  buscarCampo: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  tempPildoraFila: { alignItems: "center", marginTop: 3 },
+  tempPildora: { flexDirection: "row", alignItems: "center", gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, shadowColor: "#000", shadowOpacity: 0.14, shadowRadius: 10, shadowOffset: { width: 0, height: 3 }, elevation: 6 },
+  tempPildoraTxt: { fontSize: 11, fontFamily: fuentes.media },
   selBar: { flexDirection: "row", alignItems: "center", gap: 16, paddingHorizontal: 16, paddingTop: 12, borderTopWidth: 1 },
   selCount: { flex: 1, fontSize: 16, fontFamily: fuentes.semibold },
   selAcciones: { flexDirection: "row", alignItems: "center", gap: 22 },
@@ -1462,7 +1520,6 @@ const estilos = StyleSheet.create({
   previoFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 24 },
   previoTarjeta: { width: "100%", maxWidth: 360, borderWidth: 1, borderRadius: 16, padding: 14, gap: 12 },
   previoImagen: { width: "100%", height: 360, borderRadius: 12 },
-  previoVideo: { width: "100%", height: 160, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   previoAcciones: { flexDirection: "row", gap: 10 },
   previoBoton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
   tempFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },

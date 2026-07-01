@@ -69,6 +69,22 @@ export default function Perfil()
   const [alias, setAlias] = useState(null);
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState("");
+  const [refrescando, setRefrescando] = useState(false);
+
+  async function refrescarLlave()
+  {
+    setRefrescando(true);
+    try
+    {
+      const mia = await leer(CLAVE_PUBLICA);
+      const suya = await llavePublicaDe(id, true);
+      setSeguridad(numeroSeguridad(mia, suya));
+    }
+    catch (e)
+    {
+    }
+    setRefrescando(false);
+  }
 
   useEffect(() =>
   {
@@ -113,11 +129,21 @@ export default function Perfil()
         const items = [];
         for (const f of filas)
         {
-          const claro = descifrar(f.contenido_cifrado, f.nonce, pub, priv);
-          const m = leerMedia(claro);
-          if (m && m.t === "img")
+          try
           {
-            items.push({ id: f.id, media: m });
+            if (!f.contenido_cifrado || f.contenido_cifrado === "BORRADO")
+            {
+              continue;
+            }
+            const claro = descifrar(f.contenido_cifrado, f.nonce, pub, priv);
+            const m = leerMedia(claro);
+            if (m && m.t === "img")
+            {
+              items.push({ id: f.id, media: m });
+            }
+          }
+          catch (e)
+          {
           }
         }
         if (activo)
@@ -204,6 +230,21 @@ export default function Perfil()
           />
         </View>
 
+        {seguridad ? (
+          <>
+            <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>SEGURIDAD</Text>
+            <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde, padding: 16 }]}>
+              <Text style={[estilos.numero, { color: colores.texto }]}>{seguridad}</Text>
+            </View>
+            <Text style={[estilos.nota, { color: colores.muted }]}>
+              Verifícalo con tu contacto en persona o por llamada. Si coinciden, nadie más puede leer sus mensajes.
+            </Text>
+            <Pressable onPress={refrescarLlave} disabled={refrescando} style={({ pressed }) => [estilos.refrescar, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+              <Text style={[estilos.refrescarTxt, { color: colores.texto }]}>{refrescando ? "Refrescando…" : "Refrescar llave"}</Text>
+            </Pressable>
+          </>
+        ) : null}
+
         <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>PRIVACIDAD</Text>
         <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
           <Fila
@@ -216,18 +257,6 @@ export default function Perfil()
         <Text style={[estilos.nota, { color: colores.muted }]}>
           Al bloquear, esta persona no podrá escribirte y se quitará de tus chats.
         </Text>
-
-        {seguridad ? (
-          <>
-            <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>SEGURIDAD</Text>
-            <View style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde, padding: 16 }]}>
-              <Text style={[estilos.numero, { color: colores.texto }]}>{seguridad}</Text>
-            </View>
-            <Text style={[estilos.nota, { color: colores.muted }]}>
-              Número de seguridad. Si coincide con el que ve tu contacto, nadie intercepta su conversación.
-            </Text>
-          </>
-        ) : null}
       </View>
       </ScrollView>
 
@@ -297,6 +326,8 @@ const estilos = StyleSheet.create({
   nota: { fontSize: 12, marginTop: 10, lineHeight: 17 },
   presionado: { opacity: 0.6 },
   numero: { fontSize: 17, fontFamily: fuentes.media, letterSpacing: 2, lineHeight: 28, textAlign: "center" },
+  refrescar: { borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center", marginTop: 12 },
+  refrescarTxt: { fontSize: 14, fontFamily: fuentes.media },
   modalFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 28 },
   modalCaja: { width: "100%", maxWidth: 360, borderWidth: 1, borderRadius: 16, padding: 20, gap: 12 },
   modalTitulo: { fontSize: 17, fontFamily: fuentes.semibold },

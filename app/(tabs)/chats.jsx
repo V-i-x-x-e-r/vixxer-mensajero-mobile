@@ -7,7 +7,7 @@ import { conectarSocket, obtenerSocket } from "../../lib/socket";
 import { descifrar } from "../../lib/crypto";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
-import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, ocultar, mostrar } from "../../lib/chatLocal";
+import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, alternarFavorito, ocultar, mostrar } from "../../lib/chatLocal";
 import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
 import { leerAlias } from "../../lib/alias";
 import { useTema } from "../../components/tema";
@@ -20,9 +20,12 @@ import { Pin } from "../../components/Pin";
 import { Silencio } from "../../components/Silencio";
 import { Bote } from "../../components/Bote";
 import { Archivar } from "../../components/Archivar";
+import { Estrella } from "../../components/Estrella";
 import { EstadoLista } from "../../components/EstadoLista";
 import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 import { Lupa } from "../../components/Lupa";
+
+const DORADO = "#F5B301";
 
 function cuando(iso)
 {
@@ -45,7 +48,7 @@ export default function Chats()
   const insets = useSafeAreaInsets();
   const [amigos, setAmigos] = useState([]);
   const [convs, setConvs] = useState({});
-  const [estados, setEstados] = useState({ fijados: [], silenciados: [], ocultos: [], archivados: [] });
+  const [estados, setEstados] = useState({ fijados: [], silenciados: [], ocultos: [], archivados: [], favoritos: [] });
   const [verArchivados, setVerArchivados] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
@@ -92,6 +95,7 @@ export default function Chats()
           if (texto.includes("\"t\":\"img\"")) { texto = "Foto"; }
           else if (texto.includes("\"t\":\"video\"")) { texto = "Video"; }
           else if (texto.includes("\"t\":\"audio\"")) { texto = "Audio"; }
+          else if (texto.includes("\"t\":\"tmpaviso\"")) { texto = "Mensajes temporales"; }
           else if (texto.includes("\"t\":\"tmp\"")) { try { texto = JSON.parse(texto).m; } catch (err) { texto = "Mensaje"; } }
         }
         mapa[c.otro_id] = {
@@ -213,6 +217,12 @@ export default function Chats()
     cargar();
   }
 
+  async function favorito()
+  {
+    await alternarFavorito(sel);
+    cargar();
+  }
+
   async function quitarDeLista()
   {
     await ocultar(sel);
@@ -239,6 +249,7 @@ export default function Chats()
   const selFijado = sel ? estados.fijados.includes(sel) : false;
   const selSilenciado = sel ? estados.silenciados.includes(sel) : false;
   const selArchivado = sel ? estados.archivados.includes(sel) : false;
+  const selFavorito = sel ? (estados.favoritos || []).includes(sel) : false;
   const archivados = estados.archivados || [];
   const enSeccion = verArchivados
     ? amigos.filter((a) => archivados.includes(a.id))
@@ -264,6 +275,9 @@ export default function Chats()
             <Text style={{ color: colores.texto, fontSize: 22 }}>{"✕"}</Text>
           </Pressable>
           <View style={estilos.herramientas}>
+            <Pressable onPress={favorito} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+              <Estrella color={selFavorito ? DORADO : colores.muted} relleno={selFavorito ? DORADO : "none"} tamano={20} />
+            </Pressable>
             <Pressable onPress={fijar} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
               <Pin color={selFijado ? colores.texto : colores.muted} />
             </Pressable>
@@ -356,6 +370,7 @@ export default function Chats()
         {
           const c = convs[item.id];
           const fijado = estados.fijados.includes(item.id);
+          const favorito = (estados.favoritos || []).includes(item.id);
           const silenciado = estados.silenciados.includes(item.id);
           const nombre = alias[item.id] || item.usuario;
           const elegido = sel === item.id;
@@ -370,6 +385,7 @@ export default function Chats()
               <View style={estilos.centro}>
                 <View style={estilos.lineaNombre}>
                   {fijado ? <Pin color={colores.muted} tamano={13} /> : null}
+                  {favorito ? <Estrella color={DORADO} relleno={DORADO} tamano={13} /> : null}
                   <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{nombre}</Text>
                   {silenciado ? <Silencio color={colores.muted} tamano={13} /> : null}
                 </View>
