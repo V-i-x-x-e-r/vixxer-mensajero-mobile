@@ -37,6 +37,7 @@ function Navegacion()
       <Stack.Screen name="multimedia/[id]" options={{ title: "Multimedia" }} />
       <Stack.Screen name="grupo/crear" options={{ title: "Nuevo grupo" }} />
       <Stack.Screen name="grupo/[id]" options={{ title: "Grupo" }} />
+      <Stack.Screen name="grupo/info/[id]" options={{ title: "Info del grupo" }} />
       <Stack.Screen name="ble" options={{ title: "BLE (prueba)" }} />
     </Stack>
   );
