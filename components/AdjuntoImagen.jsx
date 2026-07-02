@@ -17,7 +17,7 @@ function medida(w, h)
 
 export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, cuadrado })
 {
-  const [uri, setUri] = useState(() => leerCache(media.path) || null);
+  const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [dims, setDims] = useState(null);
   const [error, setError] = useState(false);
   const [abierta, setAbierta] = useState(false);
@@ -25,7 +25,7 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
 
   useEffect(() =>
   {
-    if (uri)
+    if (media.local || uri)
     {
       return;
     }

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Pressable, Modal, ActivityIndicator, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
 import { escribirTemp } from "../lib/archivos";
 import { leerCache, guardarCache } from "../lib/mediaCache";
+import { VisorVideo } from "./VisorVideo";
 
 function Play({ tamano = 52 })
 {
@@ -16,19 +17,20 @@ function Play({ tamano = 52 })
   );
 }
 
-export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle })
+export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cuadrado })
 {
-  const [uri, setUri] = useState(() => leerCache(media.path) || null);
-  const [reproduciendo, setReproduciendo] = useState(false);
+  const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
+  const [abierto, setAbierto] = useState(false);
   const ref = useRef(null);
   const player = useVideoPlayer(null, (p) =>
   {
     p.loop = false;
+    p.muted = true;
   });
 
   useEffect(() =>
   {
-    if (uri)
+    if (media.local || uri)
     {
       return;
     }
@@ -66,54 +68,35 @@ export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle })
     }
   }, [uri]);
 
-  useEffect(() =>
-  {
-    const fin = player.addListener("playToEnd", () =>
-    {
-      player.currentTime = 0;
-      setReproduciendo(false);
-    });
-    return () => fin.remove();
-  }, [player]);
-
-  function alternar()
-  {
-    if (reproduciendo)
-    {
-      player.pause();
-      setReproduciendo(false);
-    }
-    else
-    {
-      player.play();
-      setReproduciendo(true);
-    }
-  }
+  const dimCuadrado = cuadrado ? { width: cuadrado, height: cuadrado, borderRadius: 10 } : null;
 
   if (!uri)
   {
     return (
-      <View style={estilos.caja}>
+      <View style={[estilos.caja, dimCuadrado]}>
         <ActivityIndicator color={color} />
       </View>
     );
   }
 
   return (
-    <Pressable
-      ref={ref}
-      onPress={() => (seleccionando ? onToggle?.() : alternar())}
-      onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
-      delayLongPress={250}
-      style={estilos.miniatura}
-    >
-      <VideoView player={player} style={estilos.video} contentFit="cover" nativeControls={false} />
-      {!reproduciendo ? (
+    <>
+      <Pressable
+        ref={ref}
+        onPress={() => (seleccionando ? onToggle?.() : setAbierto(true))}
+        onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
+        delayLongPress={250}
+        style={[estilos.miniatura, dimCuadrado]}
+      >
+        <VideoView player={player} style={estilos.video} contentFit="cover" nativeControls={false} pointerEvents="none" />
         <View style={estilos.capa} pointerEvents="none">
-          <Play tamano={52} />
+          <Play tamano={cuadrado ? 30 : 52} />
         </View>
-      ) : null}
-    </Pressable>
+      </Pressable>
+      <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>
+        <VisorVideo uri={uri} onCerrar={() => setAbierto(false)} />
+      </Modal>
+    </>
   );
 }
 

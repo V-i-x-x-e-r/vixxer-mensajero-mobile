@@ -9,6 +9,7 @@ import { Lapiz } from "./Lapiz";
 import { Bote } from "./Bote";
 import { Check } from "./Check";
 import { Pin } from "./Pin";
+import { Descargar } from "./Descargar";
 
 const REACCIONES = ["\u{1F44D}", "❤️", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
 const ANCHO = 300;
@@ -24,7 +25,7 @@ function Accion({ icono, etiqueta, onPress, color })
   );
 }
 
-export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onFijar, onCerrar })
+export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onFijar, onDescargar, onCerrar })
 {
   const { colores } = useTema();
   const entrada = useRef(null);
@@ -83,7 +84,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
             <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} />
             <Accion icono={<Check color={colores.texto} tamano={20} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} />
             <Accion icono={<Pin color={colores.texto} tamano={20} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} />
-            {esMedia ? null : <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />}
+            {esMedia ? <Accion icono={<Descargar color={colores.texto} tamano={20} />} etiqueta="Descargar" onPress={() => onDescargar(mensaje)} color={colores.texto} /> : <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />}
             {esMio && !esMedia ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
             {esMio ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
           </View>
