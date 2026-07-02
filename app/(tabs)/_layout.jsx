@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Chat } from "../../components/Chat";
+import { Grupos } from "../../components/Grupos";
 import { Amigos } from "../../components/Amigos";
 
 export default function TabsLayout()
@@ -21,6 +22,10 @@ export default function TabsLayout()
       <Tabs.Screen
         name="chats"
         options={{ title: "Chats", tabBarIcon: ({ color }) => <Chat color={color} tamano={24} /> }}
+      />
+      <Tabs.Screen
+        name="grupos"
+        options={{ title: "Grupos", tabBarIcon: ({ color }) => <Grupos color={color} tamano={24} /> }}
       />
       <Tabs.Screen
         name="amigos"
