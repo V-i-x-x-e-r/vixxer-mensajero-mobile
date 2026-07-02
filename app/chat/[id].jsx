@@ -187,6 +187,7 @@ export default function Chat()
   const tecleando = useRef(null);
   const cargandoMas = useRef(false);
   const purgados = useRef(new Set());
+  const mediaPendiente = useRef({});
 
   const invertidos = useMemo(() =>
   {
@@ -693,6 +694,13 @@ export default function Chat()
 
   async function reintentar(mensaje)
   {
+    const pendiente = mediaPendiente.current[mensaje.id];
+    if (pendiente)
+    {
+      setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "enviando" } : m)));
+      subirYEnviar(pendiente, mensaje.id);
+      return;
+    }
     const items = await leerOutbox(otroId);
     const item = items.find((i) => i.localId === mensaje.id);
     if (!item)
@@ -817,6 +825,7 @@ export default function Chat()
 
   async function subirYEnviar(actual, localId)
   {
+    mediaPendiente.current[localId] = actual;
     try
     {
       const base64 = await leerBase64(actual.uri);
@@ -831,6 +840,7 @@ export default function Chat()
       setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, texto: plano } : m)));
       await agregarOutbox(otroId, item);
       intentarEnviar(item);
+      delete mediaPendiente.current[localId];
     }
     catch (e)
     {
@@ -1309,7 +1319,7 @@ export default function Chat()
                     <Text style={estilos.horaMedia}>{hora(item.enviado_en)}</Text>
                     {mio ? (
                       item.estado === "fallido"
-                        ? <Pressable onPress={() => reintentar(item)} hitSlop={8}><Text style={[estilos.reintentarTxt, { color: colores.error }]}>reintentar</Text></Pressable>
+                        ? <Pressable onPress={() => reintentar(item)} hitSlop={8}><Text style={[estilos.reintentarTxt, { color: "#FFF" }]}>reintentar</Text></Pressable>
                         : item.estado === "enviando"
                           ? <Reloj color="#FFF" tamano={11} />
                           : <Visto color="#FFF" dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
@@ -1327,7 +1337,7 @@ export default function Chat()
                         ? (
                             <View style={estilos.fallidoFila}>
                               <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
-                                <Text style={[estilos.reintentarTxt, { color: colores.error }]}>no enviado · reintentar</Text>
+                                <Text style={[estilos.reintentarTxt, { color: mio ? colores.botonTexto : colores.muted }]}>no enviado · reintentar</Text>
                               </Pressable>
                               <Pressable onPress={() => enviarPorBle(item)} hitSlop={8} style={estilos.reintentar}>
                                 <Text style={[estilos.reintentarTxt, { color: mio ? colores.botonTexto : colores.muted }]}>· cercanía</Text>

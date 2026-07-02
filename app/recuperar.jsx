@@ -130,13 +130,16 @@ export default function Recuperar()
 
           <Boton titulo="Recuperar" onPress={recuperar} cargando={cargando} />
 
-          <Text style={[estilos.nuevo, { color: colores.botonFondo }]} onPress={elegirArchivo}>
-            {archivo ? "Archivo de respaldo cargado ✓ — escribe tu código" : "Restaurar desde un archivo de respaldo"}
-          </Text>
-
-          <Text style={[estilos.nuevo, { color: colores.muted }]} onPress={() => setConfirmarNuevo(true)}>
-            No tengo el código · empezar de nuevo
-          </Text>
+          <View style={estilos.opciones}>
+            <Pressable onPress={elegirArchivo} style={({ pressed }) => [estilos.opcion, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+              <Text style={[estilos.opcionTxt, { color: archivo ? colores.botonFondo : colores.texto }]}>
+                {archivo ? "Archivo cargado ✓ — escribe tu código" : "Restaurar desde un archivo"}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => setConfirmarNuevo(true)} style={({ pressed }) => [estilos.opcion, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+              <Text style={[estilos.opcionTxt, { color: colores.texto }]}>No tengo el código — empezar de nuevo</Text>
+            </Pressable>
+          </View>
           <Text style={[estilos.aviso, { color: colores.muted }]}>
             Empezar de nuevo descarta el historial cifrado anterior.
           </Text>
@@ -173,6 +176,9 @@ const estilos = StyleSheet.create({
   subtitulo: { marginTop: 6, fontSize: 14, lineHeight: 20 },
   form: { gap: 12 },
   error: { fontSize: 13 },
-  nuevo: { marginTop: 16, textAlign: "center", fontSize: 14, textDecorationLine: "underline" },
-  aviso: { textAlign: "center", fontSize: 12 },
+  opciones: { marginTop: 16, gap: 10 },
+  opcion: { borderWidth: 1, borderRadius: 12, paddingVertical: 13, alignItems: "center" },
+  opcionTxt: { fontSize: 14, fontFamily: fuentes.media },
+  presionado: { opacity: 0.6 },
+  aviso: { textAlign: "center", fontSize: 12, marginTop: 10 },
 });

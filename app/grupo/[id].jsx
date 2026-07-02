@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Text, TextInput, Pressable, FlatList, Platform, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as api from "../../lib/api";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
@@ -202,7 +202,7 @@ export default function GrupoChat()
     }
     for (const a of r.assets)
     {
-      enviarGrupoMedia({ uri: a.uri, esVideo: a.type === "video", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
+      await enviarGrupoMedia({ uri: a.uri, esVideo: a.type === "video", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
     }
   }
 
@@ -211,7 +211,9 @@ export default function GrupoChat()
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <Stack.Screen options={{ title: nombre || "Grupo", headerRight: () => (
-        <Text style={{ color: colores.muted, fontSize: 13, fontFamily: fuentes.media }}>{miembros.length ? `${miembros.length} miembros` : ""}</Text>
+        <Pressable onPress={() => router.push({ pathname: "/grupo/info/[id]", params: { id, nombre } })} hitSlop={8}>
+          <Text style={{ color: colores.botonFondo, fontSize: 13, fontFamily: fuentes.media }}>{miembros.length ? `${miembros.length} miembros` : "Info"}</Text>
+        </Pressable>
       ) }} />
 
       <FlatList
