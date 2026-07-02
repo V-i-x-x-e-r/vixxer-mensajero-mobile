@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, Keyboard, ActivityIndicator, StyleSheet } from "react-native";
-import { Stack, useLocalSearchParams, router } from "expo-router";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, Keyboard, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
+import { Stack, useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -9,6 +9,7 @@ import * as api from "../../lib/api";
 import { obtenerSocket, asegurarSocket } from "../../lib/socket";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
+import { guardarCache } from "../../lib/mediaCache";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
@@ -33,6 +34,11 @@ import { AccionesMensaje } from "../../components/AccionesMensaje";
 import { SelectorContacto } from "../../components/SelectorContacto";
 import { Reenviar } from "../../components/Reenviar";
 import { Bote } from "../../components/Bote";
+import { Silencio } from "../../components/Silencio";
+import { Ojo } from "../../components/Ojo";
+import { Confirmacion } from "../../components/Confirmacion";
+import { leerEstados, alternarSilenciado } from "../../lib/chatLocal";
+import { guardarMedia } from "../../lib/descargas";
 import { Lupa } from "../../components/Lupa";
 import { Kebab } from "../../components/Kebab";
 import { VistaPreviaVideo } from "../../components/VistaPreviaVideo";
@@ -162,6 +168,10 @@ export default function Chat()
   const [buscando, setBuscando] = useState(false);
   const [consulta, setConsulta] = useState("");
   const [menu, setMenu] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
+  const [silenciado, setSilenciado] = useState(false);
+  const [confirmar, setConfirmar] = useState(null);
+  const [toast, setToast] = useState("");
   const [detalle, setDetalle] = useState(null);
   const [fijados, setFijados] = useState([]);
   const [indiceFijado, setIndiceFijado] = useState(0);
@@ -185,6 +195,9 @@ export default function Chat()
       : mensajes;
     return base.slice().reverse();
   }, [mensajes, buscando, consulta]);
+
+  const datosWeb = useMemo(() => invertidos.slice().reverse(), [invertidos]);
+  const datosLista = esWeb ? datosWeb : invertidos;
 
   function marcarLeidos(filas)
   {
@@ -227,7 +240,65 @@ export default function Chat()
     leerFijados(otroId).then(setFijados);
     leerTemporizador(otroId).then(setTemporizador);
     aliasDe(otroId).then(setAlias);
+    leerEstados().then((e) => setSilenciado(e.silenciados.includes(otroId)));
   }, [otroId]);
+
+  function verContacto()
+  {
+    setMenu(false);
+    router.push({ pathname: "/perfil/[id]", params: { id: otroId, usuario: usuario || "", avatar: avatar || "" } });
+  }
+
+  async function descargarMedia(mensaje)
+  {
+    const media = leerMedia(mensaje.texto);
+    setSel(null);
+    if (!media)
+    {
+      return;
+    }
+    setToast("Descargando…");
+    const r = await guardarMedia(media);
+    const etiquetas = { ok: "Guardado en tu galería ✓", web: "No disponible en web", sin_permiso: "Sin permiso de galería", error: "No se pudo guardar" };
+    setToast(etiquetas[r] || "No se pudo guardar");
+    setTimeout(() => setToast(""), 2000);
+  }
+
+  async function alternarSilencio()
+  {
+    setMenu(false);
+    const lista = await alternarSilenciado(otroId);
+    setSilenciado(lista.includes(otroId));
+  }
+
+  async function vaciarChat()
+  {
+    setConfirmar(null);
+    setMenu(false);
+    try
+    {
+      await api.limpiarConversacion(otroId);
+    }
+    catch (e)
+    {
+    }
+    setMensajes([]);
+    guardarCacheChat(otroId, []);
+  }
+
+  async function bloquearContacto()
+  {
+    setConfirmar(null);
+    setMenu(false);
+    try
+    {
+      await api.bloquear(otroId);
+    }
+    catch (e)
+    {
+    }
+    router.back();
+  }
 
   async function elegirTemporizador(segundos)
   {
@@ -470,22 +541,6 @@ export default function Chat()
       {
         setMensajes(cache);
       }
-
-      try
-      {
-        const filas = await api.historial(otroId);
-        const descifrados = await descifrarLote(filas);
-        if (activo)
-        {
-          setMensajes(descifrados);
-          setHayMas(filas.length >= 50);
-          marcarLeidos(descifrados);
-          guardarCacheChat(otroId, descifrados);
-        }
-      }
-      catch (e)
-      {
-      }
       if (activo)
       {
         setCargado(true);
@@ -533,6 +588,40 @@ export default function Chat()
       }
     };
   }, [otroId]);
+
+  const sincronizar = useCallback(async () =>
+  {
+    try
+    {
+      const filas = await api.historial(otroId);
+      const descifrados = await descifrarLote(filas);
+      const cacheActual = await leerCacheChat(otroId);
+      if (descifrados.length > 0 || !cacheActual || cacheActual.length === 0)
+      {
+        setMensajes(descifrados);
+        guardarCacheChat(otroId, descifrados);
+      }
+      setHayMas(filas.length >= 50);
+      marcarLeidos(descifrados);
+    }
+    catch (e)
+    {
+    }
+  }, [otroId]);
+
+  useFocusEffect(
+    useCallback(() =>
+    {
+      sincronizar();
+    }, [sincronizar]),
+  );
+
+  async function refrescar()
+  {
+    setRefrescando(true);
+    await sincronizar();
+    setRefrescando(false);
+  }
 
   function intentarEnviar(item)
   {
@@ -715,41 +804,51 @@ export default function Chat()
     await enviarVarios(r.assets.map(aMedia));
   }
 
-  async function enviarArchivo(actual)
+  function mostrarMediaOptimista(actual)
   {
-    const base64 = await leerBase64(actual.uri);
-    const cif = cifrarArchivo(base64);
-    const { path } = await api.subirMedia(cif.datos);
-    await mandar(JSON.stringify({
-      t: actual.esVideo ? "video" : "img",
-      path,
-      mime: actual.mime,
-      k: cif.clave,
-      n: cif.nonce,
-    }));
+    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const texto = JSON.stringify({ t: actual.esVideo ? "video" : "img", local: actual.uri, mime: actual.mime });
+    setMensajes((prev) => [
+      ...prev,
+      { id: localId, remitente_id: miId.current, texto, enviado_en: new Date().toISOString(), estado: "enviando" },
+    ]);
+    return localId;
+  }
+
+  async function subirYEnviar(actual, localId)
+  {
+    try
+    {
+      const base64 = await leerBase64(actual.uri);
+      const cif = cifrarArchivo(base64);
+      const { path } = await api.subirMedia(cif.datos);
+      guardarCache(path, actual.uri);
+      const plano = JSON.stringify({ t: actual.esVideo ? "video" : "img", path, mime: actual.mime, k: cif.clave, n: cif.nonce });
+      const priv = await leer(CLAVE_PRIVADA);
+      const pubDest = await llavePublicaDe(otroId);
+      const { contenidoCifrado, nonce } = cifrar(plano, pubDest, priv);
+      const item = { localId, contenidoCifrado, nonce, respuestaA: null, texto: plano, respuestaTexto: null, enviado_en: new Date().toISOString() };
+      setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, texto: plano } : m)));
+      await agregarOutbox(otroId, item);
+      intentarEnviar(item);
+    }
+    catch (e)
+    {
+      setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, estado: "fallido" } : m)));
+    }
   }
 
   async function enviarVarios(archivos)
   {
-    setSubiendo(true);
-    try
+    const trabajos = archivos.map((actual) => ({ actual, localId: mostrarMediaOptimista(actual) }));
+    lista.current?.scrollToOffset({ offset: 0, animated: true });
+    for (const t of trabajos)
     {
-      for (const actual of archivos)
-      {
-        await enviarArchivo(actual);
-      }
-    }
-    catch (e)
-    {
-      Alert.alert("No se pudieron enviar todos los archivos", "Revisa tu conexión e intenta de nuevo.");
-    }
-    finally
-    {
-      setSubiendo(false);
+      await subirYEnviar(t.actual, t.localId);
     }
   }
 
-  async function confirmarEnvio()
+  function confirmarEnvio()
   {
     if (!previo)
     {
@@ -757,19 +856,9 @@ export default function Chat()
     }
     const actual = previo;
     setPrevio(null);
-    setSubiendo(true);
-    try
-    {
-      await enviarArchivo(actual);
-    }
-    catch (e)
-    {
-      Alert.alert("No se pudo enviar el archivo", "Revisa tu conexión e intenta de nuevo.");
-    }
-    finally
-    {
-      setSubiendo(false);
-    }
+    const localId = mostrarMediaOptimista(actual);
+    lista.current?.scrollToOffset({ offset: 0, animated: true });
+    subirYEnviar(actual, localId);
   }
 
   async function grabarToggle()
@@ -1025,9 +1114,46 @@ export default function Chat()
                 <Text style={[estilos.menuSub, { color: colores.muted }]}>{temporizador > 0 ? etiquetaDuracion(temporizador) : "Desactivado"}</Text>
               </View>
             </Pressable>
+            <View style={[estilos.menuDivisor, { backgroundColor: colores.borde }]} />
+            <Pressable onPress={alternarSilencio} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+              <Silencio color={silenciado ? colores.botonFondo : colores.texto} tamano={18} />
+              <Text style={[estilos.menuTxt, { color: colores.texto }]}>{silenciado ? "Activar sonido" : "Silenciar"}</Text>
+            </Pressable>
+            <Pressable onPress={verContacto} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+              <Ojo color={colores.texto} tamano={18} />
+              <Text style={[estilos.menuTxt, { color: colores.texto }]}>Ver contacto</Text>
+            </Pressable>
+            <Pressable onPress={() => { setMenu(false); setConfirmar("vaciar"); }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+              <Bote color={colores.texto} tamano={18} />
+              <Text style={[estilos.menuTxt, { color: colores.texto }]}>Vaciar chat</Text>
+            </Pressable>
+            <Pressable onPress={() => { setMenu(false); setConfirmar("bloquear"); }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+              <Candado color={colores.error} tamano={18} />
+              <Text style={[estilos.menuTxt, { color: colores.error }]}>Bloquear</Text>
+            </Pressable>
           </View>
         </Pressable>
       </Modal>
+
+      <Confirmacion
+        visible={confirmar === "vaciar"}
+        titulo="Vaciar chat"
+        mensaje="Se quitarán los mensajes de esta conversación en tu dispositivo."
+        textoConfirmar="Vaciar"
+        destructivo
+        onConfirmar={vaciarChat}
+        onCancelar={() => setConfirmar(null)}
+      />
+
+      <Confirmacion
+        visible={confirmar === "bloquear"}
+        titulo={`Bloquear a ${alias || usuario || "este contacto"}`}
+        mensaje="No podrá escribirte ni volver a agregarte, y se quitará de tus chats. Podrás desbloquearlo más adelante."
+        textoConfirmar="Bloquear"
+        destructivo
+        onConfirmar={bloquearContacto}
+        onCancelar={() => setConfirmar(null)}
+      />
 
       <View style={estilos.topOverlay} pointerEvents="box-none">
         {buscando ? (
@@ -1072,15 +1198,17 @@ export default function Chat()
 
       <FlatList
         ref={lista}
-        data={invertidos}
+        data={datosLista}
         keyExtractor={(m) => m.id}
-        inverted
+        inverted={!esWeb}
         style={estilos.flex}
         contentContainerStyle={estilos.lista}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.botonFondo]} />}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
-        onEndReached={cargarMas}
+        onEndReached={esWeb ? undefined : cargarMas}
         onEndReachedThreshold={0.3}
+        onContentSizeChange={esWeb ? () => lista.current?.scrollToEnd({ animated: false }) : undefined}
         onScrollToIndexFailed={() => {}}
         ListFooterComponent={
           <View>
@@ -1094,7 +1222,7 @@ export default function Chat()
         renderItem={({ item, index }) =>
         {
           const mio = item.remitente_id === miId.current;
-          const prev = invertidos[index + 1];
+          const prev = esWeb ? datosLista[index - 1] : datosLista[index + 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const reacciones = agrupar(item.reacciones);
           const media = leerMedia(item.texto);
@@ -1105,7 +1233,7 @@ export default function Chat()
 
           const ef = leerEfimero(item.texto);
           const textoMostrar = ef ? ef.m : item.texto;
-          const elegido = seleccionados.includes(item.id);
+          const elegido = seleccionados.includes(item.id) || (sel && sel.mensaje.id === item.id);
           const borrado = item.contenido_cifrado === "BORRADO";
           const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video");
           const mediaSolo = mediaVisual && !citado;
@@ -1370,8 +1498,15 @@ export default function Chat()
         onEditar={editar}
         onBorrar={borrar}
         onFijar={alternarFijar}
+        onDescargar={descargarMedia}
         onCerrar={() => setSel(null)}
       />
+
+      {toast ? (
+        <View style={estilos.toastChat} pointerEvents="none">
+          <Text style={estilos.toastChatTxt}>{toast}</Text>
+        </View>
+      ) : null}
 
       <SelectorContacto
         visible={!!reenviando || reenviandoMulti}
@@ -1440,6 +1575,7 @@ const estilos = StyleSheet.create({
   menuFondo: { flex: 1 },
   menuCaja: { position: "absolute", right: 10, minWidth: 224, borderWidth: 1, borderRadius: 14, paddingVertical: 6, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  menuDivisor: { height: 1, marginVertical: 4, marginHorizontal: 8 },
   menuTxt: { fontSize: 15, fontFamily: fuentes.media },
   menuSub: { fontSize: 12, marginTop: 2 },
   presionadoLeve: { opacity: 0.7 },
@@ -1458,6 +1594,8 @@ const estilos = StyleSheet.create({
   avisoSistema: { alignItems: "center", marginVertical: 10 },
   avisoPildora: { flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
   avisoPildoraTxt: { fontSize: 12 },
+  toastChat: { position: "absolute", bottom: 90, alignSelf: "center", paddingVertical: 10, paddingHorizontal: 22, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.8)" },
+  toastChatTxt: { color: "#FFF", fontSize: 14, fontFamily: fuentes.media },
   burbuja: { maxWidth: "80%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9 },
   cita: { borderLeftWidth: 2, paddingLeft: 8, marginBottom: 4 },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-end", marginTop: 3 },

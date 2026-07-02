@@ -205,9 +205,14 @@ export default function Perfil()
         ) : null}
       </View>
 
-      {media.length > 0 ? (
-        <View style={estilos.cuerpo}>
-          <Text style={[estilos.seccion, { color: colores.muted }]}>MEDIA COMPARTIDA</Text>
+      <View style={estilos.cuerpo}>
+        <View style={estilos.seccionFila}>
+          <Text style={[estilos.seccion, { color: colores.muted }]}>MULTIMEDIA</Text>
+          <Pressable onPress={() => router.push({ pathname: "/multimedia/[id]", params: { id } })} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
+            <Text style={[estilos.verTodo, { color: colores.botonFondo }]}>Ver todo</Text>
+          </Pressable>
+        </View>
+        {media.length > 0 ? (
           <FlatList
             data={media}
             keyExtractor={(m) => m.id}
@@ -216,8 +221,10 @@ export default function Perfil()
             ItemSeparatorComponent={() => <View style={{ width: 8 }} />}
             renderItem={({ item }) => <AdjuntoImagen media={item.media} color={colores.muted} cuadrado={84} />}
           />
-        </View>
-      ) : null}
+        ) : (
+          <Text style={[estilos.nota, { color: colores.muted, marginTop: 0 }]}>Fotos y videos de esta conversación.</Text>
+        )}
+      </View>
 
       <View style={[estilos.cuerpo, { marginTop: 24 }]}>
         <Text style={[estilos.seccion, { color: colores.muted }]}>CONVERSACIÓN</Text>
@@ -320,6 +327,8 @@ const estilos = StyleSheet.create({
   sub: { fontSize: 13 },
   cuerpo: { paddingHorizontal: 20 },
   seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginBottom: 10 },
+  seccionFila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  verTodo: { fontSize: 12, fontFamily: fuentes.media, marginBottom: 10 },
   tarjeta: { borderWidth: 1, borderRadius: 12, overflow: "hidden" },
   fila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 15 },
   filaTxt: { fontSize: 15 },
