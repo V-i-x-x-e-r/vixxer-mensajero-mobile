@@ -17,6 +17,9 @@ import { ConfigurarPin } from "../components/ConfigurarPin";
 import { tienePin, quitarPin } from "../lib/pin";
 import { biometricoDisponible, biometricoActivo, activarBiometrico } from "../lib/biometrico";
 import { capturasBloqueadas, guardarBloqueoCapturas } from "../lib/privacidad";
+import { RespaldoCodigo } from "../components/RespaldoCodigo";
+import { leerConfig, guardarConfig, FRECUENCIAS, ETIQUETA_FRECUENCIA } from "../lib/respaldoConfig";
+import { hacerRespaldo } from "../lib/respaldo";
 
 export default function Ajustes()
 {
@@ -33,6 +36,9 @@ export default function Ajustes()
   const [capturas, setCapturas] = useState(false);
   const [prefs, setPrefs] = useState({ mostrar_conexion: true, mostrar_acuses: true });
   const [confirmar, setConfirmar] = useState(false);
+  const [respaldoCfg, setRespaldoCfg] = useState({ frecuencia: "nunca", hora: 3, destino: "nube", ultimo: null });
+  const [respaldando, setRespaldando] = useState(false);
+  const [nuevoCodigo, setNuevoCodigo] = useState("");
 
   useEffect(() =>
   {
@@ -47,7 +53,52 @@ export default function Ajustes()
     biometricoDisponible().then(setBioHay);
     biometricoActivo().then(setBioActivo);
     capturasBloqueadas().then(setCapturas);
+    leerConfig().then(setRespaldoCfg);
   }, []);
+
+  function guardarRespaldoCfg(cambios)
+  {
+    setRespaldoCfg((c) =>
+    {
+      const nueva = { ...c, ...cambios };
+      guardarConfig(nueva);
+      return nueva;
+    });
+  }
+
+  function cambiarFrecuencia()
+  {
+    const i = FRECUENCIAS.indexOf(respaldoCfg.frecuencia);
+    guardarRespaldoCfg({ frecuencia: FRECUENCIAS[(i + 1) % FRECUENCIAS.length] });
+  }
+
+  function cambiarHora()
+  {
+    guardarRespaldoCfg({ hora: (respaldoCfg.hora + 1) % 24 });
+  }
+
+  function cambiarDestino()
+  {
+    guardarRespaldoCfg({ destino: respaldoCfg.destino === "nube" ? "local" : "nube" });
+  }
+
+  async function hacerCopiaAhora()
+  {
+    setRespaldando(true);
+    try
+    {
+      const codigo = await hacerRespaldo();
+      if (codigo)
+      {
+        setNuevoCodigo(codigo);
+        setRespaldoCfg((c) => ({ ...c, ultimo: new Date().toISOString() }));
+      }
+    }
+    catch (e)
+    {
+    }
+    setRespaldando(false);
+  }
 
   function alternarBio(valor)
   {
@@ -209,6 +260,32 @@ export default function Ajustes()
         />
       </View>
 
+      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>COPIA DE SEGURIDAD</Text>
+      <View style={[estilos.fila, { borderColor: colores.borde }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Frecuencia</Text>
+        <Pressable onPress={cambiarFrecuencia} hitSlop={8}>
+          <Text style={[estilos.valor, { color: colores.botonFondo }]}>{ETIQUETA_FRECUENCIA[respaldoCfg.frecuencia]}</Text>
+        </Pressable>
+      </View>
+      <View style={[estilos.fila, { borderColor: colores.borde }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto, opacity: respaldoCfg.frecuencia === "nunca" ? 0.4 : 1 }]}>Hora</Text>
+        <Pressable onPress={cambiarHora} disabled={respaldoCfg.frecuencia === "nunca"} hitSlop={8}>
+          <Text style={[estilos.valor, { color: respaldoCfg.frecuencia === "nunca" ? colores.muted : colores.botonFondo, opacity: respaldoCfg.frecuencia === "nunca" ? 0.4 : 1 }]}>{String(respaldoCfg.hora).padStart(2, "0")}:00</Text>
+        </Pressable>
+      </View>
+      <View style={[estilos.fila, { borderColor: colores.borde }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Destino</Text>
+        <Pressable onPress={cambiarDestino} hitSlop={8}>
+          <Text style={[estilos.valor, { color: colores.botonFondo }]}>{respaldoCfg.destino === "nube" ? "Nube" : "Local"}</Text>
+        </Pressable>
+      </View>
+      <Pressable onPress={hacerCopiaAhora} disabled={respaldando} style={({ pressed }) => [estilos.qrBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+        <Text style={[estilos.qrBotonTxt, { color: colores.texto }]}>{respaldando ? "Respaldando…" : "Hacer copia ahora"}</Text>
+      </Pressable>
+      <Text style={[estilos.notaRespaldo, { color: colores.muted }]}>
+        Respalda tu identidad (llave privada cifrada) para recuperar tu cuenta en otro dispositivo. {respaldoCfg.ultimo ? `Última copia: ${new Date(respaldoCfg.ultimo).toLocaleDateString()}.` : "Aún no has hecho una copia."} {respaldoCfg.destino === "local" ? "Guarda bien el código que te damos: es tu copia." : "Se guarda cifrado en el servidor; solo tu código lo abre."}
+      </Text>
+
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
       <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
@@ -218,6 +295,8 @@ export default function Ajustes()
       </ScrollView>
 
       <CodigoQR visible={qr} codigo={codigo} onCerrar={() => setQr(false)} />
+
+      <RespaldoCodigo visible={!!nuevoCodigo} codigo={nuevoCodigo} onCerrar={() => setNuevoCodigo("")} />
 
       <ConfigurarPin
         visible={configPin}
@@ -244,6 +323,8 @@ const estilos = StyleSheet.create({
   usuario: { fontSize: 18, fontFamily: fuentes.semibold },
   cambiar: { fontSize: 12 },
   seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginBottom: 10 },
+  valor: { fontSize: 15, fontFamily: fuentes.media },
+  notaRespaldo: { fontSize: 12, lineHeight: 17, marginTop: 10 },
   codigoCaja: { borderWidth: 1, borderRadius: 12, paddingVertical: 18, alignItems: "center", gap: 6 },
   codigo: { fontSize: 28, fontFamily: fuentes.bold, letterSpacing: 4 },
   copiar: { fontSize: 12 },
