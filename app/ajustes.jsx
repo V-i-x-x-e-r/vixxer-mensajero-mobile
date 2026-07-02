@@ -19,7 +19,7 @@ import { biometricoDisponible, biometricoActivo, activarBiometrico } from "../li
 import { capturasBloqueadas, guardarBloqueoCapturas } from "../lib/privacidad";
 import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { leerConfig, guardarConfig, FRECUENCIAS, ETIQUETA_FRECUENCIA } from "../lib/respaldoConfig";
-import { hacerRespaldo } from "../lib/respaldo";
+import { hacerRespaldo, exportarRespaldoLocal } from "../lib/respaldo";
 
 export default function Ajustes()
 {
@@ -87,7 +87,7 @@ export default function Ajustes()
     setRespaldando(true);
     try
     {
-      const codigo = await hacerRespaldo();
+      const codigo = respaldoCfg.destino === "local" ? await exportarRespaldoLocal() : await hacerRespaldo();
       if (codigo)
       {
         setNuevoCodigo(codigo);

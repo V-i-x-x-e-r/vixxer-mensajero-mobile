@@ -7,6 +7,7 @@ import { ProveedorTema, useTema } from "../components/tema";
 import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { BloqueoPin } from "../components/BloqueoPin";
 import { tienePin } from "../lib/pin";
+import { asegurarSocket } from "../lib/socket";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
 
@@ -33,6 +34,9 @@ function Navegacion()
       <Stack.Screen name="solicitudes" options={{ title: "Solicitudes" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "Conversación" }} />
       <Stack.Screen name="perfil/[id]" options={{ title: "Contacto" }} />
+      <Stack.Screen name="multimedia/[id]" options={{ title: "Multimedia" }} />
+      <Stack.Screen name="grupo/crear" options={{ title: "Nuevo grupo" }} />
+      <Stack.Screen name="grupo/[id]" options={{ title: "Grupo" }} />
       <Stack.Screen name="ble" options={{ title: "BLE (prueba)" }} />
     </Stack>
   );
@@ -50,11 +54,16 @@ function Contenido()
       tiene.current = t;
       setBloqueado(t);
     });
+    asegurarSocket().catch(() => {});
     const sub = AppState.addEventListener("change", (estado) =>
     {
-      if (estado === "active" && tiene.current)
+      if (estado === "active")
       {
-        setBloqueado(true);
+        asegurarSocket().catch(() => {});
+        if (tiene.current)
+        {
+          setBloqueado(true);
+        }
       }
     });
     return () => sub.remove();

@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import * as api from "../lib/api";
 import { restaurarDeRespaldo, crearIdentidad } from "../lib/crypto";
 import { publicarLlaveFirma } from "../lib/firma";
+import { importarRespaldoArchivo } from "../lib/respaldo";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Logo } from "../components/Logo";
@@ -22,6 +23,23 @@ export default function Recuperar()
   const [cargando, setCargando] = useState(false);
   const [nuevoCodigo, setNuevoCodigo] = useState("");
   const [confirmarNuevo, setConfirmarNuevo] = useState(false);
+  const [archivo, setArchivo] = useState(null);
+
+  async function elegirArchivo()
+  {
+    try
+    {
+      const respaldo = await importarRespaldoArchivo();
+      if (respaldo)
+      {
+        setArchivo(respaldo);
+        setError("");
+      }
+    }
+    catch (e)
+    {
+    }
+  }
 
   async function recuperar()
   {
@@ -35,7 +53,7 @@ export default function Recuperar()
 
     try
     {
-      const respaldo = await api.obtenerRespaldo();
+      const respaldo = archivo || await api.obtenerRespaldo();
       const pub = await restaurarDeRespaldo(respaldo, codigo);
       if (!pub)
       {
@@ -111,6 +129,10 @@ export default function Recuperar()
           {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
 
           <Boton titulo="Recuperar" onPress={recuperar} cargando={cargando} />
+
+          <Text style={[estilos.nuevo, { color: colores.botonFondo }]} onPress={elegirArchivo}>
+            {archivo ? "Archivo de respaldo cargado ✓ — escribe tu código" : "Restaurar desde un archivo de respaldo"}
+          </Text>
 
           <Text style={[estilos.nuevo, { color: colores.muted }]} onPress={() => setConfirmarNuevo(true)}>
             No tengo el código · empezar de nuevo

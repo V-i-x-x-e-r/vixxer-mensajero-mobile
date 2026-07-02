@@ -1,15 +1,36 @@
 import { useState, useEffect, useRef } from "react";
 import { View, Text, TextInput, Pressable, FlatList, Platform, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, router } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import * as api from "../../lib/api";
-import { cifrar, descifrar } from "../../lib/crypto";
+import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
+import { leerBase64 } from "../../lib/archivos";
+import { guardarCache } from "../../lib/mediaCache";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
-import { Avatar } from "../../components/Avatar";
+import { Adjunto } from "../../components/Adjunto";
+import { Clip } from "../../components/Clip";
 import { Flecha } from "../../components/Flecha";
+
+function leerMedia(texto)
+{
+  if (!texto || texto[0] !== "{")
+  {
+    return null;
+  }
+  try
+  {
+    const obj = JSON.parse(texto);
+    return obj && (obj.t === "img" || obj.t === "video") ? obj : null;
+  }
+  catch (e)
+  {
+    return null;
+  }
+}
 
 function hora(iso)
 {
@@ -131,6 +152,60 @@ export default function GrupoChat()
     }
   }
 
+  async function enviarGrupoMedia(actual)
+  {
+    if (miembros.length === 0)
+    {
+      return;
+    }
+    const clienteId = `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const optim = JSON.stringify({ t: actual.esVideo ? "video" : "img", local: actual.uri, mime: actual.mime });
+    setMensajes((prev) => [...prev, { id: clienteId, remitente_id: miId.current, texto: optim, enviado_en: new Date().toISOString(), enviando: true }]);
+    try
+    {
+      const base64 = await leerBase64(actual.uri);
+      const cif = cifrarArchivo(base64);
+      const { path } = await api.subirMedia(cif.datos);
+      guardarCache(path, actual.uri);
+      const plano = JSON.stringify({ t: actual.esVideo ? "video" : "img", path, mime: actual.mime, k: cif.clave, n: cif.nonce });
+      const cifrados = miembros.map((m) =>
+      {
+        const c = cifrar(plano, m.llave_publica, priv.current);
+        return { destinatario_id: m.id, contenido_cifrado: c.contenidoCifrado, nonce: c.nonce };
+      });
+      const r = await api.enviarGrupo(id, clienteId, cifrados);
+      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? (r.ok ? { ...x, id: r.id, texto: plano, enviando: false } : { ...x, fallido: true, enviando: false }) : x)));
+    }
+    catch (e)
+    {
+      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+    }
+  }
+
+  async function adjuntar()
+  {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted)
+    {
+      return;
+    }
+    const r = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images", "videos"],
+      quality: 0.6,
+      videoMaxDuration: 20,
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
+    });
+    if (r.canceled)
+    {
+      return;
+    }
+    for (const a of r.assets)
+    {
+      enviarGrupoMedia({ uri: a.uri, esVideo: a.type === "video", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
+    }
+  }
+
   const datos = esWeb ? mensajes : mensajes.slice().reverse();
 
   return (
@@ -149,19 +224,30 @@ export default function GrupoChat()
         renderItem={({ item }) =>
         {
           const mio = item.remitente_id === miId.current;
+          const media = leerMedia(item.texto);
           return (
             <View style={[estilos.filaMsg, mio ? estilos.derecha : estilos.izquierda]}>
               {!mio ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{nombres.current[item.remitente_id] || "…"}</Text> : null}
-              <View style={[estilos.burbuja, { backgroundColor: mio ? colores.botonFondo : colores.surface, borderColor: colores.borde }]}>
-                <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
-                <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{item.fallido ? "no enviado" : item.enviando ? "enviando…" : hora(item.enviado_en)}</Text>
-              </View>
+              {media ? (
+                <View style={estilos.mediaCaja}>
+                  <Adjunto media={media} color={colores.muted} />
+                  <Text style={[estilos.horaMedia, { color: colores.muted }]}>{item.fallido ? "no enviado" : item.enviando ? "enviando…" : hora(item.enviado_en)}</Text>
+                </View>
+              ) : (
+                <View style={[estilos.burbuja, { backgroundColor: mio ? colores.botonFondo : colores.surface, borderColor: colores.borde }]}>
+                  <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
+                  <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{item.fallido ? "no enviado" : item.enviando ? "enviando…" : hora(item.enviado_en)}</Text>
+                </View>
+              )}
             </View>
           );
         }}
       />
 
       <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
+        <Pressable onPress={adjuntar} hitSlop={8} style={({ pressed }) => [estilos.clip, pressed && { opacity: 0.6 }]}>
+          <Clip color={colores.muted} tamano={22} />
+        </Pressable>
         <TextInput
           value={borrador}
           onChangeText={setBorrador}
@@ -186,7 +272,10 @@ const estilos = StyleSheet.create({
   derecha: { alignSelf: "flex-end" },
   autor: { fontSize: 12, fontFamily: fuentes.semibold, marginLeft: 6, marginBottom: 2 },
   burbuja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
+  mediaCaja: { gap: 2 },
   hora: { fontSize: 10, alignSelf: "flex-end", marginTop: 2 },
+  horaMedia: { fontSize: 10, alignSelf: "flex-end" },
+  clip: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
   inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
   input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, maxHeight: 120 },
   enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
