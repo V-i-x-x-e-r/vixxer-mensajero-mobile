@@ -20,6 +20,7 @@ import { capturasBloqueadas, guardarBloqueoCapturas } from "../lib/privacidad";
 import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { leerConfig, guardarConfig, FRECUENCIAS, ETIQUETA_FRECUENCIA } from "../lib/respaldoConfig";
 import { hacerRespaldo, exportarRespaldoLocal } from "../lib/respaldo";
+import { cercaniaSoportada, modoGuardado, activarModo } from "../lib/cercania";
 
 export default function Ajustes()
 {
@@ -39,6 +40,7 @@ export default function Ajustes()
   const [respaldoCfg, setRespaldoCfg] = useState({ frecuencia: "nunca", hora: 3, destino: "nube", ultimo: null });
   const [respaldando, setRespaldando] = useState(false);
   const [nuevoCodigo, setNuevoCodigo] = useState("");
+  const [cercania, setCercania] = useState(false);
   const [cambiandoPass, setCambiandoPass] = useState(false);
   const [passActual, setPassActual] = useState("");
   const [passNueva, setPassNueva] = useState("");
@@ -61,7 +63,18 @@ export default function Ajustes()
     biometricoActivo().then(setBioActivo);
     capturasBloqueadas().then(setCapturas);
     leerConfig().then(setRespaldoCfg);
+    modoGuardado().then(setCercania);
   }, []);
+
+  async function alternarCercania(valor)
+  {
+    setCercania(valor);
+    const activo = await activarModo(valor);
+    if (valor && !activo)
+    {
+      setCercania(false);
+    }
+  }
 
   function guardarRespaldoCfg(cambios)
   {
@@ -310,6 +323,25 @@ export default function Ajustes()
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Usuarios bloqueados</Text>
         <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
       </Pressable>
+
+      {cercaniaSoportada() ? (
+        <>
+          <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>SIN INTERNET</Text>
+          <View style={[estilos.fila, { borderColor: colores.borde }]}>
+            <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mensajes por cercanía</Text>
+            <Switch
+              value={cercania}
+              onValueChange={alternarCercania}
+              trackColor={{ true: colores.texto, false: colores.borde }}
+              thumbColor={colores.fondo}
+              ios_backgroundColor={colores.borde}
+            />
+          </View>
+          <Text style={[estilos.notaRespaldo, { color: colores.muted }]}>
+            Cuando no haya internet, tus mensajes viajan cifrados por Bluetooth entre teléfonos con Vixxer cerca, saltando hasta llegar a su destino o a un teléfono con conexión. Nadie en el camino puede leerlos.
+          </Text>
+        </>
+      ) : null}
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>COPIA DE SEGURIDAD</Text>
       <View style={[estilos.fila, { borderColor: colores.borde }]}>

@@ -8,6 +8,7 @@ import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { BloqueoPin } from "../components/BloqueoPin";
 import { tienePin } from "../lib/pin";
 import { asegurarSocket } from "../lib/socket";
+import { arrancarSiActivo } from "../lib/cercania";
 import { respaldoAutomatico } from "../lib/respaldo";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
@@ -59,6 +60,7 @@ function Contenido()
     });
     asegurarSocket().catch(() => {});
     respaldoAutomatico();
+    arrancarSiActivo().catch(() => {});
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")

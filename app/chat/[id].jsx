@@ -18,6 +18,7 @@ import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFija
 import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion, envolverAviso, leerAviso, textoAviso } from "../../lib/efimero";
 import { aliasDe } from "../../lib/alias";
 import { alEntrante, enviarPorCercania } from "../../lib/bleMensajeria";
+import { estadoCercania } from "../../lib/cercania";
 import { ChatEsqueleto } from "../../components/Esqueleto";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
@@ -599,8 +600,15 @@ export default function Chat()
       const cacheActual = await leerCacheChat(otroId);
       if (descifrados.length > 0 || !cacheActual || cacheActual.length === 0)
       {
-        setMensajes(descifrados);
-        guardarCacheChat(otroId, descifrados);
+        setMensajes((prev) =>
+        {
+          const porMesh = prev.filter((m) => m.porBle && !descifrados.some((d) => d.id === m.id || d.cliente_id === m.id));
+          const lista = porMesh.length > 0
+            ? [...descifrados, ...porMesh].sort((a, b) => (a.enviado_en || "").localeCompare(b.enviado_en || ""))
+            : descifrados;
+          guardarCacheChat(otroId, lista);
+          return lista;
+        });
       }
       setHayMas(filas.length >= 50);
       marcarLeidos(descifrados);
@@ -624,11 +632,30 @@ export default function Chat()
     setRefrescando(false);
   }
 
+  async function intentarCercania(item)
+  {
+    const r = await enviarPorCercania(otroId, item.contenidoCifrado, item.nonce).catch(() => ({ entregados: 0 }));
+    if (r.entregados > 0)
+    {
+      await quitarOutbox(otroId, item.localId);
+      setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, id: r.id, cliente_id: r.id, estado: "enviado", porBle: true } : m)));
+      return true;
+    }
+    setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, estado: "fallido" } : m)));
+    return false;
+  }
+
   function intentarEnviar(item)
   {
     const socket = obtenerSocket();
     if (!socket || !socket.connected)
     {
+      const cerca = estadoCercania();
+      if (cerca.activo && cerca.cerca > 0)
+      {
+        intentarCercania(item);
+        return;
+      }
       setMensajes((prev) => prev.map((m) => (m.id === item.localId ? { ...m, estado: "fallido" } : m)));
       return;
     }
@@ -724,7 +751,7 @@ export default function Chat()
     if (r.entregados > 0)
     {
       await quitarOutbox(otroId, item.localId);
-      setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, estado: "enviado", porBle: true } : m)));
+      setMensajes((prev) => prev.map((m) => (m.id === mensaje.id ? { ...m, id: r.id, cliente_id: r.id, estado: "enviado", porBle: true } : m)));
     }
     else
     {
@@ -1330,6 +1357,9 @@ export default function Chat()
                     {ef ? <Reloj color={mio ? colores.botonTexto : colores.muted} tamano={11} /> : null}
                     {item.editado ? (
                       <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
+                    ) : null}
+                    {item.porBle ? (
+                      <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>por cercanía</Text>
                     ) : null}
                     <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
                     {mio ? (
