@@ -10,6 +10,7 @@ import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, alternarFavorito, ocultar, mostrar } from "../../lib/chatLocal";
 import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
 import { leerAlias } from "../../lib/alias";
+import { estadoCercania, alCambio } from "../../lib/cercania";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
@@ -58,6 +59,9 @@ export default function Chats()
   const [borrando, setBorrando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [alias, setAlias] = useState({});
+  const [cerca, setCerca] = useState(estadoCercania());
+
+  useEffect(() => alCambio(setCerca), []);
 
   const cargar = useCallback(async () =>
   {
@@ -314,8 +318,12 @@ export default function Chats()
       )}
 
       <View style={estilos.estado}>
-        <View style={[estilos.punto, { backgroundColor: conectado ? "#22C55E" : colores.muted }]} />
-        <Text style={[estilos.estadoTxt, { color: colores.muted }]}>{estado}</Text>
+        <View style={[estilos.punto, { backgroundColor: conectado ? "#22C55E" : cerca.activo && cerca.cerca > 0 ? "#38BDF8" : colores.muted }]} />
+        <Text style={[estilos.estadoTxt, { color: colores.muted }]}>
+          {conectado
+            ? cerca.activo && cerca.cerca > 0 ? `conectado · ${cerca.cerca} cerca` : estado
+            : cerca.activo && cerca.cerca > 0 ? `sin internet · por cercanía (${cerca.cerca} cerca)` : cerca.activo ? "sin internet · buscando vixxers cerca" : estado}
+        </Text>
       </View>
 
       {amigos.length > 0 && !sel ? (
