@@ -8,6 +8,7 @@ import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { BloqueoPin } from "../components/BloqueoPin";
 import { tienePin } from "../lib/pin";
 import { asegurarSocket } from "../lib/socket";
+import { respaldoAutomatico } from "../lib/respaldo";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
 
@@ -30,6 +31,7 @@ function Navegacion()
       <Stack.Screen name="recuperar" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="ajustes" options={{ title: "Ajustes" }} />
+      <Stack.Screen name="bloqueados" options={{ title: "Usuarios bloqueados" }} />
       <Stack.Screen name="agregar" options={{ title: "Agregar contacto" }} />
       <Stack.Screen name="solicitudes" options={{ title: "Solicitudes" }} />
       <Stack.Screen name="chat/[id]" options={{ title: "Conversación" }} />
@@ -56,11 +58,13 @@ function Contenido()
       setBloqueado(t);
     });
     asegurarSocket().catch(() => {});
+    respaldoAutomatico();
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")
       {
         asegurarSocket().catch(() => {});
+        respaldoAutomatico();
         if (tiene.current)
         {
           setBloqueado(true);
@@ -95,10 +99,14 @@ export default function RootLayout()
   {
     const sub = Notifications.addNotificationResponseReceivedListener((resp) =>
     {
-      const de = resp.notification.request.content.data?.de;
-      if (de)
+      const datos = resp.notification.request.content.data || {};
+      if (datos.de)
       {
-        router.push({ pathname: "/chat/[id]", params: { id: de } });
+        router.push({ pathname: "/chat/[id]", params: { id: datos.de } });
+      }
+      else if (datos.grupo)
+      {
+        router.push({ pathname: "/grupo/[id]", params: { id: datos.grupo } });
       }
     });
     return () => sub.remove();

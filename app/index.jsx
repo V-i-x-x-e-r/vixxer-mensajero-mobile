@@ -12,6 +12,7 @@ import { Logo } from "../components/Logo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
+import { Confirmacion } from "../components/Confirmacion";
 
 export default function Login()
 {
@@ -21,6 +22,7 @@ export default function Login()
   const [contrasena, setContrasena] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const [olvido, setOlvido] = useState(false);
 
   async function entrarTrasSesion()
   {
@@ -113,7 +115,7 @@ export default function Login()
             secureTextEntry
           />
 
-          <Text style={[estilos.olvido, { color: colores.muted }]}>¿Olvidaste tu contraseña?</Text>
+          <Text style={[estilos.olvido, { color: colores.muted }]} onPress={() => setOlvido(true)}>¿Olvidaste tu contraseña?</Text>
 
           {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
 
@@ -130,6 +132,16 @@ export default function Login()
           </Text>
         </Text>
       </KeyboardAvoidingView>
+
+      <Confirmacion
+        visible={olvido}
+        titulo="¿Olvidaste tu contraseña?"
+        mensaje="Vixxer no pide correo ni teléfono, así que nadie puede restablecerla por ti. Si la recuerdas más tarde, entra normal. Si no, crea una cuenta nueva y comparte tu código de amigo otra vez."
+        textoConfirmar="Crear cuenta"
+        textoCancelar="Entendido"
+        onConfirmar={() => { setOlvido(false); router.push("/registro"); }}
+        onCancelar={() => setOlvido(false)}
+      />
     </View>
   );
 }
