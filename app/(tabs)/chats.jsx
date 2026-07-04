@@ -4,8 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
 import { conectarSocket, obtenerSocket } from "../../lib/socket";
+import { escucharLlamadas } from "../../lib/llamadas";
 import { descifrar } from "../../lib/crypto";
-import { llavePublicaDe } from "../../lib/llaves";
+import { llavePublicaDe, sembrarLlave } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, alternarFavorito, ocultar, mostrar } from "../../lib/chatLocal";
 import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
@@ -86,7 +87,8 @@ export default function Chats()
           mapa[c.otro_id] = { preview: "Mensaje eliminado", enviado_en: c.enviado_en, noLeidos: c.no_leidos };
           continue;
         }
-        const pub = await llavePublicaDe(c.otro_id);
+        sembrarLlave(c.otro_id, c.llave_publica);
+        const pub = c.llave_publica || await llavePublicaDe(c.otro_id);
         let claro = descifrar(c.ultimo_cifrado, c.ultimo_nonce, pub, priv);
         if (claro === null)
         {
@@ -99,6 +101,7 @@ export default function Chats()
           if (texto.includes("\"t\":\"img\"")) { texto = "Foto"; }
           else if (texto.includes("\"t\":\"video\"")) { texto = "Video"; }
           else if (texto.includes("\"t\":\"audio\"")) { texto = "Audio"; }
+          else if (texto.includes("\"t\":\"sticker\"")) { texto = "Sticker"; }
           else if (texto.includes("\"t\":\"tmpaviso\"")) { texto = "Mensajes temporales"; }
           else if (texto.includes("\"t\":\"tmp\"")) { try { texto = JSON.parse(texto).m; } catch (err) { texto = "Mensaje"; } }
         }
@@ -153,6 +156,7 @@ export default function Chats()
         return;
       }
       socket = conectarSocket(token);
+      escucharLlamadas();
       setEstado(socket.connected ? "conectado" : "conectando…");
       socket.on("connect", () => setEstado("conectado"));
       socket.on("disconnect", () => setEstado("sin conexión"));

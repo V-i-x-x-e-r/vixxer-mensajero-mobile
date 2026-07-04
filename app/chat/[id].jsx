@@ -29,6 +29,11 @@ import { Reloj } from "../../components/Reloj";
 import { Flecha } from "../../components/Flecha";
 import { Check } from "../../components/Check";
 import { Clip } from "../../components/Clip";
+import { Carita } from "../../components/Carita";
+import { SelectorSticker } from "../../components/SelectorSticker";
+import { Telefono } from "../../components/Telefono";
+import { Videollamada } from "../../components/Videollamada";
+import { llamadasDisponibles } from "../../lib/llamadas";
 import { Microfono } from "../../components/Microfono";
 import { Adjunto } from "../../components/Adjunto";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
@@ -56,7 +61,7 @@ function leerMedia(texto)
   try
   {
     const obj = JSON.parse(texto);
-    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio") ? obj : null;
+    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio" || obj.t === "sticker") ? obj : null;
   }
   catch (e)
   {
@@ -161,6 +166,7 @@ export default function Chat()
   const [subiendo, setSubiendo] = useState(false);
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
+  const [stickers, setStickers] = useState(false);
   const [reenviando, setReenviando] = useState(null);
   const [reenviandoMulti, setReenviandoMulti] = useState(false);
   const [reenviadoA, setReenviadoA] = useState(null);
@@ -839,10 +845,15 @@ export default function Chat()
     await enviarVarios(r.assets.map(aMedia));
   }
 
+  function tipoDe(actual)
+  {
+    return actual.tipo || (actual.esVideo ? "video" : "img");
+  }
+
   function mostrarMediaOptimista(actual)
   {
     const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const texto = JSON.stringify({ t: actual.esVideo ? "video" : "img", local: actual.uri, mime: actual.mime });
+    const texto = JSON.stringify({ t: tipoDe(actual), local: actual.uri, mime: actual.mime });
     setMensajes((prev) => [
       ...prev,
       { id: localId, remitente_id: miId.current, texto, enviado_en: new Date().toISOString(), estado: "enviando" },
@@ -859,7 +870,7 @@ export default function Chat()
       const cif = cifrarArchivo(base64);
       const { path } = await api.subirMedia(cif.datos);
       guardarCache(path, actual.uri);
-      const plano = JSON.stringify({ t: actual.esVideo ? "video" : "img", path, mime: actual.mime, k: cif.clave, n: cif.nonce });
+      const plano = JSON.stringify({ t: tipoDe(actual), path, mime: actual.mime, k: cif.clave, n: cif.nonce });
       const priv = await leer(CLAVE_PRIVADA);
       const pubDest = await llavePublicaDe(otroId);
       const { contenidoCifrado, nonce } = cifrar(plano, pubDest, priv);
@@ -893,6 +904,15 @@ export default function Chat()
     }
     const actual = previo;
     setPrevio(null);
+    const localId = mostrarMediaOptimista(actual);
+    lista.current?.scrollToOffset({ offset: 0, animated: true });
+    subirYEnviar(actual, localId);
+  }
+
+  function enviarSticker(uri)
+  {
+    setStickers(false);
+    const actual = { uri, tipo: "sticker", mime: "image/png" };
     const localId = mostrarMediaOptimista(actual);
     lista.current?.scrollToOffset({ offset: 0, animated: true });
     subirYEnviar(actual, localId);
@@ -1119,6 +1139,24 @@ export default function Chat()
           ),
           headerRight: () => (
             <View style={estilos.headerAcciones}>
+              {llamadasDisponibles() ? (
+                <>
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/llamada", params: { id: otroId, usuario: alias || usuario || "", video: "0" } })}
+                    hitSlop={8}
+                    style={({ pressed }) => pressed && estilos.presionadoLeve}
+                  >
+                    <Telefono color={colores.texto} tamano={20} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => router.push({ pathname: "/llamada", params: { id: otroId, usuario: alias || usuario || "", video: "1" } })}
+                    hitSlop={8}
+                    style={({ pressed }) => pressed && estilos.presionadoLeve}
+                  >
+                    <Videollamada color={colores.texto} tamano={21} />
+                  </Pressable>
+                </>
+              ) : null}
               <Pressable
                 onPress={() =>
                 {
@@ -1272,7 +1310,7 @@ export default function Chat()
           const textoMostrar = ef ? ef.m : item.texto;
           const elegido = seleccionados.includes(item.id) || (sel && sel.mensaje.id === item.id);
           const borrado = item.contenido_cifrado === "BORRADO";
-          const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video");
+          const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video" || media.t === "sticker");
           const mediaSolo = mediaVisual && !citado;
           const aviso = leerAviso(item.texto);
 
@@ -1496,6 +1534,16 @@ export default function Chat()
             <Clip color={colores.muted} tamano={20} />
           </Pressable>
         ) : null}
+        {!esWeb ? (
+          <Pressable
+            onPress={() => setStickers(true)}
+            disabled={subiendo || grabando}
+            hitSlop={6}
+            style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
+          >
+            <Carita color={colores.muted} tamano={20} />
+          </Pressable>
+        ) : null}
         <TextInput
           value={texto}
           onChangeText={escribir}
@@ -1547,6 +1595,12 @@ export default function Chat()
           <Text style={estilos.toastChatTxt}>{toast}</Text>
         </View>
       ) : null}
+
+      <SelectorSticker
+        visible={stickers}
+        onElegir={enviarSticker}
+        onCerrar={() => setStickers(false)}
+      />
 
       <SelectorContacto
         visible={!!reenviando || reenviandoMulti}

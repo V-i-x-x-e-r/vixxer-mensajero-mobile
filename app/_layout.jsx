@@ -8,6 +8,7 @@ import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { BloqueoPin } from "../components/BloqueoPin";
 import { tienePin } from "../lib/pin";
 import { asegurarSocket } from "../lib/socket";
+import { escucharLlamadas } from "../lib/llamadas";
 import { arrancarSiActivo } from "../lib/cercania";
 import { respaldoAutomatico } from "../lib/respaldo";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
@@ -41,6 +42,7 @@ function Navegacion()
       <Stack.Screen name="grupo/crear" options={{ title: "Nuevo grupo" }} />
       <Stack.Screen name="grupo/[id]" options={{ title: "Grupo" }} />
       <Stack.Screen name="grupo/info/[id]" options={{ title: "Info del grupo" }} />
+      <Stack.Screen name="llamada" options={{ headerShown: false }} />
       <Stack.Screen name="ble" options={{ title: "BLE (prueba)" }} />
     </Stack>
   );
@@ -58,14 +60,14 @@ function Contenido()
       tiene.current = t;
       setBloqueado(t);
     });
-    asegurarSocket().catch(() => {});
+    asegurarSocket().then(() => escucharLlamadas()).catch(() => {});
     respaldoAutomatico();
     arrancarSiActivo().catch(() => {});
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")
       {
-        asegurarSocket().catch(() => {});
+        asegurarSocket().then(() => escucharLlamadas()).catch(() => {});
         respaldoAutomatico();
         if (tiene.current)
         {

@@ -67,7 +67,8 @@
         }
       ],
       "react-native-ble-plx",
-      "expo-sharing"
+      "expo-sharing",
+      "@config-plugins/react-native-webrtc"
     ],
     "extra": {
       "router": {},
