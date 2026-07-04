@@ -5,7 +5,7 @@ import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
 import { escribirTemp } from "../lib/archivos";
-import { leerCache, guardarCache } from "../lib/mediaCache";
+import { leerCache, guardarCache, leerDisco, guardarDisco } from "../lib/mediaCache";
 import { VisorVideo } from "./VisorVideo";
 
 function Play({ tamano = 52 })
@@ -39,13 +39,22 @@ export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cu
     {
       try
       {
+        const guardado = await leerDisco(media.path, "video/mp4");
+        if (guardado)
+        {
+          if (activo)
+          {
+            setUri(guardado);
+          }
+          return;
+        }
         const { url } = await api.urlMedia(media.path);
         const resp = await fetch(url);
         const bytes = new Uint8Array(await resp.arrayBuffer());
         const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
         if (claro)
         {
-          const archivo = await escribirTemp(claro, "mp4");
+          const archivo = (await guardarDisco(media.path, claro, "video/mp4")) || (await escribirTemp(claro, "mp4"));
           guardarCache(media.path, archivo);
           if (activo)
           {

@@ -3,7 +3,7 @@ import { View, Image, Pressable, Modal, ActivityIndicator, StyleSheet } from "re
 import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
-import { leerCache, guardarCache } from "../lib/mediaCache";
+import { leerCache, guardarCache, leerDisco, guardarDisco } from "../lib/mediaCache";
 import { VisorImagen } from "./VisorImagen";
 
 const MAX_ANCHO = 248;
@@ -17,6 +17,7 @@ function medida(w, h)
 
 export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, cuadrado })
 {
+  const esSticker = media.t === "sticker";
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [dims, setDims] = useState(null);
   const [error, setError] = useState(false);
@@ -34,15 +35,25 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
     {
       try
       {
+        const guardada = await leerDisco(media.path, media.mime);
+        if (guardada)
+        {
+          if (activo)
+          {
+            setUri(guardada);
+          }
+          return;
+        }
         const { url } = await api.urlMedia(media.path);
         const resp = await fetch(url);
         const bytes = new Uint8Array(await resp.arrayBuffer());
         const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
         if (activo && claro)
         {
-          const dataUri = `data:${media.mime};base64,${claro}`;
-          guardarCache(media.path, dataUri);
-          setUri(dataUri);
+          const archivo = await guardarDisco(media.path, claro, media.mime);
+          const final = archivo || `data:${media.mime};base64,${claro}`;
+          guardarCache(media.path, final);
+          setUri(final);
         }
         else if (activo)
         {
@@ -75,10 +86,10 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
     return () => { activo = false; };
   }, [uri]);
 
-  if (!uri || (!cuadrado && !dims))
+  if (!uri || (!cuadrado && !esSticker && !dims))
   {
     return (
-      <View style={[estilos.caja, cuadrado ? { width: cuadrado, height: cuadrado } : null]}>
+      <View style={[esSticker ? estilos.sticker : estilos.caja, cuadrado ? { width: cuadrado, height: cuadrado } : null]}>
         {!error ? <ActivityIndicator color={color} /> : null}
       </View>
     );
@@ -92,7 +103,11 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
         delayLongPress={250}
       >
-        <Image source={{ uri }} style={cuadrado ? { width: cuadrado, height: cuadrado, borderRadius: 10 } : [estilos.imagen, dims]} resizeMode="cover" />
+        {esSticker && !cuadrado ? (
+          <Image source={{ uri }} style={estilos.sticker} resizeMode="contain" />
+        ) : (
+          <Image source={{ uri }} style={cuadrado ? { width: cuadrado, height: cuadrado, borderRadius: 10 } : [estilos.imagen, dims]} resizeMode="cover" />
+        )}
       </Pressable>
       <Modal visible={abierta} transparent animationType="fade" onRequestClose={() => setAbierta(false)}>
         <VisorImagen uri={uri} onCerrar={() => setAbierta(false)} />
@@ -103,6 +118,7 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
 
 const estilos = StyleSheet.create({
   imagen: { borderRadius: 14 },
+  sticker: { width: 150, height: 150, alignItems: "center", justifyContent: "center" },
   caja: { width: 210, height: 230, borderRadius: 14, alignItems: "center", justifyContent: "center" },
   fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
   completa: { width: "100%", height: "100%" },

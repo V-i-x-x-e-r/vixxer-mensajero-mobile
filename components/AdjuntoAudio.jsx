@@ -5,7 +5,7 @@ import { encodeBase64 } from "tweetnacl-util";
 import * as api from "../lib/api";
 import { descifrarArchivo } from "../lib/crypto";
 import { escribirTemp } from "../lib/archivos";
-import { leerCache, guardarCache } from "../lib/mediaCache";
+import { leerCache, guardarCache, leerDisco, guardarDisco } from "../lib/mediaCache";
 
 export function AdjuntoAudio({ media, color })
 {
@@ -24,13 +24,22 @@ export function AdjuntoAudio({ media, color })
     {
       try
       {
+        const guardado = await leerDisco(media.path, "audio/m4a");
+        if (guardado)
+        {
+          if (activo)
+          {
+            setUri(guardado);
+          }
+          return;
+        }
         const { url } = await api.urlMedia(media.path);
         const resp = await fetch(url);
         const bytes = new Uint8Array(await resp.arrayBuffer());
         const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
         if (claro)
         {
-          const archivo = await escribirTemp(claro, "m4a");
+          const archivo = (await guardarDisco(media.path, claro, "audio/m4a")) || (await escribirTemp(claro, "m4a"));
           guardarCache(media.path, archivo);
           if (activo)
           {

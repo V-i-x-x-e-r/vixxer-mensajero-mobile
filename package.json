@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@config-plugins/react-native-webrtc": "^15.0.1",
     "@expo-google-fonts/outfit": "^0.4.3",
     "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "~56.0.12",
@@ -16,6 +17,7 @@
     "expo-document-picker": "~56.0.4",
     "expo-file-system": "~56.0.8",
     "expo-font": "~56.0.7",
+    "expo-image-manipulator": "~56.0.20",
     "expo-image-picker": "~56.0.18",
     "expo-linking": "~56.0.14",
     "expo-local-authentication": "~56.0.4",
@@ -37,6 +39,7 @@
     "react-native-screens": "4.25.2",
     "react-native-svg": "15.15.4",
     "react-native-web": "^0.21.2",
+    "react-native-webrtc": "^124.0.7",
     "socket.io-client": "^4.8.3",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1"

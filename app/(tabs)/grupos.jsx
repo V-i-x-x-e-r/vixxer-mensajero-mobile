@@ -40,6 +40,7 @@ function resumen(texto)
     if (texto.includes("\"t\":\"img\"")) { return "Foto"; }
     if (texto.includes("\"t\":\"video\"")) { return "Video"; }
     if (texto.includes("\"t\":\"audio\"")) { return "Audio"; }
+    if (texto.includes("\"t\":\"sticker\"")) { return "Sticker"; }
   }
   return texto;
 }

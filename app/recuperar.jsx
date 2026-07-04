@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { View, Text, Pressable, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as api from "../lib/api";
@@ -13,6 +13,8 @@ import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { Confirmacion } from "../components/Confirmacion";
+import { EscanerQR } from "../components/EscanerQR";
+import { PREFIJO_VINCULO } from "../components/VincularDispositivo";
 
 export default function Recuperar()
 {
@@ -24,6 +26,7 @@ export default function Recuperar()
   const [nuevoCodigo, setNuevoCodigo] = useState("");
   const [confirmarNuevo, setConfirmarNuevo] = useState(false);
   const [archivo, setArchivo] = useState(null);
+  const [escaneando, setEscaneando] = useState(false);
 
   async function elegirArchivo()
   {
@@ -41,9 +44,23 @@ export default function Recuperar()
     }
   }
 
-  async function recuperar()
+  function alLeerQR(valor)
   {
-    if (!codigo.trim())
+    setEscaneando(false);
+    if (!valor.startsWith(PREFIJO_VINCULO))
+    {
+      setError("Ese QR no es de vincular dispositivo");
+      return;
+    }
+    const leido = valor.slice(PREFIJO_VINCULO.length);
+    setCodigo(leido);
+    recuperar(leido);
+  }
+
+  async function recuperar(codigoQR)
+  {
+    const cod = typeof codigoQR === "string" ? codigoQR : codigo;
+    if (!cod.trim())
     {
       setError("Escribe tu código de recuperación");
       return;
@@ -54,7 +71,7 @@ export default function Recuperar()
     try
     {
       const respaldo = archivo || await api.obtenerRespaldo();
-      const pub = await restaurarDeRespaldo(respaldo, codigo);
+      const pub = await restaurarDeRespaldo(respaldo, cod);
       if (!pub)
       {
         setError("Código incorrecto. Revísalo e intenta de nuevo.");
@@ -128,9 +145,14 @@ export default function Recuperar()
 
           {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
 
-          <Boton titulo="Recuperar" onPress={recuperar} cargando={cargando} />
+          <Boton titulo="Recuperar" onPress={() => recuperar()} cargando={cargando} />
 
           <View style={estilos.opciones}>
+            {Platform.OS !== "web" ? (
+              <Pressable onPress={() => setEscaneando(true)} style={({ pressed }) => [estilos.opcion, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+                <Text style={[estilos.opcionTxt, { color: colores.texto }]}>Escanear desde tu otro teléfono</Text>
+              </Pressable>
+            ) : null}
             <Pressable onPress={elegirArchivo} style={({ pressed }) => [estilos.opcion, { borderColor: colores.borde }, pressed && estilos.presionado]}>
               <Text style={[estilos.opcionTxt, { color: archivo ? colores.botonFondo : colores.texto }]}>
                 {archivo ? "Archivo cargado ✓ — escribe tu código" : "Restaurar desde un archivo"}
@@ -145,6 +167,8 @@ export default function Recuperar()
           </Text>
         </View>
       </KeyboardAvoidingView>
+
+      <EscanerQR visible={escaneando} onLeido={alLeerQR} onCerrar={() => setEscaneando(false)} />
 
       <RespaldoCodigo
         visible={!!nuevoCodigo}

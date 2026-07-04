@@ -21,6 +21,7 @@ import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { leerConfig, guardarConfig, FRECUENCIAS, ETIQUETA_FRECUENCIA } from "../lib/respaldoConfig";
 import { hacerRespaldo, exportarRespaldoLocal } from "../lib/respaldo";
 import { cercaniaSoportada, modoGuardado, activarModo } from "../lib/cercania";
+import { VincularDispositivo } from "../components/VincularDispositivo";
 
 export default function Ajustes()
 {
@@ -41,6 +42,8 @@ export default function Ajustes()
   const [respaldando, setRespaldando] = useState(false);
   const [nuevoCodigo, setNuevoCodigo] = useState("");
   const [cercania, setCercania] = useState(false);
+  const [vinculo, setVinculo] = useState("");
+  const [vinculando, setVinculando] = useState(false);
   const [cambiandoPass, setCambiandoPass] = useState(false);
   const [passActual, setPassActual] = useState("");
   const [passNueva, setPassNueva] = useState("");
@@ -198,6 +201,23 @@ export default function Ajustes()
     desconectarSocket();
     await cerrarSesion();
     router.replace("/");
+  }
+
+  async function vincularDispositivo()
+  {
+    setVinculando(true);
+    try
+    {
+      const codigo = await hacerRespaldo();
+      if (codigo)
+      {
+        setVinculo(codigo);
+      }
+    }
+    catch (e)
+    {
+    }
+    setVinculando(false);
   }
 
   function abrirCambioPass()
@@ -370,7 +390,11 @@ export default function Ajustes()
       </Text>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
-      <Pressable onPress={abrirCambioPass} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+      <Pressable onPress={vincularDispositivo} disabled={vinculando} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>{vinculando ? "Preparando…" : "Vincular otro dispositivo"}</Text>
+        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
+      </Pressable>
+      <Pressable onPress={abrirCambioPass} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde, marginTop: 8 }, pressed && estilos.presionado]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>Cambiar contraseña</Text>
         <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
       </Pressable>
@@ -382,6 +406,8 @@ export default function Ajustes()
       </ScrollView>
 
       <CodigoQR visible={qr} codigo={codigo} onCerrar={() => setQr(false)} />
+
+      <VincularDispositivo visible={!!vinculo} codigo={vinculo} onCerrar={() => setVinculo("")} />
 
       <RespaldoCodigo visible={!!nuevoCodigo} codigo={nuevoCodigo} onCerrar={() => setNuevoCodigo("")} />
 

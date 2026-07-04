@@ -28,7 +28,7 @@ function leerMedia(texto)
   try
   {
     const obj = JSON.parse(texto);
-    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio") ? obj : null;
+    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio" || obj.t === "sticker") ? obj : null;
   }
   catch (e)
   {
