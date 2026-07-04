@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, Switch, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
@@ -39,6 +39,13 @@ export default function Ajustes()
   const [respaldoCfg, setRespaldoCfg] = useState({ frecuencia: "nunca", hora: 3, destino: "nube", ultimo: null });
   const [respaldando, setRespaldando] = useState(false);
   const [nuevoCodigo, setNuevoCodigo] = useState("");
+  const [cambiandoPass, setCambiandoPass] = useState(false);
+  const [passActual, setPassActual] = useState("");
+  const [passNueva, setPassNueva] = useState("");
+  const [passRepetir, setPassRepetir] = useState("");
+  const [passError, setPassError] = useState("");
+  const [passOcupado, setPassOcupado] = useState(false);
+  const [passListo, setPassListo] = useState(false);
 
   useEffect(() =>
   {
@@ -180,6 +187,46 @@ export default function Ajustes()
     router.replace("/");
   }
 
+  function abrirCambioPass()
+  {
+    setPassActual("");
+    setPassNueva("");
+    setPassRepetir("");
+    setPassError("");
+    setPassListo(false);
+    setCambiandoPass(true);
+  }
+
+  async function confirmarCambioPass()
+  {
+    if (passNueva.length < 6)
+    {
+      setPassError("La nueva contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+    if (passNueva !== passRepetir)
+    {
+      setPassError("Las contraseñas no coinciden");
+      return;
+    }
+    setPassError("");
+    setPassOcupado(true);
+    try
+    {
+      await api.cambiarContrasena(passActual, passNueva);
+      setPassListo(true);
+      setTimeout(() => setCambiandoPass(false), 1200);
+    }
+    catch (e)
+    {
+      setPassError(e.status === 400 ? "La contraseña actual no es correcta" : "No se pudo cambiar. Intenta de nuevo.");
+    }
+    finally
+    {
+      setPassOcupado(false);
+    }
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: colores.fondo }}>
       <ScrollView contentContainerStyle={estilos.pantalla} showsVerticalScrollIndicator={false}>
@@ -259,6 +306,10 @@ export default function Ajustes()
           ios_backgroundColor={colores.borde}
         />
       </View>
+      <Pressable onPress={() => router.push("/bloqueados")} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde, marginTop: 8 }, pressed && estilos.presionado]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Usuarios bloqueados</Text>
+        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
+      </Pressable>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>COPIA DE SEGURIDAD</Text>
       <View style={[estilos.fila, { borderColor: colores.borde }]}>
@@ -287,7 +338,11 @@ export default function Ajustes()
       </Text>
 
       <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
-      <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+      <Pressable onPress={abrirCambioPass} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Cambiar contraseña</Text>
+        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
+      </Pressable>
+      <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde, marginTop: 8 }, pressed && estilos.presionado]}>
         <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
       </Pressable>
 
@@ -297,6 +352,48 @@ export default function Ajustes()
       <CodigoQR visible={qr} codigo={codigo} onCerrar={() => setQr(false)} />
 
       <RespaldoCodigo visible={!!nuevoCodigo} codigo={nuevoCodigo} onCerrar={() => setNuevoCodigo("")} />
+
+      <Modal transparent visible={cambiandoPass} animationType="fade" onRequestClose={() => setCambiandoPass(false)}>
+        <Pressable style={estilos.modalFondo} onPress={() => setCambiandoPass(false)}>
+          <Pressable style={[estilos.modalCaja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.modalTitulo, { color: colores.texto }]}>Cambiar contraseña</Text>
+            <TextInput
+              value={passActual}
+              onChangeText={setPassActual}
+              placeholder="Contraseña actual"
+              placeholderTextColor={colores.placeholder}
+              secureTextEntry
+              style={[estilos.modalCampo, { color: colores.texto, borderColor: colores.borde }]}
+            />
+            <TextInput
+              value={passNueva}
+              onChangeText={setPassNueva}
+              placeholder="Nueva contraseña"
+              placeholderTextColor={colores.placeholder}
+              secureTextEntry
+              style={[estilos.modalCampo, { color: colores.texto, borderColor: colores.borde }]}
+            />
+            <TextInput
+              value={passRepetir}
+              onChangeText={setPassRepetir}
+              placeholder="Repite la nueva contraseña"
+              placeholderTextColor={colores.placeholder}
+              secureTextEntry
+              style={[estilos.modalCampo, { color: colores.texto, borderColor: colores.borde }]}
+            />
+            {passError ? <Text style={{ color: colores.error, fontSize: 13 }}>{passError}</Text> : null}
+            {passListo ? <Text style={{ color: colores.texto, fontSize: 13 }}>Contraseña actualizada.</Text> : null}
+            <View style={estilos.modalAcciones}>
+              <Pressable onPress={() => setCambiandoPass(false)} style={({ pressed }) => [estilos.modalBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+                <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={confirmarCambioPass} disabled={passOcupado || passListo} style={({ pressed }) => [estilos.modalBoton, { backgroundColor: colores.botonFondo, borderColor: colores.botonFondo }, pressed && estilos.presionado]}>
+                <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>{passOcupado ? "Cambiando…" : "Cambiar"}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       <ConfigurarPin
         visible={configPin}
@@ -345,4 +442,10 @@ const estilos = StyleSheet.create({
   salirTxt: { fontSize: 15, fontWeight: "600" },
   version: { fontSize: 12, textAlign: "center", marginTop: 28 },
   presionado: { opacity: 0.6 },
+  modalFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 28 },
+  modalCaja: { width: "100%", maxWidth: 360, borderWidth: 1, borderRadius: 16, padding: 20, gap: 12 },
+  modalTitulo: { fontSize: 17, fontFamily: fuentes.semibold },
+  modalCampo: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 },
+  modalAcciones: { flexDirection: "row", gap: 10, marginTop: 4 },
+  modalBoton: { flex: 1, borderWidth: 1, borderRadius: 10, paddingVertical: 12, alignItems: "center" },
 });

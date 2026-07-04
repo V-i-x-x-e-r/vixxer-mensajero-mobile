@@ -3,10 +3,13 @@ import { View, Text, TextInput, Pressable, FlatList, Platform, StyleSheet } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { guardarCache } from "../../lib/mediaCache";
+import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
+import { marcarVisto } from "../../lib/grupoVisto";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
@@ -14,6 +17,7 @@ import { fuentes } from "../../assets/themes/temas";
 import { Adjunto } from "../../components/Adjunto";
 import { Clip } from "../../components/Clip";
 import { Flecha } from "../../components/Flecha";
+import { Microfono } from "../../components/Microfono";
 
 function leerMedia(texto)
 {
@@ -24,7 +28,7 @@ function leerMedia(texto)
   try
   {
     const obj = JSON.parse(texto);
-    return obj && (obj.t === "img" || obj.t === "video") ? obj : null;
+    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio") ? obj : null;
   }
   catch (e)
   {
@@ -46,12 +50,36 @@ export default function GrupoChat()
   const [mensajes, setMensajes] = useState([]);
   const [borrador, setBorrador] = useState("");
   const [miembros, setMiembros] = useState([]);
+  const [titulo, setTitulo] = useState(nombre || "Grupo");
+  const [grabando, setGrabando] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
+  const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const priv = useRef(null);
   const pubs = useRef({});
   const nombres = useRef({});
+  const pendientes = useRef({});
+  const hayMas = useRef(true);
+  const cargandoMas = useRef(false);
   const lista = useRef(null);
   const esWeb = Platform.OS === "web";
+
+  function persistir(items)
+  {
+    guardarCacheChat(`g-${id}`, items);
+  }
+
+  function descifrarFila(f)
+  {
+    const pub = pubs.current[f.remitente_id];
+    return {
+      id: f.id,
+      remitente_id: f.remitente_id,
+      autor: nombres.current[f.remitente_id] || null,
+      texto: pub ? (descifrar(f.contenido_cifrado, f.nonce, pub, priv.current) ?? "No se pudo descifrar") : "No se pudo descifrar",
+      enviado_en: f.enviado_en,
+    };
+  }
 
   useEffect(() =>
   {
@@ -60,6 +88,11 @@ export default function GrupoChat()
     {
       miId.current = await leer(MI_ID);
       priv.current = await leer(CLAVE_PRIVADA);
+      const cache = await leerCacheChat(`g-${id}`);
+      if (cache && activo)
+      {
+        setMensajes(cache);
+      }
       let grupo = null;
       try
       {
@@ -71,6 +104,7 @@ export default function GrupoChat()
       if (grupo && activo)
       {
         setMiembros(grupo.miembros || []);
+        setTitulo(grupo.nombre);
         for (const m of grupo.miembros || [])
         {
           pubs.current[m.id] = m.llave_publica;
@@ -80,16 +114,17 @@ export default function GrupoChat()
       try
       {
         const filas = await api.historialGrupo(id);
-        const desc = filas.map((f) => ({
-          id: f.id,
-          remitente_id: f.remitente_id,
-          texto: pubs.current[f.remitente_id] ? (descifrar(f.contenido_cifrado, f.nonce, pubs.current[f.remitente_id], priv.current) ?? "No se pudo descifrar") : "No se pudo descifrar",
-          enviado_en: f.enviado_en,
-        }));
-        if (activo)
+        if (filas.length < 50)
+        {
+          hayMas.current = false;
+        }
+        const desc = filas.map(descifrarFila);
+        if (activo && (desc.length > 0 || !cache))
         {
           setMensajes(desc);
+          persistir(desc);
         }
+        marcarVisto(id);
       }
       catch (e)
       {
@@ -111,15 +146,85 @@ export default function GrupoChat()
       {
         return;
       }
-      const pub = pubs.current[data.remitente_id];
-      const texto = pub ? (descifrar(data.contenido_cifrado, data.nonce, pub, priv.current) ?? "No se pudo descifrar") : "No se pudo descifrar";
-      setMensajes((prev) => (prev.some((m) => m.id === data.id) ? prev : [...prev, { id: data.id, remitente_id: data.remitente_id, texto, enviado_en: data.enviado_en }]));
+      const nuevo = descifrarFila(data);
+      setMensajes((prev) =>
+      {
+        if (prev.some((m) => m.id === data.id))
+        {
+          return prev;
+        }
+        const conNuevo = [...prev, nuevo];
+        persistir(conNuevo);
+        return conNuevo;
+      });
+      marcarVisto(id);
     }
     socket.on("grupo:mensaje", alMensaje);
     return () => socket.off("grupo:mensaje", alMensaje);
   }, [id]);
 
-  async function enviar()
+  async function cargarMas()
+  {
+    if (esWeb || cargandoMas.current || !hayMas.current || mensajes.length === 0)
+    {
+      return;
+    }
+    cargandoMas.current = true;
+    try
+    {
+      const filas = await api.historialGrupo(id, mensajes[0].enviado_en);
+      if (filas.length < 50)
+      {
+        hayMas.current = false;
+      }
+      if (filas.length > 0)
+      {
+        const desc = filas.map(descifrarFila);
+        setMensajes((prev) => [...desc, ...prev]);
+      }
+    }
+    catch (e)
+    {
+    }
+    cargandoMas.current = false;
+  }
+
+  function cifrarParaTodos(texto)
+  {
+    return miembros.map((m) =>
+    {
+      const c = cifrar(texto, m.llave_publica, priv.current);
+      return { destinatario_id: m.id, contenido_cifrado: c.contenidoCifrado, nonce: c.nonce };
+    });
+  }
+
+  async function mandarTexto(texto, clienteId)
+  {
+    try
+    {
+      const r = await api.enviarGrupo(id, clienteId, cifrarParaTodos(texto));
+      if (r.ok)
+      {
+        delete pendientes.current[clienteId];
+        setMensajes((prev) =>
+        {
+          const conEnviado = prev.map((x) => (x.id === clienteId ? { ...x, id: r.id, enviando: false, fallido: false } : x));
+          persistir(conEnviado);
+          return conEnviado;
+        });
+      }
+      else
+      {
+        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+      }
+    }
+    catch (e)
+    {
+      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+    }
+  }
+
+  function enviar()
   {
     const texto = borrador.trim();
     if (!texto || miembros.length === 0)
@@ -127,58 +232,71 @@ export default function GrupoChat()
       return;
     }
     setBorrador("");
-    const clienteId = `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const clienteId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    pendientes.current[clienteId] = { tipo: "texto", texto };
     setMensajes((prev) => [...prev, { id: clienteId, remitente_id: miId.current, texto, enviado_en: new Date().toISOString(), enviando: true }]);
-    try
-    {
-      const cifrados = miembros.map((m) =>
-      {
-        const c = cifrar(texto, m.llave_publica, priv.current);
-        return { destinatario_id: m.id, contenido_cifrado: c.contenidoCifrado, nonce: c.nonce };
-      });
-      const r = await api.enviarGrupo(id, clienteId, cifrados);
-      if (r.ok)
-      {
-        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, id: r.id, enviando: false } : x)));
-      }
-      else
-      {
-        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true } : x)));
-      }
-    }
-    catch (e)
-    {
-      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true } : x)));
-    }
+    mandarTexto(texto, clienteId);
   }
 
-  async function enviarGrupoMedia(actual)
+  async function subirYMandar(actual, clienteId)
   {
-    if (miembros.length === 0)
-    {
-      return;
-    }
-    const clienteId = `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const optim = JSON.stringify({ t: actual.esVideo ? "video" : "img", local: actual.uri, mime: actual.mime });
-    setMensajes((prev) => [...prev, { id: clienteId, remitente_id: miId.current, texto: optim, enviado_en: new Date().toISOString(), enviando: true }]);
     try
     {
       const base64 = await leerBase64(actual.uri);
       const cif = cifrarArchivo(base64);
       const { path } = await api.subirMedia(cif.datos);
       guardarCache(path, actual.uri);
-      const plano = JSON.stringify({ t: actual.esVideo ? "video" : "img", path, mime: actual.mime, k: cif.clave, n: cif.nonce });
-      const cifrados = miembros.map((m) =>
+      const plano = JSON.stringify({ t: actual.tipo, path, mime: actual.mime, k: cif.clave, n: cif.nonce });
+      const r = await api.enviarGrupo(id, clienteId, cifrarParaTodos(plano));
+      if (r.ok)
       {
-        const c = cifrar(plano, m.llave_publica, priv.current);
-        return { destinatario_id: m.id, contenido_cifrado: c.contenidoCifrado, nonce: c.nonce };
-      });
-      const r = await api.enviarGrupo(id, clienteId, cifrados);
-      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? (r.ok ? { ...x, id: r.id, texto: plano, enviando: false } : { ...x, fallido: true, enviando: false }) : x)));
+        delete pendientes.current[clienteId];
+        setMensajes((prev) =>
+        {
+          const conEnviado = prev.map((x) => (x.id === clienteId ? { ...x, id: r.id, texto: plano, enviando: false, fallido: false } : x));
+          persistir(conEnviado);
+          return conEnviado;
+        });
+      }
+      else
+      {
+        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+      }
     }
     catch (e)
     {
       setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+    }
+  }
+
+  function enviarGrupoMedia(actual)
+  {
+    if (miembros.length === 0)
+    {
+      return Promise.resolve();
+    }
+    const clienteId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    pendientes.current[clienteId] = { tipo: "media", actual };
+    const optim = JSON.stringify({ t: actual.tipo, local: actual.uri, mime: actual.mime });
+    setMensajes((prev) => [...prev, { id: clienteId, remitente_id: miId.current, texto: optim, enviado_en: new Date().toISOString(), enviando: true }]);
+    return subirYMandar(actual, clienteId);
+  }
+
+  function reintentar(item)
+  {
+    const pend = pendientes.current[item.id];
+    if (!pend)
+    {
+      return;
+    }
+    setMensajes((prev) => prev.map((x) => (x.id === item.id ? { ...x, fallido: false, enviando: true } : x)));
+    if (pend.tipo === "texto")
+    {
+      mandarTexto(pend.texto, item.id);
+    }
+    else
+    {
+      subirYMandar(pend.actual, item.id);
     }
   }
 
@@ -202,7 +320,50 @@ export default function GrupoChat()
     }
     for (const a of r.assets)
     {
-      await enviarGrupoMedia({ uri: a.uri, esVideo: a.type === "video", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
+      await enviarGrupoMedia({ uri: a.uri, tipo: a.type === "video" ? "video" : "img", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
+    }
+  }
+
+  async function grabarToggle()
+  {
+    if (miembros.length === 0)
+    {
+      return;
+    }
+    if (grabando)
+    {
+      setGrabando(false);
+      setSubiendo(true);
+      try
+      {
+        await grabadora.stop();
+        if (grabadora.uri)
+        {
+          await enviarGrupoMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4" });
+        }
+      }
+      catch (e)
+      {
+      }
+      finally
+      {
+        setSubiendo(false);
+      }
+      return;
+    }
+    const permiso = await AudioModule.requestRecordingPermissionsAsync();
+    if (!permiso.granted)
+    {
+      return;
+    }
+    try
+    {
+      await grabadora.prepareToRecordAsync();
+      grabadora.record();
+      setGrabando(true);
+    }
+    catch (e)
+    {
     }
   }
 
@@ -210,8 +371,8 @@ export default function GrupoChat()
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
-      <Stack.Screen options={{ title: nombre || "Grupo", headerRight: () => (
-        <Pressable onPress={() => router.push({ pathname: "/grupo/info/[id]", params: { id, nombre } })} hitSlop={8}>
+      <Stack.Screen options={{ title: titulo, headerRight: () => (
+        <Pressable onPress={() => router.push({ pathname: "/grupo/info/[id]", params: { id, nombre: titulo } })} hitSlop={8}>
           <Text style={{ color: colores.botonFondo, fontSize: 13, fontFamily: fuentes.media }}>{miembros.length ? `${miembros.length} miembros` : "Info"}</Text>
         </Pressable>
       ) }} />
@@ -222,26 +383,29 @@ export default function GrupoChat()
         keyExtractor={(m) => m.id}
         inverted={!esWeb}
         contentContainerStyle={estilos.lista}
+        onEndReached={cargarMas}
+        onEndReachedThreshold={0.4}
         onContentSizeChange={esWeb ? () => lista.current?.scrollToEnd({ animated: false }) : undefined}
         renderItem={({ item }) =>
         {
           const mio = item.remitente_id === miId.current;
           const media = leerMedia(item.texto);
+          const pie = item.fallido ? "no enviado · toca para reintentar" : item.enviando ? "enviando…" : hora(item.enviado_en);
           return (
-            <View style={[estilos.filaMsg, mio ? estilos.derecha : estilos.izquierda]}>
-              {!mio ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{nombres.current[item.remitente_id] || "…"}</Text> : null}
+            <Pressable onPress={item.fallido ? () => reintentar(item) : undefined} style={[estilos.filaMsg, mio ? estilos.derecha : estilos.izquierda]}>
+              {!mio ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{item.autor || nombres.current[item.remitente_id] || "…"}</Text> : null}
               {media ? (
                 <View style={estilos.mediaCaja}>
                   <Adjunto media={media} color={colores.muted} />
-                  <Text style={[estilos.horaMedia, { color: colores.muted }]}>{item.fallido ? "no enviado" : item.enviando ? "enviando…" : hora(item.enviado_en)}</Text>
+                  <Text style={[estilos.horaMedia, { color: colores.muted }]}>{pie}</Text>
                 </View>
               ) : (
                 <View style={[estilos.burbuja, { backgroundColor: mio ? colores.botonFondo : colores.surface, borderColor: colores.borde }]}>
                   <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
-                  <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{item.fallido ? "no enviado" : item.enviando ? "enviando…" : hora(item.enviado_en)}</Text>
+                  <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{pie}</Text>
                 </View>
               )}
-            </View>
+            </Pressable>
           );
         }}
       />
@@ -253,14 +417,21 @@ export default function GrupoChat()
         <TextInput
           value={borrador}
           onChangeText={setBorrador}
-          placeholder="Mensaje"
-          placeholderTextColor={colores.placeholder}
+          placeholder={grabando ? "Grabando nota de voz…" : "Mensaje"}
+          placeholderTextColor={grabando ? colores.error : colores.placeholder}
           multiline
+          editable={!grabando}
           style={[estilos.input, { color: colores.texto, backgroundColor: colores.surface, borderColor: colores.borde }]}
         />
-        <Pressable onPress={enviar} style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && { opacity: 0.7 }]}>
-          <Flecha color={colores.botonTexto} tamano={20} />
-        </Pressable>
+        {borrador.trim() ? (
+          <Pressable onPress={enviar} style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && { opacity: 0.7 }]}>
+            <Flecha color={colores.botonTexto} tamano={20} />
+          </Pressable>
+        ) : (
+          <Pressable onPress={grabarToggle} disabled={subiendo} style={({ pressed }) => [estilos.enviar, { backgroundColor: grabando ? colores.error : colores.botonFondo }, pressed && { opacity: 0.7 }]}>
+            <Microfono color={colores.botonTexto} tamano={18} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
