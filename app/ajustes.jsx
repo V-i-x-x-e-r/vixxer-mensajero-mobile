@@ -385,6 +385,8 @@ export default function Ajustes()
           <Seccion titulo="SIN INTERNET" />
           <View style={tarjeta}>
             <FilaSwitch etiqueta="Mensajes por cercanía" valor={cercania} onCambio={alternarCercania} />
+            <Sep />
+            <FilaNav etiqueta="Ver radar de cercanía" onPress={() => router.push("/cercania")} />
           </View>
           <Text style={[estilos.nota, { color: colores.muted }]}>
             Sin internet, tus mensajes viajan cifrados por Bluetooth entre teléfonos con Vixxer cerca hasta llegar a su destino.

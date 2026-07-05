@@ -11,6 +11,7 @@ import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Presionable } from "../../components/Presionable";
+import { Avatar } from "../../components/Avatar";
 import { Grupos as GruposIcono } from "../../components/Grupos";
 import { EstadoLista } from "../../components/EstadoLista";
 import { Confirmacion } from "../../components/Confirmacion";
@@ -120,10 +121,12 @@ export default function Grupos()
     const alCambio = () => cargar();
     socket.on("grupo:nuevo", alCambio);
     socket.on("grupo:mensaje", alCambio);
+    socket.on("grupo:actualizado", alCambio);
     return () =>
     {
       socket.off("grupo:nuevo", alCambio);
       socket.off("grupo:mensaje", alCambio);
+      socket.off("grupo:actualizado", alCambio);
     };
   }, [cargar]);
 
@@ -187,9 +190,13 @@ export default function Grupos()
             delayLongPress={300}
             style={estilos.fila}
           >
-            <View style={[estilos.icono, { backgroundColor: colores.surface }]}>
-              <GruposIcono color={colores.muted} tamano={22} />
-            </View>
+            {item.avatar_url ? (
+              <Avatar nombre={item.nombre} uri={item.avatar_url} tamano={44} />
+            ) : (
+              <View style={[estilos.icono, { backgroundColor: colores.surface }]}>
+                <GruposIcono color={colores.muted} tamano={22} />
+              </View>
+            )}
             <View style={estilos.centro}>
               <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.nombre}</Text>
               <Text style={[estilos.sub, { color: colores.muted }]} numberOfLines={1}>

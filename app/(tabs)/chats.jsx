@@ -321,14 +321,18 @@ export default function Chats()
         </View>
       )}
 
-      <View style={estilos.estado}>
+      <Pressable
+        onPress={cerca.activo ? () => router.push("/cercania") : undefined}
+        style={({ pressed }) => [estilos.estado, pressed && cerca.activo && estilos.presionado]}
+      >
         <View style={[estilos.punto, { backgroundColor: conectado ? "#22C55E" : cerca.activo && cerca.cerca > 0 ? "#38BDF8" : colores.muted }]} />
         <Text style={[estilos.estadoTxt, { color: colores.muted }]}>
           {conectado
             ? cerca.activo && cerca.cerca > 0 ? `conectado · ${cerca.cerca} cerca` : estado
             : cerca.activo && cerca.cerca > 0 ? `sin internet · por cercanía (${cerca.cerca} cerca)` : cerca.activo ? "sin internet · buscando vixxers cerca" : estado}
         </Text>
-      </View>
+        {cerca.activo ? <Text style={{ color: colores.muted, fontSize: 12 }}>{"· ver radar ›"}</Text> : null}
+      </Pressable>
 
       {amigos.length > 0 && !sel ? (
         <View style={[estilos.buscar, { backgroundColor: colores.surface, borderColor: colores.borde }]}>

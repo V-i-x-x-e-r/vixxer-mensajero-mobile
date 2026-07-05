@@ -1,28 +1,30 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Modal, Platform, StyleSheet } from "react-native";
-import * as Clipboard from "expo-clipboard";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { View, Text, Pressable, FlatList, Platform, Alert, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as Clipboard from "expo-clipboard";
 import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
-import { guardarCache } from "../../lib/mediaCache";
+import { llavePublicaDe } from "../../lib/llaves";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { marcarVisto } from "../../lib/grupoVisto";
+import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
+import { guardarMedia } from "../../lib/descargas";
+import { hora, mismoDia, etiquetaDia } from "../../lib/fechas";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
 import { fuentes } from "../../assets/themes/temas";
-import { Adjunto } from "../../components/Adjunto";
-import { Clip } from "../../components/Clip";
-import { Flecha } from "../../components/Flecha";
-import { Microfono } from "../../components/Microfono";
-import { Carita } from "../../components/Carita";
+import { Avatar } from "../../components/Avatar";
+import { Burbuja } from "../../components/chat/Burbuja";
+import { BarraEntrada } from "../../components/chat/BarraEntrada";
+import { useEnvioMedia } from "../../components/chat/useEnvioMedia";
+import { AccionesMensaje } from "../../components/AccionesMensaje";
+import { SelectorContacto } from "../../components/SelectorContacto";
 import { SelectorSticker } from "../../components/SelectorSticker";
-import { useTeclado } from "../../components/useTeclado";
-import { guardarMedia } from "../../lib/descargas";
+import { Pin } from "../../components/Pin";
 
 function leerMedia(texto)
 {
@@ -41,33 +43,30 @@ function leerMedia(texto)
   }
 }
 
-function hora(iso)
-{
-  const f = new Date(iso);
-  return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
-}
-
 export default function GrupoChat()
 {
   const { colores } = useTema();
-  const insets = useSafeAreaInsets();
   const { id, nombre } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [borrador, setBorrador] = useState("");
   const [miembros, setMiembros] = useState([]);
-  const [titulo, setTitulo] = useState(nombre || "Grupo");
+  const [grupo, setGrupo] = useState(null);
   const [grabando, setGrabando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [stickers, setStickers] = useState(false);
-  const [menu, setMenu] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [respondiendo, setRespondiendo] = useState(null);
+  const [editando, setEditando] = useState(null);
+  const [reenviando, setReenviando] = useState(null);
+  const [reenviadoA, setReenviadoA] = useState(null);
+  const [fijados, setFijados] = useState([]);
   const [aviso, setAviso] = useState("");
-  const tecladoAlto = useTeclado();
   const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const priv = useRef(null);
   const pubs = useRef({});
   const nombres = useRef({});
-  const pendientes = useRef({});
+  const pendientesTexto = useRef({});
   const hayMas = useRef(true);
   const cargandoMas = useRef(false);
   const lista = useRef(null);
@@ -87,7 +86,31 @@ export default function GrupoChat()
       autor: nombres.current[f.remitente_id] || null,
       texto: pub ? (descifrar(f.contenido_cifrado, f.nonce, pub, priv.current) ?? "No se pudo descifrar") : "No se pudo descifrar",
       enviado_en: f.enviado_en,
+      respuesta_a: f.respuesta_a || null,
+      reacciones: f.reacciones || {},
+      borrado: !!f.borrado,
+      editado: !!f.editado,
     };
+  }
+
+  async function cargarGrupo()
+  {
+    try
+    {
+      const g = await api.infoGrupo(id);
+      setGrupo(g);
+      setMiembros(g.miembros || []);
+      for (const m of g.miembros || [])
+      {
+        pubs.current[m.id] = m.llave_publica;
+        nombres.current[m.id] = m.usuario;
+      }
+      return g;
+    }
+    catch (e)
+    {
+      return null;
+    }
   }
 
   useEffect(() =>
@@ -97,29 +120,13 @@ export default function GrupoChat()
     {
       miId.current = await leer(MI_ID);
       priv.current = await leer(CLAVE_PRIVADA);
+      leerFijados(`g-${id}`).then(setFijados);
       const cache = await leerCacheChat(`g-${id}`);
       if (cache && activo)
       {
         setMensajes(cache);
       }
-      let grupo = null;
-      try
-      {
-        grupo = await api.infoGrupo(id);
-      }
-      catch (e)
-      {
-      }
-      if (grupo && activo)
-      {
-        setMiembros(grupo.miembros || []);
-        setTitulo(grupo.nombre);
-        for (const m of grupo.miembros || [])
-        {
-          pubs.current[m.id] = m.llave_publica;
-          nombres.current[m.id] = m.usuario;
-        }
-      }
+      await cargarGrupo();
       try
       {
         const filas = await api.historialGrupo(id);
@@ -168,8 +175,59 @@ export default function GrupoChat()
       });
       marcarVisto(id);
     }
+    function alReaccion(data)
+    {
+      if (data.grupo_id !== id)
+      {
+        return;
+      }
+      setMensajes((prev) => prev.map((m) => (m.id === data.id ? { ...m, reacciones: data.reacciones } : m)));
+    }
+    function alBorrado(data)
+    {
+      if (data.grupo_id !== id)
+      {
+        return;
+      }
+      setMensajes((prev) => prev.map((m) => (m.id === data.id ? { ...m, borrado: true } : m)));
+    }
+    function alEditado(data)
+    {
+      if (data.grupo_id !== id)
+      {
+        return;
+      }
+      setMensajes((prev) => prev.map((m) =>
+      {
+        if (m.id !== data.id)
+        {
+          return m;
+        }
+        const clave = pubs.current[m.remitente_id];
+        const texto = clave ? (descifrar(data.contenido_cifrado, data.nonce, clave, priv.current) ?? m.texto) : m.texto;
+        return { ...m, texto, editado: true };
+      }));
+    }
+    function alActualizado(data)
+    {
+      if (data.id === id)
+      {
+        cargarGrupo();
+      }
+    }
     socket.on("grupo:mensaje", alMensaje);
-    return () => socket.off("grupo:mensaje", alMensaje);
+    socket.on("grupo:reaccion", alReaccion);
+    socket.on("grupo:borrado", alBorrado);
+    socket.on("grupo:editado", alEditado);
+    socket.on("grupo:actualizado", alActualizado);
+    return () =>
+    {
+      socket.off("grupo:mensaje", alMensaje);
+      socket.off("grupo:reaccion", alReaccion);
+      socket.off("grupo:borrado", alBorrado);
+      socket.off("grupo:editado", alEditado);
+      socket.off("grupo:actualizado", alActualizado);
+    };
   }, [id]);
 
   async function cargarMas()
@@ -207,143 +265,97 @@ export default function GrupoChat()
     });
   }
 
-  async function mandarTexto(texto, clienteId)
+  const { enviarMedia, reintentarMedia } = useEnvioMedia({
+    miId: () => miId.current,
+    setMensajes,
+    alPersistir: persistir,
+    enviarPlano: (plano, clienteId) => api.enviarGrupo(id, clienteId, cifrarParaTodos(plano)),
+  });
+
+  async function mandarTexto(texto, clienteId, respuestaA)
   {
     try
     {
-      const r = await api.enviarGrupo(id, clienteId, cifrarParaTodos(texto));
+      const r = await api.enviarGrupo(id, clienteId, cifrarParaTodos(texto), respuestaA);
       if (r.ok)
       {
-        delete pendientes.current[clienteId];
+        delete pendientesTexto.current[clienteId];
         setMensajes((prev) =>
         {
-          const conEnviado = prev.map((x) => (x.id === clienteId ? { ...x, id: r.id, enviando: false, fallido: false } : x));
+          const conEnviado = prev.map((x) => (x.id === clienteId ? { ...x, id: r.id, estado: "enviado" } : x));
           persistir(conEnviado);
           return conEnviado;
         });
       }
       else
       {
-        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, estado: "fallido" } : x)));
       }
     }
     catch (e)
     {
-      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, estado: "fallido" } : x)));
     }
   }
 
-  function enviar()
+  async function enviar()
   {
     const texto = borrador.trim();
     if (!texto || miembros.length === 0)
     {
       return;
     }
-    setBorrador("");
-    const clienteId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    pendientes.current[clienteId] = { tipo: "texto", texto };
-    setMensajes((prev) => [...prev, { id: clienteId, remitente_id: miId.current, texto, enviado_en: new Date().toISOString(), enviando: true }]);
-    mandarTexto(texto, clienteId);
-  }
-
-  async function subirYMandar(actual, clienteId)
-  {
-    try
+    if (editando)
     {
-      const base64 = await leerBase64(actual.uri);
-      const cif = cifrarArchivo(base64);
-      const { path } = await api.subirMedia(cif.datos);
-      guardarCache(path, actual.uri);
-      const plano = JSON.stringify({ t: actual.tipo, path, mime: actual.mime, k: cif.clave, n: cif.nonce });
-      const r = await api.enviarGrupo(id, clienteId, cifrarParaTodos(plano));
-      if (r.ok)
+      const objetivo = editando;
+      setEditando(null);
+      setBorrador("");
+      try
       {
-        delete pendientes.current[clienteId];
+        await api.editarMensajeGrupo(id, objetivo.id, cifrarParaTodos(texto));
         setMensajes((prev) =>
         {
-          const conEnviado = prev.map((x) => (x.id === clienteId ? { ...x, id: r.id, texto: plano, enviando: false, fallido: false } : x));
-          persistir(conEnviado);
-          return conEnviado;
+          const conEdicion = prev.map((m) => (m.id === objetivo.id ? { ...m, texto, editado: true } : m));
+          persistir(conEdicion);
+          return conEdicion;
         });
       }
-      else
+      catch (e)
       {
-        setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
+        Alert.alert("No se pudo editar", "Revisa tu conexión e intenta de nuevo.");
       }
-    }
-    catch (e)
-    {
-      setMensajes((prev) => prev.map((x) => (x.id === clienteId ? { ...x, fallido: true, enviando: false } : x)));
-    }
-  }
-
-  function enviarGrupoMedia(actual)
-  {
-    if (miembros.length === 0)
-    {
-      return Promise.resolve();
-    }
-    const clienteId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    pendientes.current[clienteId] = { tipo: "media", actual };
-    const optim = JSON.stringify({ t: actual.tipo, local: actual.uri, mime: actual.mime });
-    setMensajes((prev) => [...prev, { id: clienteId, remitente_id: miId.current, texto: optim, enviado_en: new Date().toISOString(), enviando: true }]);
-    return subirYMandar(actual, clienteId);
-  }
-
-  function enviarSticker(uri)
-  {
-    setStickers(false);
-    enviarGrupoMedia({ uri, tipo: "sticker", mime: "image/png" });
-  }
-
-  function mostrarAviso(texto)
-  {
-    setAviso(texto);
-    setTimeout(() => setAviso(""), 1800);
-  }
-
-  async function copiarMensaje()
-  {
-    const item = menu;
-    setMenu(null);
-    if (item)
-    {
-      await Clipboard.setStringAsync(item.texto);
-      mostrarAviso("Copiado");
-    }
-  }
-
-  async function descargarMedia()
-  {
-    const item = menu;
-    setMenu(null);
-    const media = item ? leerMedia(item.texto) : null;
-    if (!media)
-    {
       return;
     }
-    mostrarAviso("Descargando…");
-    const r = await guardarMedia(media);
-    mostrarAviso(r === "ok" ? "Guardado en tu galería" : r === "sin_permiso" ? "Sin permiso de galería" : "No se pudo descargar");
+    setBorrador("");
+    const resp = respondiendo;
+    setRespondiendo(null);
+    const clienteId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    pendientesTexto.current[clienteId] = { texto, respuestaA: resp ? resp.id : null };
+    setMensajes((prev) => [...prev, {
+      id: clienteId,
+      remitente_id: miId.current,
+      texto,
+      enviado_en: new Date().toISOString(),
+      estado: "enviando",
+      respuesta_a: resp ? resp.id : null,
+      respuestaTexto: resp ? resp.texto : null,
+    }]);
+    mandarTexto(texto, clienteId, resp ? resp.id : null);
   }
 
   function reintentar(item)
   {
-    const pend = pendientes.current[item.id];
+    if (reintentarMedia(item.id))
+    {
+      return;
+    }
+    const pend = pendientesTexto.current[item.id];
     if (!pend)
     {
       return;
     }
-    setMensajes((prev) => prev.map((x) => (x.id === item.id ? { ...x, fallido: false, enviando: true } : x)));
-    if (pend.tipo === "texto")
-    {
-      mandarTexto(pend.texto, item.id);
-    }
-    else
-    {
-      subirYMandar(pend.actual, item.id);
-    }
+    setMensajes((prev) => prev.map((x) => (x.id === item.id ? { ...x, estado: "enviando" } : x)));
+    mandarTexto(pend.texto, item.id, pend.respuestaA);
   }
 
   async function adjuntar()
@@ -366,8 +378,14 @@ export default function GrupoChat()
     }
     for (const a of r.assets)
     {
-      await enviarGrupoMedia({ uri: a.uri, tipo: a.type === "video" ? "video" : "img", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
+      await enviarMedia({ uri: a.uri, tipo: a.type === "video" ? "video" : "img", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
     }
+  }
+
+  function enviarSticker(uri)
+  {
+    setStickers(false);
+    enviarMedia({ uri, tipo: "sticker", mime: "image/png" });
   }
 
   async function grabarToggle()
@@ -385,7 +403,7 @@ export default function GrupoChat()
         await grabadora.stop();
         if (grabadora.uri)
         {
-          await enviarGrupoMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4" });
+          await enviarMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4" });
         }
       }
       catch (e)
@@ -413,15 +431,143 @@ export default function GrupoChat()
     }
   }
 
+  function mostrarAviso(texto)
+  {
+    setAviso(texto);
+    setTimeout(() => setAviso(""), 1800);
+  }
+
+  async function reaccionar(mensaje, emoji)
+  {
+    setSel(null);
+    setMensajes((prev) => prev.map((m) =>
+    {
+      if (m.id !== mensaje.id)
+      {
+        return m;
+      }
+      const r = { ...(m.reacciones || {}) };
+      if (r[miId.current] === emoji)
+      {
+        delete r[miId.current];
+      }
+      else
+      {
+        r[miId.current] = emoji;
+      }
+      return { ...m, reacciones: r };
+    }));
+    api.reaccionarGrupo(id, mensaje.id, emoji).catch(() => {});
+  }
+
+  async function copiarMensaje(mensaje)
+  {
+    setSel(null);
+    await Clipboard.setStringAsync(mensaje.texto);
+    mostrarAviso("Copiado");
+  }
+
+  async function descargarMedia(mensaje)
+  {
+    setSel(null);
+    const media = leerMedia(mensaje.texto);
+    if (!media)
+    {
+      return;
+    }
+    mostrarAviso("Descargando…");
+    const r = await guardarMedia(media);
+    mostrarAviso(r === "ok" ? "Guardado en tu galería" : r === "sin_permiso" ? "Sin permiso de galería" : "No se pudo descargar");
+  }
+
+  async function borrarMensaje(mensaje)
+  {
+    setSel(null);
+    setMensajes((prev) =>
+    {
+      const conBorrado = prev.map((m) => (m.id === mensaje.id ? { ...m, borrado: true } : m));
+      persistir(conBorrado);
+      return conBorrado;
+    });
+    api.borrarMensajeGrupo(id, mensaje.id).catch(() => {});
+    if (fijados.some((f) => f.id === mensaje.id))
+    {
+      quitarFijado(`g-${id}`, mensaje.id).then(setFijados);
+    }
+  }
+
+  function editarMensaje(mensaje)
+  {
+    setSel(null);
+    setRespondiendo(null);
+    setEditando(mensaje);
+    setBorrador(mensaje.texto);
+  }
+
+  function responder(mensaje)
+  {
+    setSel(null);
+    setEditando(null);
+    setRespondiendo(mensaje);
+  }
+
+  async function fijar(mensaje)
+  {
+    setSel(null);
+    setFijados(await alternarFijado(`g-${id}`, mensaje));
+  }
+
+  async function hacerReenvio(amigo)
+  {
+    const objetivo = reenviando;
+    setReenviando(null);
+    if (!objetivo)
+    {
+      return;
+    }
+    const socket = obtenerSocket();
+    if (!socket || !socket.connected)
+    {
+      Alert.alert("Sin conexión", "Conéctate para reenviar el mensaje.");
+      return;
+    }
+    const pub = await llavePublicaDe(amigo.id);
+    const { contenidoCifrado, nonce } = cifrar(objetivo.texto, pub, priv.current);
+    socket.emit("mensaje:enviar", { destinatarioId: amigo.id, contenidoCifrado, nonce, respuestaA: null });
+    setReenviadoA(amigo.usuario);
+    setTimeout(() => setReenviadoA(null), 1600);
+  }
+
   const datos = esWeb ? mensajes : mensajes.slice().reverse();
+  const ultimoFijado = fijados.length > 0 ? fijados[fijados.length - 1] : null;
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
-      <Stack.Screen options={{ title: titulo, headerRight: () => (
-        <Pressable onPress={() => router.push({ pathname: "/grupo/info/[id]", params: { id, nombre: titulo } })} hitSlop={8}>
-          <Text style={{ color: colores.botonFondo, fontSize: 13, fontFamily: fuentes.media }}>{miembros.length ? `${miembros.length} miembros` : "Info"}</Text>
+      <Stack.Screen options={{
+        headerTitle: () => (
+          <Pressable
+            onPress={() => router.push({ pathname: "/grupo/info/[id]", params: { id, nombre: grupo?.nombre || nombre || "" } })}
+            style={({ pressed }) => [estilos.encabezado, pressed && { opacity: 0.7 }]}
+          >
+            <Avatar nombre={grupo?.nombre || nombre || "G"} uri={grupo?.avatar_url || null} tamano={32} />
+            <View>
+              <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{grupo?.nombre || nombre || "Grupo"}</Text>
+              {miembros.length ? <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{miembros.length} miembros</Text> : null}
+            </View>
+          </Pressable>
+        ),
+      }} />
+
+      {ultimoFijado ? (
+        <Pressable
+          onLongPress={() => quitarFijado(`g-${id}`, ultimoFijado.id).then(setFijados)}
+          delayLongPress={350}
+          style={[estilos.fijado, { backgroundColor: colores.surface, borderColor: colores.borde }]}
+        >
+          <Pin color={colores.muted} tamano={13} />
+          <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.muted }]}>{ultimoFijado.texto}</Text>
         </Pressable>
-      ) }} />
+      ) : null}
 
       <FlatList
         ref={lista}
@@ -432,83 +578,108 @@ export default function GrupoChat()
         onEndReached={cargarMas}
         onEndReachedThreshold={0.4}
         onContentSizeChange={esWeb ? () => lista.current?.scrollToEnd({ animated: false }) : undefined}
-        renderItem={({ item }) =>
+        renderItem={({ item, index }) =>
         {
           const mio = item.remitente_id === miId.current;
           const media = leerMedia(item.texto);
-          const pie = item.fallido ? "no enviado · toca para reintentar" : item.enviando ? "enviando…" : hora(item.enviado_en);
+          const prev = esWeb ? datos[index - 1] : datos[index + 1];
+          const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
+          const citadoCrudo = item.respuestaTexto
+            ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
+          const cita = citadoCrudo && leerMedia(citadoCrudo) ? "Multimedia" : citadoCrudo;
+          const pie = (
+            <>
+              {item.editado ? <Text style={[estilos.pieTxt, { color: media ? "#FFF" : mio ? colores.botonTexto : colores.muted }]}>editado</Text> : null}
+              <Text style={[estilos.pieTxt, { color: media ? "#FFF" : mio ? colores.botonTexto : colores.muted }]}>
+                {item.estado === "fallido" ? "no enviado · toca para reintentar" : item.estado === "enviando" ? "enviando…" : hora(item.enviado_en)}
+              </Text>
+            </>
+          );
           return (
-            <Pressable
-              onPress={item.fallido ? () => reintentar(item) : undefined}
-              onLongPress={() => setMenu(item)}
-              delayLongPress={300}
-              style={[estilos.filaMsg, mio ? estilos.derecha : estilos.izquierda]}
-            >
-              {!mio ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{item.autor || nombres.current[item.remitente_id] || "…"}</Text> : null}
-              {media ? (
-                <View style={estilos.mediaCaja}>
-                  <Adjunto media={media} color={colores.muted} />
-                  <Text style={[estilos.horaMedia, { color: colores.muted }]}>{pie}</Text>
+            <View>
+              {nuevoDia ? (
+                <View style={estilos.dia}>
+                  <Text style={[estilos.diaTxt, { color: colores.muted, backgroundColor: colores.surface, borderColor: colores.borde }]}>
+                    {etiquetaDia(item.enviado_en)}
+                  </Text>
                 </View>
-              ) : (
-                <View style={[estilos.burbuja, { backgroundColor: mio ? colores.botonFondo : colores.surface, borderColor: colores.borde }]}>
-                  <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{item.texto}</Text>
-                  <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{pie}</Text>
-                </View>
-              )}
-            </Pressable>
+              ) : null}
+              <Burbuja
+                mio={mio}
+                autor={!mio ? (item.autor || nombres.current[item.remitente_id] || "…") : null}
+                cita={cita}
+                borrado={item.borrado}
+                media={item.borrado ? null : media}
+                texto={item.texto}
+                meta={item.borrado ? null : pie}
+                reacciones={item.reacciones}
+                onMenu={(coords) => setSel({ mensaje: item, ...coords })}
+                onPress={item.estado === "fallido" ? () => reintentar(item) : undefined}
+                resaltada={sel && sel.mensaje.id === item.id}
+              />
+            </View>
           );
         }}
       />
 
-      <View style={[estilos.inputFila, { borderTopColor: colores.borde, marginBottom: tecladoAlto, paddingBottom: 12 + (tecladoAlto > 0 ? 0 : insets.bottom) }]}>
-        <Pressable onPress={adjuntar} hitSlop={8} style={({ pressed }) => [estilos.clip, pressed && { opacity: 0.6 }]}>
-          <Clip color={colores.muted} tamano={22} />
-        </Pressable>
-        <Pressable onPress={() => setStickers(true)} hitSlop={8} style={({ pressed }) => [estilos.clip, pressed && { opacity: 0.6 }]}>
-          <Carita color={colores.muted} tamano={22} />
-        </Pressable>
-        <TextInput
-          value={borrador}
-          onChangeText={setBorrador}
-          placeholder={grabando ? "Grabando nota de voz…" : "Mensaje"}
-          placeholderTextColor={grabando ? colores.error : colores.placeholder}
-          multiline
-          editable={!grabando}
-          style={[estilos.input, { color: colores.texto, backgroundColor: colores.surface, borderColor: colores.borde }]}
-        />
-        {borrador.trim() ? (
-          <Pressable onPress={enviar} style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && { opacity: 0.7 }]}>
-            <Flecha color={colores.botonTexto} tamano={20} />
-          </Pressable>
-        ) : (
-          <Pressable onPress={grabarToggle} disabled={subiendo} style={({ pressed }) => [estilos.enviar, { backgroundColor: grabando ? colores.error : colores.botonFondo }, pressed && { opacity: 0.7 }]}>
-            <Microfono color={colores.botonTexto} tamano={18} />
-          </Pressable>
-        )}
-      </View>
+      <BarraEntrada
+        valor={borrador}
+        onCambiar={setBorrador}
+        onEnviar={enviar}
+        onAdjuntar={adjuntar}
+        onSticker={() => setStickers(true)}
+        onMic={grabarToggle}
+        grabando={grabando}
+        subiendo={subiendo}
+      >
+        {respondiendo ? (
+          <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>Respondiendo: {respondiendo.texto}</Text>
+            <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
+              <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+        {editando ? (
+          <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.avisoTxt, { color: colores.muted }]}>Editando mensaje</Text>
+            <Pressable onPress={() => { setEditando(null); setBorrador(""); }} hitSlop={8}>
+              <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </BarraEntrada>
+
+      <AccionesMensaje
+        sel={sel}
+        esMio={sel ? sel.mensaje.remitente_id === miId.current : false}
+        esMedia={sel ? !!leerMedia(sel.mensaje.texto) : false}
+        fijado={sel ? fijados.some((f) => f.id === sel.mensaje.id) : false}
+        onReaccionar={reaccionar}
+        onResponder={responder}
+        onReenviar={(m) => { setSel(null); setReenviando(m); }}
+        onFijar={fijar}
+        onCopiar={copiarMensaje}
+        onDescargar={descargarMedia}
+        onEditar={editarMensaje}
+        onBorrar={borrarMensaje}
+        onCerrar={() => setSel(null)}
+      />
+
+      <SelectorContacto
+        visible={!!reenviando}
+        titulo="Reenviar a"
+        onElegir={hacerReenvio}
+        onCerrar={() => setReenviando(null)}
+      />
 
       <SelectorSticker visible={stickers} onElegir={enviarSticker} onCerrar={() => setStickers(false)} />
 
-      <Modal transparent visible={!!menu} animationType="fade" onRequestClose={() => setMenu(null)}>
-        <Pressable style={estilos.menuFondo} onPress={() => setMenu(null)}>
-          <Pressable style={[estilos.menuHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-            {menu && !leerMedia(menu.texto) ? (
-              <Pressable onPress={copiarMensaje} style={({ pressed }) => [estilos.menuItem, pressed && { opacity: 0.6 }]}>
-                <Text style={[estilos.menuTxt, { color: colores.texto }]}>Copiar</Text>
-              </Pressable>
-            ) : null}
-            {menu && leerMedia(menu.texto) && leerMedia(menu.texto).path ? (
-              <Pressable onPress={descargarMedia} style={({ pressed }) => [estilos.menuItem, pressed && { opacity: 0.6 }]}>
-                <Text style={[estilos.menuTxt, { color: colores.texto }]}>Descargar</Text>
-              </Pressable>
-            ) : null}
-            <Pressable onPress={() => setMenu(null)} style={({ pressed }) => [estilos.menuItem, pressed && { opacity: 0.6 }]}>
-              <Text style={[estilos.menuTxt, { color: colores.muted }]}>Cancelar</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      {reenviadoA ? (
+        <View style={estilos.toast} pointerEvents="none">
+          <Text style={estilos.toastTxt}>Reenviado a {reenviadoA}</Text>
+        </View>
+      ) : null}
 
       {aviso ? (
         <View style={estilos.toast} pointerEvents="none">
@@ -522,22 +693,16 @@ export default function GrupoChat()
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
   lista: { padding: 14, gap: 8 },
-  filaMsg: { maxWidth: "82%" },
-  izquierda: { alignSelf: "flex-start" },
-  derecha: { alignSelf: "flex-end" },
-  autor: { fontSize: 12, fontFamily: fuentes.semibold, marginLeft: 6, marginBottom: 2 },
-  burbuja: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
-  mediaCaja: { gap: 2 },
-  hora: { fontSize: 10, alignSelf: "flex-end", marginTop: 2 },
-  horaMedia: { fontSize: 10, alignSelf: "flex-end" },
-  clip: { width: 40, height: 44, alignItems: "center", justifyContent: "center" },
-  inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
-  input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, maxHeight: 120 },
-  enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
-  menuFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  menuHoja: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, paddingVertical: 8, paddingBottom: 28 },
-  menuItem: { paddingVertical: 14, paddingHorizontal: 24 },
-  menuTxt: { fontSize: 16 },
+  encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
+  encabezadoTxt: { fontSize: 16, fontFamily: fuentes.semibold },
+  encabezadoSub: { fontSize: 11 },
+  dia: { alignItems: "center", marginVertical: 6 },
+  diaTxt: { fontSize: 11, fontFamily: fuentes.media, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3, overflow: "hidden" },
+  fijado: { flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
+  fijadoTxt: { flex: 1, fontSize: 13 },
+  pieTxt: { fontSize: 10 },
+  aviso: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 10, marginHorizontal: 12, marginBottom: 6, paddingHorizontal: 12, paddingVertical: 8 },
+  avisoTxt: { flex: 1, fontSize: 13 },
   toast: { position: "absolute", bottom: 96, alignSelf: "center", backgroundColor: "rgba(20,20,24,0.92)", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   toastTxt: { color: "#FFF", fontSize: 13 },
 });
