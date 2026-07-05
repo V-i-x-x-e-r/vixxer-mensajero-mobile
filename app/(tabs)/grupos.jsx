@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
@@ -13,6 +13,7 @@ import { fuentes } from "../../assets/themes/temas";
 import { Presionable } from "../../components/Presionable";
 import { Grupos as GruposIcono } from "../../components/Grupos";
 import { EstadoLista } from "../../components/EstadoLista";
+import { Confirmacion } from "../../components/Confirmacion";
 
 function cuando(iso)
 {
@@ -53,6 +54,8 @@ export default function Grupos()
   const [cargando, setCargando] = useState(true);
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
+  const [sel, setSel] = useState(null);
+  const [confirmarSalir, setConfirmarSalir] = useState(false);
 
   const cargar = useCallback(async () =>
   {
@@ -133,6 +136,25 @@ export default function Grupos()
     setRefrescando(false);
   }
 
+  async function salirDelGrupo()
+  {
+    const grupo = sel;
+    setConfirmarSalir(false);
+    setSel(null);
+    if (!grupo)
+    {
+      return;
+    }
+    try
+    {
+      await api.salirGrupo(grupo.id);
+    }
+    catch (e)
+    {
+    }
+    cargar();
+  }
+
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
       <View style={estilos.cabecera}>
@@ -161,6 +183,8 @@ export default function Grupos()
         renderItem={({ item }) => (
           <Presionable
             onPress={() => router.push({ pathname: "/grupo/[id]", params: { id: item.id, nombre: item.nombre } })}
+            onLongPress={() => setSel(item)}
+            delayLongPress={300}
             style={estilos.fila}
           >
             <View style={[estilos.icono, { backgroundColor: colores.surface }]}>
@@ -178,6 +202,33 @@ export default function Grupos()
             </View>
           </Presionable>
         )}
+      />
+
+      <Modal transparent visible={!!sel && !confirmarSalir} animationType="fade" onRequestClose={() => setSel(null)}>
+        <Pressable style={estilos.menuFondo} onPress={() => setSel(null)}>
+          <Pressable style={[estilos.menuHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.menuTitulo, { color: colores.muted }]}>{sel?.nombre}</Text>
+            <Pressable
+              onPress={() => { const g = sel; setSel(null); router.push({ pathname: "/grupo/info/[id]", params: { id: g.id, nombre: g.nombre } }); }}
+              style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionado]}
+            >
+              <Text style={[estilos.menuTxt, { color: colores.texto }]}>Ver info y miembros</Text>
+            </Pressable>
+            <Pressable onPress={() => setConfirmarSalir(true)} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionado]}>
+              <Text style={[estilos.menuTxt, { color: colores.error }]}>Salir del grupo</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <Confirmacion
+        visible={confirmarSalir}
+        titulo="Salir del grupo"
+        mensaje="Dejarás de recibir sus mensajes. Podrán volver a agregarte más adelante."
+        textoConfirmar="Salir"
+        destructivo
+        onConfirmar={salirDelGrupo}
+        onCancelar={() => { setConfirmarSalir(false); setSel(null); }}
       />
     </View>
   );
@@ -200,4 +251,9 @@ const estilos = StyleSheet.create({
   punto: { width: 10, height: 10, borderRadius: 5 },
   sep: { height: 1, marginLeft: 66 },
   presionado: { opacity: 0.7 },
+  menuFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  menuHoja: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, paddingVertical: 8, paddingBottom: 28 },
+  menuTitulo: { fontSize: 12, fontFamily: fuentes.semibold, letterSpacing: 1, paddingHorizontal: 24, paddingTop: 8, paddingBottom: 4, textTransform: "uppercase" },
+  menuItem: { paddingVertical: 14, paddingHorizontal: 24 },
+  menuTxt: { fontSize: 16 },
 });

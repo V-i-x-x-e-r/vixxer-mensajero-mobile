@@ -406,7 +406,7 @@ export default function Chat()
   {
     const abrir = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const cerrar = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const subir = Keyboard.addListener(abrir, (e) => setTecladoAlto(e.endCoordinates.height));
+    const subir = Keyboard.addListener(abrir, (e) => setTecladoAlto(e.endCoordinates?.height || 0));
     const bajar = Keyboard.addListener(cerrar, () => setTecladoAlto(0));
     return () =>
     {
