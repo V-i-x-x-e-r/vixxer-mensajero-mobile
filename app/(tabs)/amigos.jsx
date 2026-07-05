@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
@@ -26,12 +27,32 @@ export default function AmigosPantalla()
   const [sel, setSel] = useState(null);
   const [confirmar, setConfirmar] = useState(false);
 
+  useEffect(() =>
+  {
+    AsyncStorage.getItem("vixxer_lista_amigos").then((crudo) =>
+    {
+      if (crudo)
+      {
+        try
+        {
+          setLista(JSON.parse(crudo));
+          setCargando(false);
+        }
+        catch (e)
+        {
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
   const cargar = useCallback(async () =>
   {
     setError(false);
     try
     {
-      setLista(await api.amigos());
+      const datos = await api.amigos();
+      setLista(datos);
+      AsyncStorage.setItem("vixxer_lista_amigos", JSON.stringify(datos)).catch(() => {});
       refrescar();
     }
     catch (e)

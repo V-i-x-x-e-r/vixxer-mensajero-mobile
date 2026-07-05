@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Platform, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Modal, Platform, StyleSheet } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -18,6 +19,10 @@ import { Adjunto } from "../../components/Adjunto";
 import { Clip } from "../../components/Clip";
 import { Flecha } from "../../components/Flecha";
 import { Microfono } from "../../components/Microfono";
+import { Carita } from "../../components/Carita";
+import { SelectorSticker } from "../../components/SelectorSticker";
+import { useTeclado } from "../../components/useTeclado";
+import { guardarMedia } from "../../lib/descargas";
 
 function leerMedia(texto)
 {
@@ -53,6 +58,10 @@ export default function GrupoChat()
   const [titulo, setTitulo] = useState(nombre || "Grupo");
   const [grabando, setGrabando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [stickers, setStickers] = useState(false);
+  const [menu, setMenu] = useState(null);
+  const [aviso, setAviso] = useState("");
+  const tecladoAlto = useTeclado();
   const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const priv = useRef(null);
@@ -282,6 +291,43 @@ export default function GrupoChat()
     return subirYMandar(actual, clienteId);
   }
 
+  function enviarSticker(uri)
+  {
+    setStickers(false);
+    enviarGrupoMedia({ uri, tipo: "sticker", mime: "image/png" });
+  }
+
+  function mostrarAviso(texto)
+  {
+    setAviso(texto);
+    setTimeout(() => setAviso(""), 1800);
+  }
+
+  async function copiarMensaje()
+  {
+    const item = menu;
+    setMenu(null);
+    if (item)
+    {
+      await Clipboard.setStringAsync(item.texto);
+      mostrarAviso("Copiado");
+    }
+  }
+
+  async function descargarMedia()
+  {
+    const item = menu;
+    setMenu(null);
+    const media = item ? leerMedia(item.texto) : null;
+    if (!media)
+    {
+      return;
+    }
+    mostrarAviso("Descargando…");
+    const r = await guardarMedia(media);
+    mostrarAviso(r === "ok" ? "Guardado en tu galería" : r === "sin_permiso" ? "Sin permiso de galería" : "No se pudo descargar");
+  }
+
   function reintentar(item)
   {
     const pend = pendientes.current[item.id];
@@ -392,7 +438,12 @@ export default function GrupoChat()
           const media = leerMedia(item.texto);
           const pie = item.fallido ? "no enviado · toca para reintentar" : item.enviando ? "enviando…" : hora(item.enviado_en);
           return (
-            <Pressable onPress={item.fallido ? () => reintentar(item) : undefined} style={[estilos.filaMsg, mio ? estilos.derecha : estilos.izquierda]}>
+            <Pressable
+              onPress={item.fallido ? () => reintentar(item) : undefined}
+              onLongPress={() => setMenu(item)}
+              delayLongPress={300}
+              style={[estilos.filaMsg, mio ? estilos.derecha : estilos.izquierda]}
+            >
               {!mio ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{item.autor || nombres.current[item.remitente_id] || "…"}</Text> : null}
               {media ? (
                 <View style={estilos.mediaCaja}>
@@ -410,9 +461,12 @@ export default function GrupoChat()
         }}
       />
 
-      <View style={[estilos.inputFila, { borderTopColor: colores.borde, paddingBottom: 12 + insets.bottom }]}>
+      <View style={[estilos.inputFila, { borderTopColor: colores.borde, marginBottom: tecladoAlto, paddingBottom: 12 + (tecladoAlto > 0 ? 0 : insets.bottom) }]}>
         <Pressable onPress={adjuntar} hitSlop={8} style={({ pressed }) => [estilos.clip, pressed && { opacity: 0.6 }]}>
           <Clip color={colores.muted} tamano={22} />
+        </Pressable>
+        <Pressable onPress={() => setStickers(true)} hitSlop={8} style={({ pressed }) => [estilos.clip, pressed && { opacity: 0.6 }]}>
+          <Carita color={colores.muted} tamano={22} />
         </Pressable>
         <TextInput
           value={borrador}
@@ -433,6 +487,34 @@ export default function GrupoChat()
           </Pressable>
         )}
       </View>
+
+      <SelectorSticker visible={stickers} onElegir={enviarSticker} onCerrar={() => setStickers(false)} />
+
+      <Modal transparent visible={!!menu} animationType="fade" onRequestClose={() => setMenu(null)}>
+        <Pressable style={estilos.menuFondo} onPress={() => setMenu(null)}>
+          <Pressable style={[estilos.menuHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            {menu && !leerMedia(menu.texto) ? (
+              <Pressable onPress={copiarMensaje} style={({ pressed }) => [estilos.menuItem, pressed && { opacity: 0.6 }]}>
+                <Text style={[estilos.menuTxt, { color: colores.texto }]}>Copiar</Text>
+              </Pressable>
+            ) : null}
+            {menu && leerMedia(menu.texto) && leerMedia(menu.texto).path ? (
+              <Pressable onPress={descargarMedia} style={({ pressed }) => [estilos.menuItem, pressed && { opacity: 0.6 }]}>
+                <Text style={[estilos.menuTxt, { color: colores.texto }]}>Descargar</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => setMenu(null)} style={({ pressed }) => [estilos.menuItem, pressed && { opacity: 0.6 }]}>
+              <Text style={[estilos.menuTxt, { color: colores.muted }]}>Cancelar</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {aviso ? (
+        <View style={estilos.toast} pointerEvents="none">
+          <Text style={estilos.toastTxt}>{aviso}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -452,4 +534,10 @@ const estilos = StyleSheet.create({
   inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
   input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, maxHeight: 120 },
   enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  menuFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  menuHoja: { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderWidth: 1, paddingVertical: 8, paddingBottom: 28 },
+  menuItem: { paddingVertical: 14, paddingHorizontal: 24 },
+  menuTxt: { fontSize: 16 },
+  toast: { position: "absolute", bottom: 96, alignSelf: "center", backgroundColor: "rgba(20,20,24,0.92)", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
+  toastTxt: { color: "#FFF", fontSize: 13 },
 });

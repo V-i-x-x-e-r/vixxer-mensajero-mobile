@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as api from "../lib/api";
 import { cerrarSesion } from "../lib/storage";
 import { desconectarSocket } from "../lib/socket";
@@ -22,6 +23,8 @@ import { leerConfig, guardarConfig, FRECUENCIAS, ETIQUETA_FRECUENCIA } from "../
 import { hacerRespaldo, exportarRespaldoLocal } from "../lib/respaldo";
 import { cercaniaSoportada, modoGuardado, activarModo } from "../lib/cercania";
 import { VincularDispositivo } from "../components/VincularDispositivo";
+
+const PERFIL_CACHE = "vixxer_perfil";
 
 export default function Ajustes()
 {
@@ -54,11 +57,28 @@ export default function Ajustes()
 
   useEffect(() =>
   {
+    AsyncStorage.getItem(PERFIL_CACHE).then((crudo) =>
+    {
+      if (crudo)
+      {
+        try
+        {
+          const p = JSON.parse(crudo);
+          setUsuario((v) => v || p.usuario || "");
+          setCodigo((v) => v || p.codigo || "");
+          setAvatar((v) => v || p.avatar || null);
+        }
+        catch (e)
+        {
+        }
+      }
+    }).catch(() => {});
     api.miCodigo().then((d) =>
     {
       setUsuario(d.usuario);
       setCodigo(d.codigo);
       setAvatar(d.avatar_url);
+      AsyncStorage.setItem(PERFIL_CACHE, JSON.stringify({ usuario: d.usuario, codigo: d.codigo, avatar: d.avatar_url })).catch(() => {});
     }).catch(() => {});
     api.preferencias().then(setPrefs).catch(() => {});
     tienePin().then(setPinActivo);
@@ -110,10 +130,10 @@ export default function Ajustes()
     setRespaldando(true);
     try
     {
-      const codigo = respaldoCfg.destino === "local" ? await exportarRespaldoLocal() : await hacerRespaldo();
-      if (codigo)
+      const cod = respaldoCfg.destino === "local" ? await exportarRespaldoLocal() : await hacerRespaldo();
+      if (cod)
       {
-        setNuevoCodigo(codigo);
+        setNuevoCodigo(cod);
         setRespaldoCfg((c) => ({ ...c, ultimo: new Date().toISOString() }));
       }
     }
@@ -208,10 +228,10 @@ export default function Ajustes()
     setVinculando(true);
     try
     {
-      const codigo = await hacerRespaldo();
-      if (codigo)
+      const cod = await hacerRespaldo();
+      if (cod)
       {
-        setVinculo(codigo);
+        setVinculo(cod);
       }
     }
     catch (e)
@@ -260,147 +280,143 @@ export default function Ajustes()
     }
   }
 
+  function Seccion({ titulo })
+  {
+    return <Text style={[estilos.seccion, { color: colores.muted }]}>{titulo}</Text>;
+  }
+
+  function Sep()
+  {
+    return <View style={[estilos.sep, { backgroundColor: colores.borde }]} />;
+  }
+
+  function FilaNav({ etiqueta, valor, onPress, color, cargando })
+  {
+    return (
+      <Pressable onPress={onPress} disabled={!!cargando} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado]}>
+        <Text style={[estilos.etiqueta, { color: color || colores.texto }]}>{cargando ? "Un momento…" : etiqueta}</Text>
+        <View style={estilos.filaDerecha}>
+          {valor ? <Text style={[estilos.valor, { color: colores.muted }]}>{valor}</Text> : null}
+          <Text style={{ color: colores.muted, fontSize: 17 }}>{"›"}</Text>
+        </View>
+      </Pressable>
+    );
+  }
+
+  function FilaSwitch({ etiqueta, valor, onCambio })
+  {
+    return (
+      <View style={estilos.fila}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>{etiqueta}</Text>
+        <Switch
+          value={valor}
+          onValueChange={onCambio}
+          trackColor={{ true: colores.texto, false: colores.borde }}
+          thumbColor={colores.fondo}
+          ios_backgroundColor={colores.borde}
+        />
+      </View>
+    );
+  }
+
+  function FilaValor({ etiqueta, valor, onPress, apagada })
+  {
+    return (
+      <Pressable onPress={onPress} disabled={apagada} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado, apagada && { opacity: 0.4 }]}>
+        <Text style={[estilos.etiqueta, { color: colores.texto }]}>{etiqueta}</Text>
+        <Text style={[estilos.valor, { color: colores.botonFondo }]}>{valor}</Text>
+      </Pressable>
+    );
+  }
+
+  const tarjeta = [estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }];
+
   return (
     <View style={{ flex: 1, backgroundColor: colores.fondo }}>
       <ScrollView contentContainerStyle={estilos.pantalla} showsVerticalScrollIndicator={false}>
+
       <View style={estilos.perfil}>
         <Pressable onPress={cambiarFoto} style={({ pressed }) => pressed && estilos.presionado}>
           <Avatar nombre={usuario} uri={avatar} tamano={92} />
         </Pressable>
-        <Text style={[estilos.usuario, { color: colores.texto }]}>{usuario}</Text>
-        <Text style={[estilos.cambiar, { color: colores.muted }]}>tocar la foto para cambiarla</Text>
+        <Text style={[estilos.usuario, { color: colores.texto }]}>{usuario || "…"}</Text>
+        <Text style={[estilos.cambiar, { color: colores.muted }]}>toca la foto para cambiarla</Text>
       </View>
 
-      <Text style={[estilos.seccion, { color: colores.muted }]}>TU CÓDIGO DE AMIGO</Text>
-      <Pressable onPress={copiar} style={({ pressed }) => [estilos.codigoCaja, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-        <Text style={[estilos.codigo, { color: colores.texto }]}>{codigo || "…"}</Text>
-        <Text style={[estilos.copiar, { color: colores.muted }]}>{copiado ? "copiado" : "tocar para copiar"}</Text>
-      </Pressable>
-      <Pressable onPress={() => setQr(true)} disabled={!codigo} style={({ pressed }) => [estilos.qrBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-        <Text style={[estilos.qrBotonTxt, { color: colores.texto }]}>Mostrar código QR</Text>
-      </Pressable>
-
-      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>APARIENCIA</Text>
-      <View style={[estilos.fila, { borderColor: colores.borde }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Tema claro / oscuro</Text>
-        <BotonTema />
+      <Seccion titulo="TU CÓDIGO DE AMIGO" />
+      <View style={tarjeta}>
+        <Pressable onPress={copiar} style={({ pressed }) => [estilos.codigoCaja, pressed && estilos.presionado]}>
+          <Text style={[estilos.codigo, { color: colores.texto }]}>{codigo || "…"}</Text>
+          <Text style={[estilos.copiar, { color: colores.muted }]}>{copiado ? "copiado ✓" : "toca para copiar"}</Text>
+        </Pressable>
+        <Sep />
+        <FilaNav etiqueta="Mostrar código QR" onPress={() => setQr(true)} />
       </View>
 
-      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>PRIVACIDAD</Text>
-      <View style={[estilos.fila, { borderColor: colores.borde }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mostrar mi conexión</Text>
-        <Switch
-          value={prefs.mostrar_conexion}
-          onValueChange={(v) => cambiar("mostrar_conexion", v)}
-          trackColor={{ true: colores.texto, false: colores.borde }}
-          thumbColor={colores.fondo}
-          ios_backgroundColor={colores.borde}
-        />
-      </View>
-      <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Acuses de lectura</Text>
-        <Switch
-          value={prefs.mostrar_acuses}
-          onValueChange={(v) => cambiar("mostrar_acuses", v)}
-          trackColor={{ true: colores.texto, false: colores.borde }}
-          thumbColor={colores.fondo}
-          ios_backgroundColor={colores.borde}
-        />
-      </View>
-      <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Bloqueo con PIN</Text>
-        <Switch
-          value={pinActivo}
-          onValueChange={alternarPin}
-          trackColor={{ true: colores.texto, false: colores.borde }}
-          thumbColor={colores.fondo}
-          ios_backgroundColor={colores.borde}
-        />
-      </View>
-      {pinActivo && bioHay ? (
-        <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
-          <Text style={[estilos.etiqueta, { color: colores.texto }]}>Desbloqueo biométrico</Text>
-          <Switch
-            value={bioActivo}
-            onValueChange={alternarBio}
-            trackColor={{ true: colores.texto, false: colores.borde }}
-            thumbColor={colores.fondo}
-            ios_backgroundColor={colores.borde}
-          />
+      <Seccion titulo="APARIENCIA" />
+      <View style={tarjeta}>
+        <View style={estilos.fila}>
+          <Text style={[estilos.etiqueta, { color: colores.texto }]}>Tema claro / oscuro</Text>
+          <BotonTema />
         </View>
-      ) : null}
-      <View style={[estilos.fila, { borderColor: colores.borde, marginTop: 8 }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Bloquear capturas de pantalla</Text>
-        <Switch
-          value={capturas}
-          onValueChange={alternarCapturas}
-          trackColor={{ true: colores.texto, false: colores.borde }}
-          thumbColor={colores.fondo}
-          ios_backgroundColor={colores.borde}
-        />
       </View>
-      <Pressable onPress={() => router.push("/bloqueados")} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde, marginTop: 8 }, pressed && estilos.presionado]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Usuarios bloqueados</Text>
-        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
-      </Pressable>
+
+      <Seccion titulo="PRIVACIDAD" />
+      <View style={tarjeta}>
+        <FilaSwitch etiqueta="Mostrar mi conexión" valor={prefs.mostrar_conexion} onCambio={(v) => cambiar("mostrar_conexion", v)} />
+        <Sep />
+        <FilaSwitch etiqueta="Acuses de lectura" valor={prefs.mostrar_acuses} onCambio={(v) => cambiar("mostrar_acuses", v)} />
+        <Sep />
+        <FilaSwitch etiqueta="Bloqueo con PIN" valor={pinActivo} onCambio={alternarPin} />
+        {pinActivo && bioHay ? (
+          <>
+            <Sep />
+            <FilaSwitch etiqueta="Desbloqueo biométrico" valor={bioActivo} onCambio={alternarBio} />
+          </>
+        ) : null}
+        <Sep />
+        <FilaSwitch etiqueta="Bloquear capturas de pantalla" valor={capturas} onCambio={alternarCapturas} />
+        <Sep />
+        <FilaNav etiqueta="Usuarios bloqueados" onPress={() => router.push("/bloqueados")} />
+      </View>
 
       {cercaniaSoportada() ? (
         <>
-          <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>SIN INTERNET</Text>
-          <View style={[estilos.fila, { borderColor: colores.borde }]}>
-            <Text style={[estilos.etiqueta, { color: colores.texto }]}>Mensajes por cercanía</Text>
-            <Switch
-              value={cercania}
-              onValueChange={alternarCercania}
-              trackColor={{ true: colores.texto, false: colores.borde }}
-              thumbColor={colores.fondo}
-              ios_backgroundColor={colores.borde}
-            />
+          <Seccion titulo="SIN INTERNET" />
+          <View style={tarjeta}>
+            <FilaSwitch etiqueta="Mensajes por cercanía" valor={cercania} onCambio={alternarCercania} />
           </View>
-          <Text style={[estilos.notaRespaldo, { color: colores.muted }]}>
-            Cuando no haya internet, tus mensajes viajan cifrados por Bluetooth entre teléfonos con Vixxer cerca, saltando hasta llegar a su destino o a un teléfono con conexión. Nadie en el camino puede leerlos.
+          <Text style={[estilos.nota, { color: colores.muted }]}>
+            Sin internet, tus mensajes viajan cifrados por Bluetooth entre teléfonos con Vixxer cerca hasta llegar a su destino.
           </Text>
         </>
       ) : null}
 
-      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>COPIA DE SEGURIDAD</Text>
-      <View style={[estilos.fila, { borderColor: colores.borde }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Frecuencia</Text>
-        <Pressable onPress={cambiarFrecuencia} hitSlop={8}>
-          <Text style={[estilos.valor, { color: colores.botonFondo }]}>{ETIQUETA_FRECUENCIA[respaldoCfg.frecuencia]}</Text>
-        </Pressable>
+      <Seccion titulo="COPIA DE SEGURIDAD" />
+      <View style={tarjeta}>
+        <FilaValor etiqueta="Destino" valor={respaldoCfg.destino === "nube" ? "Nube" : "Local"} onPress={cambiarDestino} />
+        <Sep />
+        <FilaValor etiqueta="Frecuencia" valor={ETIQUETA_FRECUENCIA[respaldoCfg.frecuencia]} onPress={cambiarFrecuencia} />
+        <Sep />
+        <FilaValor etiqueta="Hora" valor={`${String(respaldoCfg.hora).padStart(2, "0")}:00`} onPress={cambiarHora} apagada={respaldoCfg.frecuencia === "nunca"} />
+        <Sep />
+        <FilaNav etiqueta={respaldando ? "Respaldando…" : "Hacer copia ahora"} onPress={hacerCopiaAhora} cargando={respaldando} />
       </View>
-      <View style={[estilos.fila, { borderColor: colores.borde }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto, opacity: respaldoCfg.frecuencia === "nunca" ? 0.4 : 1 }]}>Hora</Text>
-        <Pressable onPress={cambiarHora} disabled={respaldoCfg.frecuencia === "nunca"} hitSlop={8}>
-          <Text style={[estilos.valor, { color: respaldoCfg.frecuencia === "nunca" ? colores.muted : colores.botonFondo, opacity: respaldoCfg.frecuencia === "nunca" ? 0.4 : 1 }]}>{String(respaldoCfg.hora).padStart(2, "0")}:00</Text>
-        </Pressable>
-      </View>
-      <View style={[estilos.fila, { borderColor: colores.borde }]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Destino</Text>
-        <Pressable onPress={cambiarDestino} hitSlop={8}>
-          <Text style={[estilos.valor, { color: colores.botonFondo }]}>{respaldoCfg.destino === "nube" ? "Nube" : "Local"}</Text>
-        </Pressable>
-      </View>
-      <Pressable onPress={hacerCopiaAhora} disabled={respaldando} style={({ pressed }) => [estilos.qrBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-        <Text style={[estilos.qrBotonTxt, { color: colores.texto }]}>{respaldando ? "Respaldando…" : "Hacer copia ahora"}</Text>
-      </Pressable>
-      <Text style={[estilos.notaRespaldo, { color: colores.muted }]}>
-        Respalda tu identidad (llave privada cifrada) para recuperar tu cuenta en otro dispositivo. {respaldoCfg.ultimo ? `Última copia: ${new Date(respaldoCfg.ultimo).toLocaleDateString()}.` : "Aún no has hecho una copia."} {respaldoCfg.destino === "local" ? "Guarda bien el código que te damos: es tu copia." : "Se guarda cifrado en el servidor; solo tu código lo abre."}
+      <Text style={[estilos.nota, { color: colores.muted }]}>
+        {respaldoCfg.ultimo ? `Última copia: ${new Date(respaldoCfg.ultimo).toLocaleDateString()}. ` : "Aún no has hecho una copia. "}
+        Tu llave se respalda cifrada; solo tu código de recuperación la abre.
       </Text>
 
-      <Text style={[estilos.seccion, { color: colores.muted, marginTop: 24 }]}>CUENTA</Text>
-      <Pressable onPress={vincularDispositivo} disabled={vinculando} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>{vinculando ? "Preparando…" : "Vincular otro dispositivo"}</Text>
-        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
-      </Pressable>
-      <Pressable onPress={abrirCambioPass} style={({ pressed }) => [estilos.fila, { borderColor: colores.borde, marginTop: 8 }, pressed && estilos.presionado]}>
-        <Text style={[estilos.etiqueta, { color: colores.texto }]}>Cambiar contraseña</Text>
-        <Text style={{ color: colores.muted, fontSize: 18 }}>{"›"}</Text>
-      </Pressable>
-      <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.salir, { borderColor: colores.borde, marginTop: 8 }, pressed && estilos.presionado]}>
-        <Text style={[estilos.salirTxt, { color: colores.error }]}>Cerrar sesión</Text>
-      </Pressable>
+      <Seccion titulo="CUENTA" />
+      <View style={tarjeta}>
+        <FilaNav etiqueta="Vincular otro dispositivo" onPress={vincularDispositivo} cargando={vinculando} />
+        <Sep />
+        <FilaNav etiqueta="Cambiar contraseña" onPress={abrirCambioPass} />
+        <Sep />
+        <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado]}>
+          <Text style={[estilos.etiqueta, { color: colores.error }]}>Cerrar sesión</Text>
+        </Pressable>
+      </View>
 
       <Text style={[estilos.version, { color: colores.muted }]}>Vixxer {Constants.expoConfig?.version || ""}</Text>
       </ScrollView>
@@ -474,31 +490,21 @@ export default function Ajustes()
 
 const estilos = StyleSheet.create({
   pantalla: { padding: 20, paddingBottom: 48 },
-  perfil: { alignItems: "center", gap: 8, marginBottom: 24 },
+  perfil: { alignItems: "center", gap: 8, marginBottom: 8 },
   usuario: { fontSize: 18, fontFamily: fuentes.semibold },
   cambiar: { fontSize: 12 },
-  seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginBottom: 10 },
-  valor: { fontSize: 15, fontFamily: fuentes.media },
-  notaRespaldo: { fontSize: 12, lineHeight: 17, marginTop: 10 },
-  codigoCaja: { borderWidth: 1, borderRadius: 12, paddingVertical: 18, alignItems: "center", gap: 6 },
-  codigo: { fontSize: 28, fontFamily: fuentes.bold, letterSpacing: 4 },
-  copiar: { fontSize: 12 },
-  qrBoton: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center", marginTop: 8 },
-  qrBotonTxt: { fontSize: 14, fontFamily: fuentes.media },
-  fila:
-  {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
+  seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginTop: 24, marginBottom: 8 },
+  tarjeta: { borderWidth: 1, borderRadius: 14, overflow: "hidden" },
+  fila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, minHeight: 52 },
+  filaDerecha: { flexDirection: "row", alignItems: "center", gap: 8 },
   etiqueta: { fontSize: 15 },
-  salir: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: "center" },
-  salirTxt: { fontSize: 15, fontWeight: "600" },
-  version: { fontSize: 12, textAlign: "center", marginTop: 28 },
+  valor: { fontSize: 15, fontFamily: fuentes.media },
+  sep: { height: 1, marginLeft: 16 },
+  codigoCaja: { alignItems: "center", paddingVertical: 16, gap: 4 },
+  codigo: { fontSize: 26, fontFamily: fuentes.bold, letterSpacing: 4 },
+  copiar: { fontSize: 12 },
+  nota: { fontSize: 12, lineHeight: 17, marginTop: 8 },
+  version: { fontSize: 12, textAlign: "center", marginTop: 32 },
   presionado: { opacity: 0.6 },
   modalFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 28 },
   modalCaja: { width: "100%", maxWidth: 360, borderWidth: 1, borderRadius: 16, padding: 20, gap: 12 },
