@@ -49,6 +49,8 @@ import { Lupa } from "../../components/Lupa";
 import { Kebab } from "../../components/Kebab";
 import { VistaPreviaVideo } from "../../components/VistaPreviaVideo";
 import { Pin } from "../../components/Pin";
+import { aFecha, mismoDia, etiquetaDia, hora } from "../../lib/fechas";
+import { tick } from "../../lib/haptica";
 
 const GRIS_VISTO = "#8E8E93";
 
@@ -67,39 +69,6 @@ function leerMedia(texto)
   {
     return null;
   }
-}
-
-function aFecha(iso)
-{
-  return iso ? new Date(iso) : new Date();
-}
-
-function mismoDia(a, b)
-{
-  return aFecha(a).toDateString() === aFecha(b).toDateString();
-}
-
-function etiquetaDia(iso)
-{
-  const f = aFecha(iso);
-  const hoy = new Date();
-  const ayer = new Date();
-  ayer.setDate(hoy.getDate() - 1);
-  if (f.toDateString() === hoy.toDateString())
-  {
-    return "Hoy";
-  }
-  if (f.toDateString() === ayer.toDateString())
-  {
-    return "Ayer";
-  }
-  return f.toLocaleDateString();
-}
-
-function hora(iso)
-{
-  const f = aFecha(iso);
-  return `${String(f.getHours()).padStart(2, "0")}:${String(f.getMinutes()).padStart(2, "0")}`;
 }
 
 function detalleTexto(item, mio)
@@ -138,6 +107,7 @@ function BurbujaMedible({ style, onSeleccionar, onPress, children })
 
   function alMantener()
   {
+    tick();
     ref.current?.measureInWindow((x, y, w, h) => onSeleccionar?.({ x, y, w, h }));
   }
 

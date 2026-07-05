@@ -9,6 +9,7 @@ import { Telefono } from "../components/Telefono";
 import { Videollamada } from "../components/Videollamada";
 import { Microfono } from "../components/Microfono";
 import { Bocina } from "../components/Bocina";
+import { impacto } from "../lib/haptica";
 
 function Video({ stream, estilo, espejo })
 {
@@ -123,10 +124,10 @@ export default function Llamada()
       <View style={[estilos.controles, { paddingBottom: insets.bottom + 28 }]}>
         {esEntrante ? (
           <>
-            <Pressable onPress={colgar} style={({ pressed }) => [estilos.boton, estilos.rojo, pressed && estilos.presionado]}>
+            <Pressable onPress={() => { impacto(); colgar(); }} style={({ pressed }) => [estilos.boton, estilos.rojo, pressed && estilos.presionado]}>
               <Telefono color="#FFF" tamano={26} />
             </Pressable>
-            <Pressable onPress={contestar} style={({ pressed }) => [estilos.boton, estilos.verde, pressed && estilos.presionado]}>
+            <Pressable onPress={() => { impacto(); contestar(); }} style={({ pressed }) => [estilos.boton, estilos.verde, pressed && estilos.presionado]}>
               {conVideo ? <Videollamada color="#FFF" tamano={26} /> : <Telefono color="#FFF" tamano={26} />}
             </Pressable>
           </>
@@ -157,7 +158,7 @@ export default function Llamada()
                 </Pressable>
               </>
             ) : null}
-            <Pressable onPress={colgar} style={({ pressed }) => [estilos.boton, estilos.rojo, pressed && estilos.presionado]}>
+            <Pressable onPress={() => { impacto(); colgar(); }} style={({ pressed }) => [estilos.boton, estilos.rojo, pressed && estilos.presionado]}>
               <Telefono color="#FFF" tamano={26} />
             </Pressable>
           </>

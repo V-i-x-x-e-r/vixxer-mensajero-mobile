@@ -43,6 +43,7 @@ function Navegacion()
       <Stack.Screen name="grupo/[id]" options={{ title: "Grupo" }} />
       <Stack.Screen name="grupo/info/[id]" options={{ title: "Info del grupo" }} />
       <Stack.Screen name="llamada" options={{ headerShown: false }} />
+      <Stack.Screen name="cercania" options={{ title: "Radar de cercanía" }} />
       <Stack.Screen name="ble" options={{ title: "BLE (prueba)" }} />
     </Stack>
   );

@@ -66,27 +66,31 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
     <Modal transparent visible animationType="fade" onRequestClose={onCerrar}>
       <Pressable style={estilos.fondo} onPress={onCerrar}>
         <View style={[estilos.barra, { width: ancho, top, left, backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <View style={estilos.reacciones}>
-            {REACCIONES.map((e) => (
-              <Pressable key={e} onPress={() => onReaccionar(mensaje, e)} hitSlop={6}>
-                <Text style={estilos.emoji}>{e}</Text>
-              </Pressable>
-            ))}
-            <Pressable onPress={abrirEmoji} hitSlop={6} style={[estilos.mas, { borderColor: colores.borde }]}>
-              <Text style={{ color: colores.texto, fontSize: 18 }}>+</Text>
-            </Pressable>
-          </View>
-
-          <View style={[estilos.separador, { backgroundColor: colores.borde }]} />
+          {onReaccionar ? (
+            <>
+              <View style={estilos.reacciones}>
+                {REACCIONES.map((e) => (
+                  <Pressable key={e} onPress={() => onReaccionar(mensaje, e)} hitSlop={6}>
+                    <Text style={estilos.emoji}>{e}</Text>
+                  </Pressable>
+                ))}
+                <Pressable onPress={abrirEmoji} hitSlop={6} style={[estilos.mas, { borderColor: colores.borde }]}>
+                  <Text style={{ color: colores.texto, fontSize: 18 }}>+</Text>
+                </Pressable>
+              </View>
+              <View style={[estilos.separador, { backgroundColor: colores.borde }]} />
+            </>
+          ) : null}
 
           <View style={estilos.acciones}>
-            <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} />
-            <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} />
-            <Accion icono={<Check color={colores.texto} tamano={20} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} />
-            <Accion icono={<Pin color={colores.texto} tamano={20} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} />
-            {esMedia ? <Accion icono={<Descargar color={colores.texto} tamano={20} />} etiqueta="Descargar" onPress={() => onDescargar(mensaje)} color={colores.texto} /> : <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} />}
-            {esMio && !esMedia ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
-            {esMio ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
+            {onResponder ? <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} /> : null}
+            {onReenviar ? <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} /> : null}
+            {onSeleccionar ? <Accion icono={<Check color={colores.texto} tamano={20} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} /> : null}
+            {onFijar ? <Accion icono={<Pin color={colores.texto} tamano={20} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} /> : null}
+            {esMedia && onDescargar ? <Accion icono={<Descargar color={colores.texto} tamano={20} />} etiqueta="Descargar" onPress={() => onDescargar(mensaje)} color={colores.texto} /> : null}
+            {!esMedia && onCopiar ? <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} /> : null}
+            {esMio && !esMedia && onEditar ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
+            {esMio && onBorrar ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
           </View>
         </View>
 
