@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Modal, Platform, Alert, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
-import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
+import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
 import { obtenerSocket, asegurarSocket } from "../../lib/socket";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
@@ -44,9 +44,11 @@ import { Ojo } from "../../components/Ojo";
 import { Confirmacion } from "../../components/Confirmacion";
 import { leerEstados, alternarSilenciado } from "../../lib/chatLocal";
 import { guardarMedia } from "../../lib/descargas";
+import { leerOcultos, ocultarMensaje } from "../../lib/ocultos";
+import { normalizarMuestras } from "../../lib/audioWave";
+import { PrevioMedia } from "../../components/chat/PrevioMedia";
 import { Lupa } from "../../components/Lupa";
 import { Kebab } from "../../components/Kebab";
-import { VistaPreviaVideo } from "../../components/VistaPreviaVideo";
 import { Pin } from "../../components/Pin";
 import { aFecha, mismoDia, etiquetaDia, hora } from "../../lib/fechas";
 import { tick } from "../../lib/haptica";
@@ -129,7 +131,10 @@ export default function Chat()
   const [alias, setAlias] = useState(null);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
-  const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+  const estadoGrab = useAudioRecorderState(grabadora, 150);
+  const muestras = useRef([]);
+  const [ocultos, setOcultos] = useState(() => new Set());
   const miId = useRef(null);
   const lista = useRef(null);
   const lejosRef = useRef(false);
@@ -140,11 +145,12 @@ export default function Chat()
 
   const invertidos = useMemo(() =>
   {
+    const visibles = ocultos.size ? mensajes.filter((m) => !ocultos.has(m.id)) : mensajes;
     const base = buscando && consulta.trim()
-      ? mensajes.filter((m) => !leerMedia(m.texto) && !leerAviso(m.texto) && m.texto.toLowerCase().includes(consulta.trim().toLowerCase()))
-      : mensajes;
+      ? visibles.filter((m) => !leerMedia(m.texto) && !leerAviso(m.texto) && m.texto.toLowerCase().includes(consulta.trim().toLowerCase()))
+      : visibles;
     return base.slice().reverse();
-  }, [mensajes, buscando, consulta]);
+  }, [mensajes, buscando, consulta, ocultos]);
 
   const datosWeb = useMemo(() => invertidos.slice().reverse(), [invertidos]);
   const datosLista = esWeb ? datosWeb : invertidos;
@@ -476,6 +482,7 @@ export default function Chat()
     (async () =>
     {
       miId.current = await leer(MI_ID);
+      leerOcultos(otroId).then((set) => activo && setOcultos(set));
 
       const cache = await leerCacheChat(otroId);
       if (cache && activo)
@@ -858,13 +865,13 @@ export default function Chat()
     }
   }
 
-  function confirmarEnvio()
+  function confirmarEnvio(cap)
   {
     if (!previo)
     {
       return;
     }
-    const actual = previo;
+    const actual = { ...previo, cap };
     setPrevio(null);
     const localId = mostrarMediaOptimista(actual);
     lista.current?.scrollToOffset({ offset: 0, animated: true });
@@ -888,14 +895,16 @@ export default function Chat()
       setSubiendo(true);
       try
       {
+        const dur = Math.max(1, Math.round(grabadora.currentTime || 0));
         await grabadora.stop();
         const uri = grabadora.uri;
         if (uri)
         {
+          const wf = normalizarMuestras(muestras.current);
           const base64 = await leerBase64(uri);
           const cif = cifrarArchivo(base64);
           const { path } = await api.subirMedia(cif.datos);
-          await mandar(JSON.stringify({ t: "audio", path, mime: "audio/mp4", k: cif.clave, n: cif.nonce }));
+          await mandar(JSON.stringify({ t: "audio", path, mime: "audio/mp4", k: cif.clave, n: cif.nonce, dur, wf: wf || undefined }));
         }
       }
       catch (e)
@@ -916,6 +925,7 @@ export default function Chat()
     }
     try
     {
+      muestras.current = [];
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
@@ -1067,6 +1077,21 @@ export default function Chat()
     setRespondiendo(null);
     setTexto(mensaje.texto);
     setSel(null);
+  }
+
+  useEffect(() =>
+  {
+    if (grabando && estadoGrab && typeof estadoGrab.metering === "number")
+    {
+      muestras.current.push(estadoGrab.metering);
+    }
+  }, [estadoGrab, grabando]);
+
+  async function borrarLocal(mensaje)
+  {
+    setSel(null);
+    const set = await ocultarMensaje(otroId, mensaje.id);
+    setOcultos(new Set(set));
   }
 
   function alDesplazar(e)
@@ -1492,6 +1517,7 @@ export default function Chat()
         onCopiar={copiar}
         onEditar={editar}
         onBorrar={borrar}
+        onBorrarLocal={borrarLocal}
         onFijar={alternarFijar}
         onDescargar={descargarMedia}
         onCerrar={() => setSel(null)}
@@ -1543,27 +1569,7 @@ export default function Chat()
         </Pressable>
       </Modal>
 
-      <Modal visible={!!previo} transparent animationType="fade" onRequestClose={() => setPrevio(null)}>
-        <View style={estilos.previoFondo}>
-          <View style={[estilos.previoTarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-            {previo ? (
-              previo.esVideo ? (
-                <VistaPreviaVideo uri={previo.uri} estilo={estilos.previoImagen} />
-              ) : (
-                <Image source={{ uri: previo.uri }} style={estilos.previoImagen} resizeMode="cover" />
-              )
-            ) : null}
-            <View style={estilos.previoAcciones}>
-              <Pressable onPress={() => setPrevio(null)} style={({ pressed }) => [estilos.previoBoton, { borderColor: colores.borde }, pressed && estilos.enviarPresionado]}>
-                <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>Cancelar</Text>
-              </Pressable>
-              <Pressable onPress={confirmarEnvio} style={({ pressed }) => [estilos.previoBoton, { backgroundColor: colores.botonFondo, borderColor: colores.botonFondo }, pressed && estilos.enviarPresionado]}>
-                <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>Enviar</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <PrevioMedia visible={!!previo} media={previo} onCancelar={() => setPrevio(null)} onEnviar={confirmarEnvio} />
     </View>
   );
 }

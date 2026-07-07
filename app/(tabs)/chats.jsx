@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { View, Text, Pressable, TextInput, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +18,7 @@ import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
 import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
+import { Visto } from "../../components/Visto";
 import { Presionable } from "../../components/Presionable";
 import { Pin } from "../../components/Pin";
 import { Silencio } from "../../components/Silencio";
@@ -58,6 +59,8 @@ export default function Chats()
   const [error, setError] = useState(false);
   const [estado, setEstado] = useState("conectando…");
   const [sel, setSel] = useState(null);
+  const [tecleando, setTecleando] = useState({});
+  const tiempos = useRef({});
   const [borrando, setBorrando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [alias, setAlias] = useState({});
@@ -110,6 +113,9 @@ export default function Chats()
           preview: c.ultimo_remitente_id === miId ? `Tú: ${texto}` : texto,
           enviado_en: c.enviado_en,
           noLeidos: c.no_leidos,
+          mio: c.ultimo_remitente_id === miId,
+          entregado: !!c.ultimo_entregado_en,
+          leido: !!c.ultimo_leido_en,
         };
       }
 
@@ -168,6 +174,26 @@ export default function Chats()
         await mostrar(fila.remitente_id);
         cargar();
       });
+      socket.on("usuario:escribiendo", (data) =>
+      {
+        if (!data || !data.de)
+        {
+          return;
+        }
+        if (tiempos.current[data.de])
+        {
+          clearTimeout(tiempos.current[data.de]);
+        }
+        if (data.activo)
+        {
+          setTecleando((prev) => ({ ...prev, [data.de]: true }));
+          tiempos.current[data.de] = setTimeout(() => setTecleando((prev) => ({ ...prev, [data.de]: false })), 3000);
+        }
+        else
+        {
+          setTecleando((prev) => ({ ...prev, [data.de]: false }));
+        }
+      });
     })();
 
     return () =>
@@ -178,6 +204,7 @@ export default function Chats()
         socket.off("disconnect");
         socket.off("connect_error");
         socket.off("mensaje:recibido");
+        socket.off("usuario:escribiendo");
       }
     };
   }, [cargar]);
@@ -410,8 +437,13 @@ export default function Chats()
                   <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{nombre}</Text>
                   {silenciado ? <Silencio color={colores.muted} tamano={13} /> : null}
                 </View>
-                {c ? (
-                  <Text style={[estilos.preview, { color: colores.muted }]} numberOfLines={1}>{c.preview}</Text>
+                {tecleando[item.id] ? (
+                  <Text style={[estilos.preview, { color: colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
+                ) : c ? (
+                  <View style={estilos.lineaPreview}>
+                    {c.mio ? <Visto color={c.leido ? colores.botonFondo : "#8E8E93"} dos={c.entregado || c.leido} tamano={13} /> : null}
+                    <Text style={[estilos.preview, { color: colores.muted, flexShrink: 1 }]} numberOfLines={1}>{c.preview}</Text>
+                  </View>
                 ) : null}
               </View>
               {c ? (
@@ -465,6 +497,7 @@ const estilos = StyleSheet.create({
   separadorFila: { height: 1, marginLeft: 66 },
   centro: { flex: 1, gap: 2 },
   lineaNombre: { flexDirection: "row", alignItems: "center", gap: 6 },
+  lineaPreview: { flexDirection: "row", alignItems: "center", gap: 4 },
   nombre: { fontSize: 16, flexShrink: 1 },
   preview: { fontSize: 13 },
   derecha: { alignItems: "flex-end", gap: 4 },

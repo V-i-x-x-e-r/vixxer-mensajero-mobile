@@ -57,6 +57,7 @@ export default function Grupos()
   const [refrescando, setRefrescando] = useState(false);
   const [error, setError] = useState(false);
   const [sel, setSel] = useState(null);
+  const [escribiendo, setEscribiendo] = useState({});
   const [confirmarSalir, setConfirmarSalir] = useState(false);
 
   const cargar = useCallback(async () =>
@@ -120,14 +121,38 @@ export default function Grupos()
       return;
     }
     const alCambio = () => cargar();
+    const tiempos = {};
+    function alEscribiendo(data)
+    {
+      if (!data || !data.grupo)
+      {
+        return;
+      }
+      if (tiempos[data.grupo])
+      {
+        clearTimeout(tiempos[data.grupo]);
+      }
+      if (data.activo)
+      {
+        setEscribiendo((prev) => ({ ...prev, [data.grupo]: true }));
+        tiempos[data.grupo] = setTimeout(() => setEscribiendo((prev) => ({ ...prev, [data.grupo]: false })), 3000);
+      }
+      else
+      {
+        setEscribiendo((prev) => ({ ...prev, [data.grupo]: false }));
+      }
+    }
     socket.on("grupo:nuevo", alCambio);
     socket.on("grupo:mensaje", alCambio);
     socket.on("grupo:actualizado", alCambio);
+    socket.on("grupo:escribiendo", alEscribiendo);
     return () =>
     {
       socket.off("grupo:nuevo", alCambio);
       socket.off("grupo:mensaje", alCambio);
       socket.off("grupo:actualizado", alCambio);
+      socket.off("grupo:escribiendo", alEscribiendo);
+      Object.values(tiempos).forEach(clearTimeout);
     };
   }, [cargar]);
 
@@ -204,9 +229,13 @@ export default function Grupos()
             )}
             <View style={estilos.centro}>
               <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.nombre}</Text>
-              <Text style={[estilos.sub, { color: colores.muted }]} numberOfLines={1}>
-                {item.preview || `${item.miembros} miembros`}
-              </Text>
+              {escribiendo[item.id] ? (
+                <Text style={[estilos.sub, { color: colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
+              ) : (
+                <Text style={[estilos.sub, { color: colores.muted }]} numberOfLines={1}>
+                  {item.preview || `${item.miembros} miembros`}
+                </Text>
+              )}
             </View>
             <View style={estilos.derecha}>
               {item.hora ? <Text style={[estilos.hora, { color: colores.muted }]}>{cuando(item.hora)}</Text> : null}
