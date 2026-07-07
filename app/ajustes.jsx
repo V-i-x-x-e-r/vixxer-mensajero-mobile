@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
@@ -430,6 +430,7 @@ export default function Ajustes()
       <RespaldoCodigo visible={!!nuevoCodigo} codigo={nuevoCodigo} onCerrar={() => setNuevoCodigo("")} />
 
       <Modal transparent visible={cambiandoPass} animationType="fade" onRequestClose={() => setCambiandoPass(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <Pressable style={estilos.modalFondo} onPress={() => setCambiandoPass(false)}>
           <Pressable style={[estilos.modalCaja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
             <Text style={[estilos.modalTitulo, { color: colores.texto }]}>Cambiar contraseña</Text>
@@ -469,6 +470,7 @@ export default function Ajustes()
             </View>
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       <ConfigurarPin

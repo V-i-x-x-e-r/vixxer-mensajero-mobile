@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Modal, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Modal, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as api from "../../../lib/api";
@@ -300,6 +300,7 @@ export default function InfoGrupo()
       </Modal>
 
       <Modal transparent visible={renombrando} animationType="fade" onRequestClose={() => setRenombrando(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <Pressable style={estilos.modalFondo} onPress={() => setRenombrando(false)}>
           <Pressable style={[estilos.modalCaja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
             <Text style={[estilos.modalTitulo, { color: colores.texto }]}>Nombre del grupo</Text>
@@ -321,6 +322,7 @@ export default function InfoGrupo()
             </View>
           </Pressable>
         </Pressable>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Confirmacion
