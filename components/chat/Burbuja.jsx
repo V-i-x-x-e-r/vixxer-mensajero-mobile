@@ -5,6 +5,8 @@ import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring, run
 import { useTema } from "../tema";
 import { fuentes } from "../../assets/themes/temas";
 import { Adjunto } from "../Adjunto";
+import { TarjetaEnlace } from "../TarjetaEnlace";
+import { extraerUrl } from "../../lib/enlaces";
 import { Responder } from "../Responder";
 import { tick } from "../../lib/haptica";
 
@@ -101,10 +103,30 @@ export function BurbujaMedible({ style, onSeleccionar, onPress, onResponder, chi
   );
 }
 
-export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reacciones, onMenu, onPress, onResponder, seleccionando, onToggle, resaltada, aparecer })
+function TextoMensaje({ texto, mio, conMenciones, colores })
+{
+  const base = { color: mio ? colores.botonTexto : colores.texto, fontSize: 15 };
+  if (!conMenciones || !/@/.test(String(texto)))
+  {
+    return <Text style={base}>{texto}</Text>;
+  }
+  const partes = String(texto).split(/(@[\w.\u00e1\u00e9\u00ed\u00f3\u00fa\u00f1\u00c1\u00c9\u00cd\u00d3\u00da\u00d1-]+)/g);
+  return (
+    <Text style={base}>
+      {partes.map((p, i) => (p.startsWith("@") ? (
+        <Text key={i} style={{ fontFamily: fuentes.semibold, color: mio ? colores.botonTexto : colores.botonFondo }}>{p}</Text>
+      ) : (
+        p
+      )))}
+    </Text>
+  );
+}
+
+export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reacciones, onMenu, onPress, onResponder, seleccionando, onToggle, resaltada, aparecer, conMenciones })
 {
   const { colores } = useTema();
   const grupos = agrupar(reacciones);
+  const urlEnlace = !media && !borrado && typeof texto === "string" ? extraerUrl(texto) : null;
   const mediaSolo = media && media.t !== "audio" && !borrado && !cita && !media.cap;
   const Contenedor = aparecer ? Animated.View : View;
 
@@ -139,8 +161,10 @@ export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reaccio
         ) : media ? (
           <Adjunto media={media} color={mio ? colores.botonTexto : colores.texto} seleccionando={seleccionando} onToggle={onToggle} onMenu={seleccionando ? undefined : onMenu} />
         ) : (
-          <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{texto}</Text>
+          <TextoMensaje texto={texto} mio={mio} conMenciones={conMenciones} colores={colores} />
         )}
+
+        {urlEnlace ? <TarjetaEnlace url={urlEnlace} claro={mio} /> : null}
 
         {media && media.cap && !borrado ? (
           <Text style={[estilos.caption, { color: mio ? colores.botonTexto : colores.texto }]}>{media.cap}</Text>

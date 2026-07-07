@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { View, Text, Pressable, FlatList, Platform, Alert, StyleSheet } from "react-native";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { View, Text, Pressable, FlatList, Modal, Platform, Alert, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
-import { useAudioRecorder, AudioModule, RecordingPresets } from "expo-audio";
+import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
@@ -12,6 +12,8 @@ import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { marcarVisto } from "../../lib/grupoVisto";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { guardarMedia } from "../../lib/descargas";
+import { leerOcultos, ocultarMensaje } from "../../lib/ocultos";
+import { normalizarMuestras } from "../../lib/audioWave";
 import { aFecha, hora, mismoDia, etiquetaDia } from "../../lib/fechas";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
@@ -25,6 +27,8 @@ import { AccionesMensaje } from "../../components/AccionesMensaje";
 import { SelectorContacto } from "../../components/SelectorContacto";
 import { SelectorSticker } from "../../components/SelectorSticker";
 import { Pin } from "../../components/Pin";
+import { Visto } from "../../components/Visto";
+import { PrevioMedia } from "../../components/chat/PrevioMedia";
 
 function leerMedia(texto)
 {
@@ -61,7 +65,16 @@ export default function GrupoChat()
   const [reenviadoA, setReenviadoA] = useState(null);
   const [fijados, setFijados] = useState([]);
   const [aviso, setAviso] = useState("");
-  const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
+  const estadoGrab = useAudioRecorderState(grabadora, 150);
+  const muestras = useRef([]);
+  const [ocultos, setOcultos] = useState(() => new Set());
+  const [previo, setPrevio] = useState(null);
+  const [escribiendoDe, setEscribiendoDe] = useState(null);
+  const [infoDe, setInfoDe] = useState(null);
+  const tecleando = useRef(null);
+  const escribiendoTimer = useRef(null);
+  const marcados = useRef(new Set());
   const miId = useRef(null);
   const priv = useRef(null);
   const pubs = useRef({});
@@ -90,6 +103,7 @@ export default function GrupoChat()
       reacciones: f.reacciones || {},
       borrado: !!f.borrado,
       editado: !!f.editado,
+      leido_por: f.leido_por || {},
     };
   }
 
@@ -120,6 +134,7 @@ export default function GrupoChat()
     {
       miId.current = await leer(MI_ID);
       priv.current = await leer(CLAVE_PRIVADA);
+      leerOcultos(`g-${id}`).then((set) => activo && setOcultos(set));
       leerFijados(`g-${id}`).then(setFijados);
       const cache = await leerCacheChat(`g-${id}`);
       if (cache && activo)
@@ -141,6 +156,7 @@ export default function GrupoChat()
           persistir(desc);
         }
         marcarVisto(id);
+        reportarLeidos(desc);
       }
       catch (e)
       {
@@ -174,6 +190,39 @@ export default function GrupoChat()
         return conNuevo;
       });
       marcarVisto(id);
+      reportarLeidos([nuevo]);
+    }
+    function alLeido(data)
+    {
+      if (data.grupo_id !== id)
+      {
+        return;
+      }
+      setMensajes((prev) => prev.map((m) =>
+      {
+        const l = (data.lecturas || []).find((x) => x.id === m.id);
+        return l ? { ...m, leido_por: l.leido_por } : m;
+      }));
+    }
+    function alEscribiendo(data)
+    {
+      if (data.grupo !== id || data.de === miId.current)
+      {
+        return;
+      }
+      if (escribiendoTimer.current)
+      {
+        clearTimeout(escribiendoTimer.current);
+      }
+      if (data.activo)
+      {
+        setEscribiendoDe(nombres.current[data.de] || "Alguien");
+        escribiendoTimer.current = setTimeout(() => setEscribiendoDe(null), 3000);
+      }
+      else
+      {
+        setEscribiendoDe(null);
+      }
     }
     function alReaccion(data)
     {
@@ -220,6 +269,8 @@ export default function GrupoChat()
     socket.on("grupo:borrado", alBorrado);
     socket.on("grupo:editado", alEditado);
     socket.on("grupo:actualizado", alActualizado);
+    socket.on("grupo:leido", alLeido);
+    socket.on("grupo:escribiendo", alEscribiendo);
     return () =>
     {
       socket.off("grupo:mensaje", alMensaje);
@@ -227,6 +278,8 @@ export default function GrupoChat()
       socket.off("grupo:borrado", alBorrado);
       socket.off("grupo:editado", alEditado);
       socket.off("grupo:actualizado", alActualizado);
+      socket.off("grupo:leido", alLeido);
+      socket.off("grupo:escribiendo", alEscribiendo);
     };
   }, [id]);
 
@@ -254,6 +307,41 @@ export default function GrupoChat()
     {
     }
     cargandoMas.current = false;
+  }
+
+  function reportarLeidos(lista)
+  {
+    const ids = lista
+      .filter((m) => m.remitente_id !== miId.current && !String(m.id).startsWith("local-") && !(m.leido_por || {})[miId.current] && !marcados.current.has(m.id))
+      .map((m) => m.id);
+    if (ids.length === 0)
+    {
+      return;
+    }
+    ids.forEach((i) => marcados.current.add(i));
+    api.marcarLeidosGrupo(id, ids.slice(0, 200)).catch(() => {});
+  }
+
+  function escribir(t)
+  {
+    setBorrador(t);
+    const socket = obtenerSocket();
+    if (socket && socket.connected)
+    {
+      socket.emit("grupo:escribiendo", { grupo: id, activo: true });
+      if (tecleando.current)
+      {
+        clearTimeout(tecleando.current);
+      }
+      tecleando.current = setTimeout(() => socket.emit("grupo:escribiendo", { grupo: id, activo: false }), 2200);
+    }
+  }
+
+  async function borrarLocal(mensaje)
+  {
+    setSel(null);
+    const set = await ocultarMensaje(`g-${id}`, mensaje.id);
+    setOcultos(new Set(set));
   }
 
   function cifrarParaTodos(texto)
@@ -376,16 +464,22 @@ export default function GrupoChat()
     {
       return;
     }
-    for (const a of r.assets)
+    const items = r.assets.map((a) => ({
+      uri: a.uri,
+      tipo: a.type === "video" ? "video" : "img",
+      mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg"),
+      ancho: a.width,
+      alto: a.height,
+      dur: a.duration ? Math.round(a.duration / 1000) : undefined,
+    }));
+    if (items.length === 1)
     {
-      await enviarMedia({
-        uri: a.uri,
-        tipo: a.type === "video" ? "video" : "img",
-        mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg"),
-        ancho: a.width,
-        alto: a.height,
-        dur: a.duration ? Math.round(a.duration / 1000) : undefined,
-      });
+      setPrevio(items[0]);
+      return;
+    }
+    for (const item of items)
+    {
+      await enviarMedia(item);
     }
   }
 
@@ -407,10 +501,11 @@ export default function GrupoChat()
       setSubiendo(true);
       try
       {
+        const dur = Math.max(1, Math.round(grabadora.currentTime || 0));
         await grabadora.stop();
         if (grabadora.uri)
         {
-          await enviarMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4" });
+          await enviarMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4", dur, wf: normalizarMuestras(muestras.current) || undefined });
         }
       }
       catch (e)
@@ -429,6 +524,7 @@ export default function GrupoChat()
     }
     try
     {
+      muestras.current = [];
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
@@ -545,8 +641,30 @@ export default function GrupoChat()
     setTimeout(() => setReenviadoA(null), 1600);
   }
 
-  const datos = esWeb ? mensajes : mensajes.slice().reverse();
+  useEffect(() =>
+  {
+    if (grabando && estadoGrab && typeof estadoGrab.metering === "number")
+    {
+      muestras.current.push(estadoGrab.metering);
+    }
+  }, [estadoGrab, grabando]);
+
+  const visibles = useMemo(() => (ocultos.size ? mensajes.filter((m) => !ocultos.has(m.id)) : mensajes), [mensajes, ocultos]);
+  const datos = useMemo(() => (esWeb ? visibles : visibles.slice().reverse()), [visibles]);
   const ultimoFijado = fijados.length > 0 ? fijados[fijados.length - 1] : null;
+  const mencion = useMemo(() =>
+  {
+    const m = borrador.match(/(^|\s)@([\w.-]*)$/);
+    return m ? m[2].toLowerCase() : null;
+  }, [borrador]);
+  const sugerencias = mencion != null
+    ? miembros.filter((x) => x.id !== miId.current && x.usuario.toLowerCase().startsWith(mencion)).slice(0, 5)
+    : [];
+
+  function insertarMencion(usuario)
+  {
+    setBorrador((prev) => prev.replace(/@[\w.-]*$/, `@${usuario} `));
+  }
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
@@ -559,7 +677,11 @@ export default function GrupoChat()
             <Avatar nombre={grupo?.nombre || nombre || "G"} uri={grupo?.avatar_url || null} tamano={32} />
             <View>
               <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{grupo?.nombre || nombre || "Grupo"}</Text>
-              {miembros.length ? <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{miembros.length} miembros</Text> : null}
+              {escribiendoDe ? (
+                <Text style={[estilos.encabezadoSub, { color: colores.botonFondo }]}>{escribiendoDe} escribe…</Text>
+              ) : miembros.length ? (
+                <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{miembros.length} miembros</Text>
+              ) : null}
             </View>
           </Pressable>
         ),
@@ -597,12 +719,21 @@ export default function GrupoChat()
           const citadoCrudo = item.respuestaTexto
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
           const cita = citadoCrudo && leerMedia(citadoCrudo) ? "Multimedia" : citadoCrudo;
+          const lecturas = Object.keys(item.leido_por || {}).length;
+          const todos = miembros.length > 1 && lecturas >= miembros.length - 1;
           const pie = (
             <>
               {item.editado ? <Text style={[estilos.pieTxt, { color: media ? "#FFF" : mio ? colores.botonTexto : colores.muted }]}>editado</Text> : null}
               <Text style={[estilos.pieTxt, { color: media ? "#FFF" : mio ? colores.botonTexto : colores.muted }]}>
                 {item.estado === "fallido" ? "no enviado · toca para reintentar" : item.estado === "enviando" ? "enviando…" : hora(item.enviado_en)}
               </Text>
+              {mio && item.estado !== "fallido" && item.estado !== "enviando" ? (
+                <Visto
+                  color={media ? "#FFF" : todos ? colores.botonTexto : "#8E8E93"}
+                  dos={lecturas > 0}
+                  tamano={11}
+                />
+              ) : null}
             </>
           );
           return (
@@ -628,6 +759,7 @@ export default function GrupoChat()
                 onResponder={item.borrado ? undefined : () => responder(item)}
                 resaltada={sel && sel.mensaje.id === item.id}
                 aparecer={!esWeb && Date.now() - aFecha(item.enviado_en).getTime() < 2500}
+                conMenciones
               />
             </View>
           );
@@ -636,7 +768,7 @@ export default function GrupoChat()
 
       <BarraEntrada
         valor={borrador}
-        onCambiar={setBorrador}
+        onCambiar={escribir}
         onEnviar={enviar}
         onAdjuntar={adjuntar}
         onSticker={() => setStickers(true)}
@@ -644,6 +776,16 @@ export default function GrupoChat()
         grabando={grabando}
         subiendo={subiendo}
       >
+        {sugerencias.length > 0 ? (
+          <View style={[estilos.sugerencias, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            {sugerencias.map((m) => (
+              <Pressable key={m.id} onPress={() => insertarMencion(m.usuario)} style={({ pressed }) => [estilos.sugerencia, pressed && { opacity: 0.6 }]}>
+                <Avatar nombre={m.usuario} uri={m.avatar_url || null} tamano={24} />
+                <Text style={[estilos.sugerenciaTxt, { color: colores.texto }]}>@{m.usuario}</Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
         {respondiendo ? (
           <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
             <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>Respondiendo: {respondiendo.texto}</Text>
@@ -675,6 +817,8 @@ export default function GrupoChat()
         onDescargar={descargarMedia}
         onEditar={editarMensaje}
         onBorrar={borrarMensaje}
+        onBorrarLocal={borrarLocal}
+        onInfo={(m) => { setSel(null); setInfoDe(m); }}
         onCerrar={() => setSel(null)}
       />
 
@@ -686,6 +830,40 @@ export default function GrupoChat()
       />
 
       <SelectorSticker visible={stickers} onElegir={enviarSticker} onCerrar={() => setStickers(false)} />
+
+      <PrevioMedia
+        visible={!!previo}
+        media={previo}
+        onCancelar={() => setPrevio(null)}
+        onEnviar={(cap) =>
+        {
+          const item = previo;
+          setPrevio(null);
+          if (item)
+          {
+            enviarMedia({ ...item, cap });
+          }
+        }}
+      />
+
+      <Modal transparent visible={!!infoDe} animationType="fade" onRequestClose={() => setInfoDe(null)}>
+        <Pressable style={estilos.infoFondo} onPress={() => setInfoDe(null)}>
+          <Pressable style={[estilos.infoHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.infoTitulo, { color: colores.texto }]}>Visto por</Text>
+            {miembros.filter((m) => m.id !== miId.current).map((m) =>
+            {
+              const t = infoDe ? (infoDe.leido_por || {})[m.id] : null;
+              return (
+                <View key={m.id} style={estilos.infoFila}>
+                  <Avatar nombre={m.usuario} uri={m.avatar_url || null} tamano={30} />
+                  <Text style={[estilos.infoNombre, { color: colores.texto }]}>{m.usuario}</Text>
+                  <Text style={[estilos.infoHora, { color: t ? colores.texto : colores.muted }]}>{t ? hora(t) : "pendiente"}</Text>
+                </View>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {reenviadoA ? (
         <View style={estilos.toast} pointerEvents="none">
@@ -717,4 +895,13 @@ const estilos = StyleSheet.create({
   avisoTxt: { flex: 1, fontSize: 13 },
   toast: { position: "absolute", bottom: 96, alignSelf: "center", backgroundColor: "rgba(20,20,24,0.92)", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   toastTxt: { color: "#FFF", fontSize: 13 },
+  sugerencias: { borderWidth: 1, borderRadius: 12, marginHorizontal: 12, marginBottom: 6, paddingVertical: 4 },
+  sugerencia: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  sugerenciaTxt: { fontSize: 14, fontFamily: fuentes.media },
+  infoFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  infoHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, padding: 18, paddingBottom: 30, gap: 4 },
+  infoTitulo: { fontSize: 16, fontFamily: fuentes.semibold, marginBottom: 8 },
+  infoFila: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 7 },
+  infoNombre: { flex: 1, fontSize: 14, fontFamily: fuentes.media },
+  infoHora: { fontSize: 12.5 },
 });

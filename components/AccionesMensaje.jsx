@@ -10,10 +10,10 @@ import { Bote } from "./Bote";
 import { Check } from "./Check";
 import { Pin } from "./Pin";
 import { Descargar } from "./Descargar";
+import { Ojo } from "./Ojo";
 
 const REACCIONES = ["\u{1F44D}", "❤️", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
 const ANCHO = 300;
-const ALTO = 108;
 
 function Accion({ icono, etiqueta, onPress, color })
 {
@@ -25,7 +25,7 @@ function Accion({ icono, etiqueta, onPress, color })
   );
 }
 
-export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onFijar, onDescargar, onCerrar })
+export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onBorrarLocal, onInfo, onDescargar, onFijar, onCerrar })
 {
   const { colores } = useTema();
   const entrada = useRef(null);
@@ -44,8 +44,22 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
   const mensaje = sel.mensaje;
   const { width: W } = Dimensions.get("window");
   const ancho = Math.min(ANCHO, W - 24);
-  const arriba = sel.y - ALTO - 8 > 70;
-  const top = arriba ? sel.y - ALTO - 8 : sel.y + sel.h + 8;
+  const visibles = [
+    onResponder,
+    onReenviar,
+    onSeleccionar,
+    onFijar,
+    esMedia && onDescargar,
+    !esMedia && onCopiar,
+    esMio && onInfo,
+    esMio && !esMedia && onEditar,
+    esMio && onBorrar,
+    onBorrarLocal,
+  ].filter(Boolean).length;
+  const porFila = Math.floor((ancho - 16) / 68);
+  const alto = (onReaccionar ? 52 : 8) + Math.max(1, Math.ceil(visibles / porFila)) * 56;
+  const arriba = sel.y - alto - 8 > 70;
+  const top = arriba ? sel.y - alto - 8 : sel.y + sel.h + 8;
   const left = Math.max(12, Math.min(esMio ? sel.x + sel.w - ancho : sel.x, W - ancho - 12));
 
   function abrirEmoji()
@@ -89,7 +103,9 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
             {onFijar ? <Accion icono={<Pin color={colores.texto} tamano={20} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} /> : null}
             {esMedia && onDescargar ? <Accion icono={<Descargar color={colores.texto} tamano={20} />} etiqueta="Descargar" onPress={() => onDescargar(mensaje)} color={colores.texto} /> : null}
             {!esMedia && onCopiar ? <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} /> : null}
+            {esMio && onInfo ? <Accion icono={<Ojo color={colores.texto} tamano={20} />} etiqueta="Info" onPress={() => onInfo(mensaje)} color={colores.texto} /> : null}
             {esMio && !esMedia && onEditar ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
+            {onBorrarLocal ? <Accion icono={<Bote color={colores.texto} tamano={20} />} etiqueta="Para mí" onPress={() => onBorrarLocal(mensaje)} color={colores.texto} /> : null}
             {esMio && onBorrar ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
           </View>
         </View>
