@@ -355,6 +355,9 @@ export default function Chats()
       <FlatList
         data={mostrados}
         keyExtractor={(a) => a.id}
+        windowSize={7}
+        maxToRenderPerBatch={10}
+        initialNumToRender={12}
         style={estilos.lista}
         refreshControl={
           <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.texto]} />

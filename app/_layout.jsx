@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppState, View, StyleSheet } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { useFonts, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from "@expo-google-fonts/outfit";
@@ -26,6 +27,8 @@ function Navegacion()
         headerTitleStyle: { fontFamily: fuentes.semibold },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colores.fondo },
+        animation: "slide_from_right",
+        animationDuration: 220,
       }}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -42,7 +45,7 @@ function Navegacion()
       <Stack.Screen name="grupo/crear" options={{ title: "Nuevo grupo" }} />
       <Stack.Screen name="grupo/[id]" options={{ title: "Grupo" }} />
       <Stack.Screen name="grupo/info/[id]" options={{ title: "Info del grupo" }} />
-      <Stack.Screen name="llamada" options={{ headerShown: false }} />
+      <Stack.Screen name="llamada" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="cercania" options={{ title: "Radar de cercanía" }} />
       <Stack.Screen name="ble" options={{ title: "BLE (prueba)" }} />
     </Stack>
@@ -123,10 +126,12 @@ export default function RootLayout()
   }
 
   return (
-    <ProveedorTema>
-      <ProveedorSolicitudes>
-        <Contenido />
-      </ProveedorSolicitudes>
-    </ProveedorTema>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ProveedorTema>
+        <ProveedorSolicitudes>
+          <Contenido />
+        </ProveedorSolicitudes>
+      </ProveedorTema>
+    </GestureHandlerRootView>
   );
 }

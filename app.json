@@ -68,7 +68,9 @@
       ],
       "react-native-ble-plx",
       "expo-sharing",
-      "@config-plugins/react-native-webrtc"
+      "@config-plugins/react-native-webrtc",
+      "expo-image",
+      "expo-asset"
     ],
     "extra": {
       "router": {},

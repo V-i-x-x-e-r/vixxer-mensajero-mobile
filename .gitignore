@@ -16,8 +16,8 @@ web-build/
 expo-env.d.ts
 
 # ---------- Native builds ----------
-ios/
-android/
+/ios/
+/android/
 *.orig.*
 build/
 *.apk

@@ -10,6 +10,8 @@ import { obtenerSocket, asegurarSocket } from "../../lib/socket";
 import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { guardarCache } from "../../lib/mediaCache";
+import { generarPreview } from "../../lib/mediaPreview";
+import { publicarProgreso, limpiarProgreso } from "../../lib/progresoMedia";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
@@ -786,6 +788,9 @@ export default function Chat()
       uri: asset.uri,
       esVideo: asset.type === "video",
       mime: asset.mimeType || (asset.type === "video" ? "video/mp4" : "image/jpeg"),
+      ancho: asset.width,
+      alto: asset.height,
+      dur: asset.duration ? Math.round(asset.duration / 1000) : undefined,
     };
   }
 
@@ -823,7 +828,17 @@ export default function Chat()
   function mostrarMediaOptimista(actual)
   {
     const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    const texto = JSON.stringify({ t: tipoDe(actual), local: actual.uri, mime: actual.mime });
+    const texto = JSON.stringify({
+      t: tipoDe(actual),
+      local: actual.uri,
+      mime: actual.mime,
+      w: actual.ancho,
+      h: actual.alto,
+      dur: actual.dur,
+      cap: actual.cap,
+      wf: actual.wf,
+      pid: localId,
+    });
     setMensajes((prev) => [
       ...prev,
       { id: localId, remitente_id: miId.current, texto, enviado_en: new Date().toISOString(), estado: "enviando" },
@@ -836,11 +851,25 @@ export default function Chat()
     mediaPendiente.current[localId] = actual;
     try
     {
+      publicarProgreso(localId, 0);
+      const extra = await generarPreview({ ...actual, tipo: tipoDe(actual) });
       const base64 = await leerBase64(actual.uri);
       const cif = cifrarArchivo(base64);
-      const { path } = await api.subirMedia(cif.datos);
+      const { path } = await api.subirMediaConProgreso(cif.datos, (p) => publicarProgreso(localId, p * 0.95));
       guardarCache(path, actual.uri);
-      const plano = JSON.stringify({ t: tipoDe(actual), path, mime: actual.mime, k: cif.clave, n: cif.nonce });
+      const plano = JSON.stringify({
+        t: tipoDe(actual),
+        path,
+        mime: actual.mime,
+        k: cif.clave,
+        n: cif.nonce,
+        w: actual.ancho || extra.w,
+        h: actual.alto || extra.h,
+        dur: actual.dur,
+        cap: actual.cap,
+        wf: actual.wf,
+        prev: extra.prev,
+      });
       const priv = await leer(CLAVE_PRIVADA);
       const pubDest = await llavePublicaDe(otroId);
       const { contenidoCifrado, nonce } = cifrar(plano, pubDest, priv);
@@ -849,9 +878,11 @@ export default function Chat()
       await agregarOutbox(otroId, item);
       intentarEnviar(item);
       delete mediaPendiente.current[localId];
+      limpiarProgreso(localId);
     }
     catch (e)
     {
+      publicarProgreso(localId, null);
       setMensajes((prev) => prev.map((m) => (m.id === localId ? { ...m, estado: "fallido" } : m)));
     }
   }
@@ -1245,6 +1276,9 @@ export default function Chat()
         ref={lista}
         data={datosLista}
         keyExtractor={(m) => m.id}
+        windowSize={9}
+        maxToRenderPerBatch={8}
+        initialNumToRender={14}
         inverted={!esWeb}
         style={estilos.flex}
         contentContainerStyle={estilos.lista}

@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
 import { Pressable, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
-import { encodeBase64 } from "tweetnacl-util";
-import * as api from "../lib/api";
-import { descifrarArchivo } from "../lib/crypto";
-import { escribirTemp } from "../lib/archivos";
-import { leerCache, guardarCache, leerDisco, guardarDisco } from "../lib/mediaCache";
+import { obtenerMedia } from "../lib/mediaRemota";
+import { leerCache } from "../lib/mediaCache";
 
 export function AdjuntoAudio({ media, color })
 {
-  const [uri, setUri] = useState(() => leerCache(media.path) || null);
+  const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const player = useAudioPlayer(null);
   const estado = useAudioPlayerStatus(player);
 
@@ -20,37 +17,9 @@ export function AdjuntoAudio({ media, color })
       return;
     }
     let activo = true;
-    (async () =>
-    {
-      try
-      {
-        const guardado = await leerDisco(media.path, "audio/m4a");
-        if (guardado)
-        {
-          if (activo)
-          {
-            setUri(guardado);
-          }
-          return;
-        }
-        const { url } = await api.urlMedia(media.path);
-        const resp = await fetch(url);
-        const bytes = new Uint8Array(await resp.arrayBuffer());
-        const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
-        if (claro)
-        {
-          const archivo = (await guardarDisco(media.path, claro, "audio/m4a")) || (await escribirTemp(claro, "m4a"));
-          guardarCache(media.path, archivo);
-          if (activo)
-          {
-            setUri(archivo);
-          }
-        }
-      }
-      catch (e)
-      {
-      }
-    })();
+    obtenerMedia({ ...media, mime: media.mime || "audio/m4a" })
+      .then((final) => activo && setUri(final))
+      .catch(() => {});
     return () => { activo = false; };
   }, [media.path]);
 

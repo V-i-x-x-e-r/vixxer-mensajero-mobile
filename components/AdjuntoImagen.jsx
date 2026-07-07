@@ -1,96 +1,87 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Image, Pressable, Modal, ActivityIndicator, StyleSheet } from "react-native";
-import { encodeBase64 } from "tweetnacl-util";
-import * as api from "../lib/api";
-import { descifrarArchivo } from "../lib/crypto";
-import { leerCache, guardarCache, leerDisco, guardarDisco } from "../lib/mediaCache";
+import { View, Text, Pressable, Modal, ActivityIndicator, StyleSheet, Image as ImagenNativa } from "react-native";
+import { Image } from "expo-image";
+import { obtenerMedia } from "../lib/mediaRemota";
+import { leerCache } from "../lib/mediaCache";
+import { ajustarMedida } from "../lib/mediaPreview";
+import { alProgreso } from "../lib/progresoMedia";
+import { AnilloProgreso } from "./AnilloProgreso";
 import { VisorImagen } from "./VisorImagen";
-
-const MAX_ANCHO = 248;
-const MAX_ALTO = 320;
-
-function medida(w, h)
-{
-  const escala = Math.min(MAX_ANCHO / w, MAX_ALTO / h, 1);
-  return { width: Math.round(w * escala), height: Math.round(h * escala) };
-}
 
 export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, cuadrado })
 {
   const esSticker = media.t === "sticker";
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
-  const [dims, setDims] = useState(null);
+  const [dims, setDims] = useState(() => ajustarMedida(media.w, media.h));
+  const [progreso, setProgreso] = useState(null);
   const [error, setError] = useState(false);
   const [abierta, setAbierta] = useState(false);
+  const [intento, setIntento] = useState(0);
   const ref = useRef(null);
 
   useEffect(() =>
   {
-    if (media.local || uri)
+    if (uri)
     {
       return;
     }
     let activo = true;
-    (async () =>
-    {
-      try
-      {
-        const guardada = await leerDisco(media.path, media.mime);
-        if (guardada)
-        {
-          if (activo)
-          {
-            setUri(guardada);
-          }
-          return;
-        }
-        const { url } = await api.urlMedia(media.path);
-        const resp = await fetch(url);
-        const bytes = new Uint8Array(await resp.arrayBuffer());
-        const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
-        if (activo && claro)
-        {
-          const archivo = await guardarDisco(media.path, claro, media.mime);
-          const final = archivo || `data:${media.mime};base64,${claro}`;
-          guardarCache(media.path, final);
-          setUri(final);
-        }
-        else if (activo)
-        {
-          setError(true);
-        }
-      }
-      catch (e)
-      {
-        if (activo)
-        {
-          setError(true);
-        }
-      }
-    })();
+    obtenerMedia(media, (p) => activo && setProgreso(p))
+      .then((final) => activo && setUri(final))
+      .catch(() => activo && setError(true));
     return () => { activo = false; };
-  }, [media.path]);
+  }, [media.path, intento]);
 
   useEffect(() =>
   {
-    if (!uri)
+    if (!media.pid)
+    {
+      return;
+    }
+    return alProgreso(media.pid, setProgreso);
+  }, [media.pid]);
+
+  useEffect(() =>
+  {
+    if (!uri || dims || esSticker || cuadrado)
     {
       return;
     }
     let activo = true;
-    Image.getSize(
+    ImagenNativa.getSize(
       uri,
-      (w, h) => activo && setDims(medida(w, h)),
+      (w, h) => activo && setDims(ajustarMedida(w, h)),
       () => activo && setDims({ width: 210, height: 260 }),
     );
     return () => { activo = false; };
-  }, [uri]);
+  }, [uri, dims]);
 
-  if (!uri || (!cuadrado && !esSticker && !dims))
+  function reintentar()
+  {
+    setError(false);
+    setProgreso(null);
+    setIntento((n) => n + 1);
+  }
+
+  const marco = cuadrado
+    ? { width: cuadrado, height: cuadrado, borderRadius: 10 }
+    : esSticker
+      ? estilos.sticker
+      : dims || estilos.caja;
+  const subiendo = media.pid && progreso != null && progreso < 1;
+  const cargando = !uri && !error;
+
+  if (!uri && !media.prev)
   {
     return (
-      <View style={[esSticker ? estilos.sticker : estilos.caja, cuadrado ? { width: cuadrado, height: cuadrado } : null]}>
-        {!error ? <ActivityIndicator color={color} /> : null}
+      <View style={[estilos.caja, estilos.centro, marco]}>
+        {error ? (
+          <Pressable onPress={reintentar} style={estilos.centro}>
+            <Text style={[estilos.reintentar, { color }]}>Reintentar</Text>
+          </Pressable>
+        ) : (
+          <ActivityIndicator color={color} />
+        )}
       </View>
     );
   }
@@ -99,15 +90,29 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
     <>
       <Pressable
         ref={ref}
-        onPress={() => (seleccionando ? onToggle?.() : setAbierta(true))}
+        onPress={() => (seleccionando ? onToggle?.() : error ? reintentar() : uri ? setAbierta(true) : null)}
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
         delayLongPress={250}
+        style={[marco, estilos.recorte]}
       >
-        {esSticker && !cuadrado ? (
-          <Image source={{ uri }} style={estilos.sticker} resizeMode="contain" />
-        ) : (
-          <Image source={{ uri }} style={cuadrado ? { width: cuadrado, height: cuadrado, borderRadius: 10 } : [estilos.imagen, dims]} resizeMode="cover" />
-        )}
+        <Image
+          source={uri ? { uri } : null}
+          placeholder={media.prev ? { uri: media.prev } : null}
+          placeholderContentFit="cover"
+          contentFit={esSticker && !cuadrado ? "contain" : "cover"}
+          transition={180}
+          style={estilos.llena}
+        />
+        {(cargando || subiendo) && !esSticker ? (
+          <View style={estilos.capa} pointerEvents="none">
+            <AnilloProgreso progreso={progreso} color="#fff" />
+          </View>
+        ) : null}
+        {error ? (
+          <View style={estilos.capa} pointerEvents="none">
+            <Text style={estilos.reintentar}>Reintentar</Text>
+          </View>
+        ) : null}
       </Pressable>
       <Modal visible={abierta} transparent animationType="fade" onRequestClose={() => setAbierta(false)}>
         <VisorImagen uri={uri} onCerrar={() => setAbierta(false)} />
@@ -117,9 +122,11 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
 }
 
 const estilos = StyleSheet.create({
-  imagen: { borderRadius: 14 },
-  sticker: { width: 150, height: 150, alignItems: "center", justifyContent: "center" },
-  caja: { width: 210, height: 230, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
-  completa: { width: "100%", height: "100%" },
+  llena: { width: "100%", height: "100%" },
+  recorte: { borderRadius: 14, overflow: "hidden" },
+  sticker: { width: 150, height: 150 },
+  caja: { width: 210, height: 260, borderRadius: 14 },
+  centro: { alignItems: "center", justifyContent: "center" },
+  capa: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
+  reintentar: { color: "#fff", fontSize: 13, backgroundColor: "rgba(0,0,0,0.5)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
 });
