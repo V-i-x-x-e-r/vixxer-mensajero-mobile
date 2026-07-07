@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
-import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, Keyboard, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, FlatList, Image, Modal, Platform, Alert, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router, useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
@@ -28,16 +28,13 @@ import { Candado } from "../../components/Candado";
 import { Visto } from "../../components/Visto";
 import { Avatar } from "../../components/Avatar";
 import { Reloj } from "../../components/Reloj";
-import { Flecha } from "../../components/Flecha";
 import { Check } from "../../components/Check";
-import { Clip } from "../../components/Clip";
-import { Carita } from "../../components/Carita";
 import { SelectorSticker } from "../../components/SelectorSticker";
 import { Telefono } from "../../components/Telefono";
 import { Videollamada } from "../../components/Videollamada";
 import { llamadasDisponibles } from "../../lib/llamadas";
-import { Microfono } from "../../components/Microfono";
-import { Adjunto } from "../../components/Adjunto";
+import { Burbuja } from "../../components/chat/Burbuja";
+import { BarraEntrada } from "../../components/chat/BarraEntrada";
 import { AccionesMensaje } from "../../components/AccionesMensaje";
 import { SelectorContacto } from "../../components/SelectorContacto";
 import { Reenviar } from "../../components/Reenviar";
@@ -92,34 +89,6 @@ function existente(lista, m)
   return lista.some((x) => x.id === m.id || (m.cliente_id && (x.cliente_id === m.cliente_id || x.id === m.cliente_id)));
 }
 
-function agrupar(reacciones)
-{
-  const conteo = {};
-  const lista = Array.isArray(reacciones) ? reacciones : Object.values(reacciones || {});
-  for (const e of lista)
-  {
-    conteo[e] = (conteo[e] || 0) + 1;
-  }
-  return Object.entries(conteo);
-}
-
-function BurbujaMedible({ style, onSeleccionar, onPress, children })
-{
-  const ref = useRef(null);
-
-  function alMantener()
-  {
-    tick();
-    ref.current?.measureInWindow((x, y, w, h) => onSeleccionar?.({ x, y, w, h }));
-  }
-
-  return (
-    <Pressable ref={ref} onLongPress={alMantener} onPress={onPress} delayLongPress={250} style={style}>
-      {children}
-    </Pressable>
-  );
-}
-
 export default function Chat()
 {
   const { colores } = useTema();
@@ -132,6 +101,7 @@ export default function Chat()
   const [escribiendo, setEscribiendo] = useState(false);
   const [presencia, setPresencia] = useState(null);
   const [lejos, setLejos] = useState(false);
+  const [nuevosAbajo, setNuevosAbajo] = useState(0);
   const [sel, setSel] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null);
   const [editando, setEditando] = useState(null);
@@ -157,12 +127,12 @@ export default function Chat()
   const [temporizador, setTemporizador] = useState(0);
   const [pickerTemp, setPickerTemp] = useState(false);
   const [alias, setAlias] = useState(null);
-  const [tecladoAlto, setTecladoAlto] = useState(0);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
   const grabadora = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const miId = useRef(null);
   const lista = useRef(null);
+  const lejosRef = useRef(false);
   const tecleando = useRef(null);
   const cargandoMas = useRef(false);
   const purgados = useRef(new Set());
@@ -374,19 +344,6 @@ export default function Chat()
     return quitar;
   }, [otroId]);
 
-  useEffect(() =>
-  {
-    const abrir = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const cerrar = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const subir = Keyboard.addListener(abrir, (e) => setTecladoAlto(e.endCoordinates?.height || 0));
-    const bajar = Keyboard.addListener(cerrar, () => setTecladoAlto(0));
-    return () =>
-    {
-      subir.remove();
-      bajar.remove();
-    };
-  }, []);
-
   async function abrir(fila)
   {
     const priv = await leer(CLAVE_PRIVADA);
@@ -465,6 +422,10 @@ export default function Chat()
         {
           setMensajes((prev) => (existente(prev, fila) ? prev : [...prev, { ...fila, texto: t }]));
           marcarLeidos([fila]);
+          if (lejosRef.current)
+          {
+            setNuevosAbajo((n) => n + 1);
+          }
         }
       });
     }
@@ -1110,7 +1071,13 @@ export default function Chat()
 
   function alDesplazar(e)
   {
-    setLejos(e.nativeEvent.contentOffset.y > 240);
+    const l = e.nativeEvent.contentOffset.y > 240;
+    lejosRef.current = l;
+    setLejos(l);
+    if (!l)
+    {
+      setNuevosAbajo(0);
+    }
   }
 
   const fijadoActual = fijados.length ? fijados[indiceFijado % fijados.length] : null;
@@ -1303,7 +1270,6 @@ export default function Chat()
           const mio = item.remitente_id === miId.current;
           const prev = esWeb ? datosLista[index - 1] : datosLista[index + 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
-          const reacciones = agrupar(item.reacciones);
           const media = leerMedia(item.texto);
           const citadoCrudo = item.respuestaTexto
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
@@ -1315,7 +1281,7 @@ export default function Chat()
           const elegido = seleccionados.includes(item.id) || (sel && sel.mensaje.id === item.id);
           const borrado = item.contenido_cifrado === "BORRADO";
           const mediaVisual = !borrado && media && (media.t === "img" || media.t === "video" || media.t === "sticker");
-          const mediaSolo = mediaVisual && !citado;
+          const mediaSolo = mediaVisual && !citado && !media.cap;
           const aviso = leerAviso(item.texto);
 
           if (aviso)
@@ -1339,8 +1305,46 @@ export default function Chat()
             );
           }
 
+          const reciente = !esWeb && Date.now() - aFecha(item.enviado_en).getTime() < 2500;
+          const metaColor = mio ? colores.botonTexto : colores.muted;
+          const meta = mediaSolo ? (
+            <>
+              <Text style={estilos.horaMedia}>{hora(item.enviado_en)}</Text>
+              {mio ? (
+                item.estado === "fallido"
+                  ? <Pressable onPress={() => reintentar(item)} hitSlop={8}><Text style={[estilos.reintentarTxt, { color: "#FFF" }]}>reintentar</Text></Pressable>
+                  : item.estado === "enviando"
+                    ? <Reloj color="#FFF" tamano={11} />
+                    : <Visto color="#FFF" dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
+              ) : null}
+            </>
+          ) : (
+            <>
+              {ef ? <Reloj color={metaColor} tamano={11} /> : null}
+              {item.editado ? <Text style={[estilos.editado, { color: metaColor }]}>editado</Text> : null}
+              {item.porBle ? <Text style={[estilos.editado, { color: metaColor }]}>por cercanía</Text> : null}
+              <Text style={[estilos.hora, { color: metaColor }]}>{hora(item.enviado_en)}</Text>
+              {mio ? (
+                item.estado === "fallido"
+                  ? (
+                      <View style={estilos.fallidoFila}>
+                        <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
+                          <Text style={[estilos.reintentarTxt, { color: metaColor }]}>no enviado · reintentar</Text>
+                        </Pressable>
+                        <Pressable onPress={() => enviarPorBle(item)} hitSlop={8} style={estilos.reintentar}>
+                          <Text style={[estilos.reintentarTxt, { color: metaColor }]}>· cercanía</Text>
+                        </Pressable>
+                      </View>
+                    )
+                  : item.estado === "enviando"
+                    ? <Reloj color={GRIS_VISTO} tamano={11} />
+                    : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
+              ) : null}
+            </>
+          );
+
           return (
-            <View style={elegido ? { backgroundColor: colores.surface } : null}>
+            <View>
               {nuevoDia ? (
                 <View style={estilos.dia}>
                   <Text style={[estilos.diaTxt, { color: colores.muted, backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -1349,90 +1353,22 @@ export default function Chat()
                 </View>
               ) : null}
 
-              <BurbujaMedible
-                onSeleccionar={seleccionando || borrado ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
+              <Burbuja
+                mio={mio}
+                cita={citado}
+                borrado={borrado}
+                media={media}
+                texto={textoMostrar}
+                meta={meta}
+                reacciones={item.reacciones}
+                onMenu={seleccionando || borrado ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
                 onPress={seleccionando ? () => alternarSeleccion(item) : () => setDetalle((p) => (p === item.id ? null : item.id))}
-                style={[
-                  estilos.burbuja,
-                  mediaSolo
-                    ? { alignSelf: mio ? "flex-end" : "flex-start", paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }
-                    : mio
-                      ? { alignSelf: "flex-end", backgroundColor: colores.botonFondo }
-                      : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
-                ]}
-              >
-                {citado ? (
-                  <View style={[estilos.cita, { borderColor: mio ? colores.botonTexto : colores.borde }]}>
-                    <Text numberOfLines={1} style={{ color: mio ? colores.botonTexto : colores.muted, fontSize: 13, opacity: 0.8 }}>
-                      {citado}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {borrado ? (
-                  <Text style={{ color: mio ? colores.botonTexto : colores.muted, fontSize: 15, fontStyle: "italic", opacity: 0.8 }}>Este mensaje fue eliminado</Text>
-                ) : media ? (
-                  <Adjunto
-                    media={media}
-                    color={mio ? colores.botonTexto : colores.texto}
-                    seleccionando={seleccionando}
-                    onToggle={() => alternarSeleccion(item)}
-                    onMenu={seleccionando ? undefined : (coords) => setSel({ mensaje: item, ...coords })}
-                  />
-                ) : (
-                  <Text style={{ color: mio ? colores.botonTexto : colores.texto, fontSize: 15 }}>{textoMostrar}</Text>
-                )}
-
-                {mediaSolo ? (
-                  <View style={estilos.metaMedia} pointerEvents="box-none">
-                    <Text style={estilos.horaMedia}>{hora(item.enviado_en)}</Text>
-                    {mio ? (
-                      item.estado === "fallido"
-                        ? <Pressable onPress={() => reintentar(item)} hitSlop={8}><Text style={[estilos.reintentarTxt, { color: "#FFF" }]}>reintentar</Text></Pressable>
-                        : item.estado === "enviando"
-                          ? <Reloj color="#FFF" tamano={11} />
-                          : <Visto color="#FFF" dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
-                    ) : null}
-                  </View>
-                ) : (
-                  <View style={estilos.meta}>
-                    {ef ? <Reloj color={mio ? colores.botonTexto : colores.muted} tamano={11} /> : null}
-                    {item.editado ? (
-                      <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>editado</Text>
-                    ) : null}
-                    {item.porBle ? (
-                      <Text style={[estilos.editado, { color: mio ? colores.botonTexto : colores.muted }]}>por cercanía</Text>
-                    ) : null}
-                    <Text style={[estilos.hora, { color: mio ? colores.botonTexto : colores.muted }]}>{hora(item.enviado_en)}</Text>
-                    {mio ? (
-                      item.estado === "fallido"
-                        ? (
-                            <View style={estilos.fallidoFila}>
-                              <Pressable onPress={() => reintentar(item)} hitSlop={8} style={estilos.reintentar}>
-                                <Text style={[estilos.reintentarTxt, { color: mio ? colores.botonTexto : colores.muted }]}>no enviado · reintentar</Text>
-                              </Pressable>
-                              <Pressable onPress={() => enviarPorBle(item)} hitSlop={8} style={estilos.reintentar}>
-                                <Text style={[estilos.reintentarTxt, { color: mio ? colores.botonTexto : colores.muted }]}>· cercanía</Text>
-                              </Pressable>
-                            </View>
-                          )
-                        : item.estado === "enviando"
-                          ? <Reloj color={GRIS_VISTO} tamano={11} />
-                          : <Visto color={item.leido_en ? colores.botonTexto : GRIS_VISTO} dos={!!item.entregado_en || !!item.leido_en} tamano={11} />
-                    ) : null}
-                  </View>
-                )}
-              </BurbujaMedible>
-
-              {reacciones.length > 0 ? (
-                <View style={[estilos.reaccionesFila, mio ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" }]}>
-                  {reacciones.map(([emoji, n]) => (
-                    <View key={emoji} style={[estilos.chip, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-                      <Text style={estilos.chipTxt}>{emoji}{n > 1 ? ` ${n}` : ""}</Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
+                onResponder={borrado ? undefined : () => responder(item)}
+                seleccionando={seleccionando}
+                onToggle={() => alternarSeleccion(item)}
+                resaltada={elegido}
+                aparecer={reciente}
+              />
 
               {detalle === item.id && !String(item.id).startsWith("local-") ? (
                 <Text style={[estilos.visto, mio ? { alignSelf: "flex-end" } : { alignSelf: "flex-start" }, { color: colores.muted }]}>
@@ -1469,6 +1405,11 @@ export default function Chat()
           style={[estilos.bajar, { backgroundColor: colores.surface, borderColor: colores.borde }]}
         >
           <Text style={{ color: colores.texto, fontSize: 18 }}>{"↓"}</Text>
+          {nuevosAbajo > 0 ? (
+            <View style={[estilos.bajarBadge, { backgroundColor: colores.botonFondo }]}>
+              <Text style={[estilos.bajarBadgeTxt, { color: colores.botonTexto }]}>{nuevosAbajo > 99 ? "99+" : nuevosAbajo}</Text>
+            </View>
+          ) : null}
         </Pressable>
       ) : null}
 
@@ -1499,82 +1440,44 @@ export default function Chat()
         </View>
       ) : null}
 
-      {!seleccionando && respondiendo ? (
-        <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
-            Respondiendo: {respondiendo.texto}
-          </Text>
-          <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
-            <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      {!seleccionando && editando ? (
-        <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <Text style={[estilos.avisoTxt, { color: colores.muted }]}>Editando mensaje</Text>
-          <Pressable
-            onPress={() =>
-            {
-              setEditando(null);
-              setTexto("");
-            }}
-            hitSlop={8}
-          >
-            <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
-          </Pressable>
-        </View>
-      ) : null}
-
       {!seleccionando ? (
-      <View style={[estilos.inputFila, { borderTopColor: colores.borde, marginBottom: tecladoAlto, paddingBottom: 12 + (tecladoAlto > 0 ? 0 : insets.bottom) }]}>
-        {!esWeb ? (
-          <Pressable
-            onPress={adjuntar}
-            disabled={subiendo || grabando}
-            hitSlop={6}
-            style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
-          >
-            <Clip color={colores.muted} tamano={20} />
-          </Pressable>
-        ) : null}
-        {!esWeb ? (
-          <Pressable
-            onPress={() => setStickers(true)}
-            disabled={subiendo || grabando}
-            hitSlop={6}
-            style={({ pressed }) => [estilos.clip, { opacity: subiendo || grabando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
-          >
-            <Carita color={colores.muted} tamano={20} />
-          </Pressable>
-        ) : null}
-        <TextInput
-          value={texto}
-          onChangeText={escribir}
-          placeholder={grabando ? "Grabando…" : "Mensaje"}
-          placeholderTextColor={grabando ? colores.error : colores.placeholder}
-          editable={!grabando}
-          multiline
-          style={[estilos.campo, { backgroundColor: colores.surface, borderColor: colores.borde, color: colores.texto }]}
-        />
-        {texto.trim() || editando || esWeb ? (
-          <Pressable
-            onPress={enviar}
-            disabled={esWeb && !texto.trim() && !editando}
-            style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo, opacity: esWeb && !texto.trim() && !editando ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
-          >
-            {editando ? <Check color={colores.botonTexto} tamano={18} /> : <Flecha color={colores.botonTexto} tamano={18} />}
-          </Pressable>
-        ) : (
-          <Pressable
-            onPress={grabarToggle}
-            disabled={subiendo}
-            style={({ pressed }) => [estilos.enviar, { backgroundColor: grabando ? colores.error : colores.botonFondo }, pressed && estilos.enviarPresionado]}
-          >
-            <Microfono color={colores.botonTexto} tamano={18} />
-          </Pressable>
-        )}
-      </View>
+        <BarraEntrada
+          valor={texto}
+          onCambiar={escribir}
+          onEnviar={enviar}
+          onAdjuntar={adjuntar}
+          onSticker={() => setStickers(true)}
+          onMic={grabarToggle}
+          grabando={grabando}
+          subiendo={subiendo}
+          editando={!!editando}
+        >
+          {respondiendo ? (
+            <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+              <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
+                Respondiendo: {respondiendo.texto}
+              </Text>
+              <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
+                <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {editando ? (
+            <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+              <Text style={[estilos.avisoTxt, { color: colores.muted }]}>Editando mensaje</Text>
+              <Pressable
+                onPress={() =>
+                {
+                  setEditando(null);
+                  setTexto("");
+                }}
+                hitSlop={8}
+              >
+                <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+        </BarraEntrada>
       ) : null}
 
       <AccionesMensaje
@@ -1735,6 +1638,19 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  bajarBadge:
+  {
+    position: "absolute",
+    top: -7,
+    right: -7,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bajarBadgeTxt: { fontSize: 11, fontFamily: fuentes.semibold },
   aviso:
   {
     flexDirection: "row",

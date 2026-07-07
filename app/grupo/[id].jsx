@@ -12,7 +12,7 @@ import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { marcarVisto } from "../../lib/grupoVisto";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { guardarMedia } from "../../lib/descargas";
-import { hora, mismoDia, etiquetaDia } from "../../lib/fechas";
+import { aFecha, hora, mismoDia, etiquetaDia } from "../../lib/fechas";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
@@ -625,7 +625,9 @@ export default function GrupoChat()
                 reacciones={item.reacciones}
                 onMenu={(coords) => setSel({ mensaje: item, ...coords })}
                 onPress={item.estado === "fallido" ? () => reintentar(item) : undefined}
+                onResponder={item.borrado ? undefined : () => responder(item)}
                 resaltada={sel && sel.mensaje.id === item.id}
+                aparecer={!esWeb && Date.now() - aFecha(item.enviado_en).getTime() < 2500}
               />
             </View>
           );

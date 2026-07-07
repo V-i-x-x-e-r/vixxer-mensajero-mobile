@@ -5,9 +5,10 @@ import { useTeclado } from "../useTeclado";
 import { Clip } from "../Clip";
 import { Carita } from "../Carita";
 import { Flecha } from "../Flecha";
+import { Check } from "../Check";
 import { Microfono } from "../Microfono";
 
-export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker, onMic, grabando, subiendo, children })
+export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker, onMic, grabando, subiendo, editando, children })
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
@@ -15,6 +16,8 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
   const esWeb = Platform.OS === "web";
   const ocupado = subiendo || grabando;
   const hayTexto = !!valor.trim();
+  const mostrarEnviar = hayTexto || !!editando || esWeb || !onMic;
+  const enviarApagado = esWeb && !hayTexto && !editando;
 
   return (
     <View style={{ marginBottom: tecladoAlto }}>
@@ -49,9 +52,13 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
           editable={!grabando}
           style={[estilos.input, { color: colores.texto, backgroundColor: colores.surface, borderColor: colores.borde }]}
         />
-        {hayTexto || esWeb || !onMic ? (
-          <Pressable onPress={onEnviar} style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && estilos.presionado]}>
-            <Flecha color={colores.botonTexto} tamano={20} />
+        {mostrarEnviar ? (
+          <Pressable
+            onPress={onEnviar}
+            disabled={enviarApagado}
+            style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo, opacity: enviarApagado ? 0.4 : 1 }, pressed && estilos.presionado]}
+          >
+            {editando ? <Check color={colores.botonTexto} tamano={18} /> : <Flecha color={colores.botonTexto} tamano={20} />}
           </Pressable>
         ) : (
           <Pressable onPress={onMic} disabled={subiendo} style={({ pressed }) => [estilos.enviar, { backgroundColor: grabando ? colores.error : colores.botonFondo }, pressed && estilos.presionado]}>

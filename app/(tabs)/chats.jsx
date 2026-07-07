@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, TextInput, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
+import Animated, { LinearTransition } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
@@ -352,9 +353,10 @@ export default function Chats()
         </View>
       ) : null}
 
-      <FlatList
+      <Animated.FlatList
         data={mostrados}
         keyExtractor={(a) => a.id}
+        itemLayoutAnimation={LinearTransition.springify().damping(18)}
         windowSize={7}
         maxToRenderPerBatch={10}
         initialNumToRender={12}
