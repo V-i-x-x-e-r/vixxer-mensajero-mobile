@@ -1,12 +1,26 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Pressable, Modal, ActivityIndicator, StyleSheet } from "react-native";
-import { useVideoPlayer, VideoView } from "expo-video";
-import { encodeBase64 } from "tweetnacl-util";
-import * as api from "../lib/api";
-import { descifrarArchivo } from "../lib/crypto";
-import { escribirTemp } from "../lib/archivos";
-import { leerCache, guardarCache, leerDisco, guardarDisco } from "../lib/mediaCache";
+import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
+import { Image } from "expo-image";
+import { obtenerMedia } from "../lib/mediaRemota";
+import { leerCache, guardarCache } from "../lib/mediaCache";
+import { ajustarMedida, duracionCorta } from "../lib/mediaPreview";
+import { alProgreso } from "../lib/progresoMedia";
+import { AnilloProgreso } from "./AnilloProgreso";
 import { VisorVideo } from "./VisorVideo";
+
+const miniaturas = new Map();
+
+async function miniaturaDe(uri, clave)
+{
+  if (miniaturas.has(clave))
+  {
+    return miniaturas.get(clave);
+  }
+  const VideoThumbnails = require("expo-video-thumbnails");
+  const r = await VideoThumbnails.getThumbnailAsync(uri, { time: 0 });
+  miniaturas.set(clave, r.uri);
+  return r.uri;
+}
 
 function Play({ tamano = 52 })
 {
@@ -20,87 +34,85 @@ function Play({ tamano = 52 })
 export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cuadrado })
 {
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
+  const [poster, setPoster] = useState(() => miniaturas.get(media.path || media.local) || null);
+  const [progreso, setProgreso] = useState(null);
   const [abierto, setAbierto] = useState(false);
   const ref = useRef(null);
-  const player = useVideoPlayer(null, (p) =>
-  {
-    p.loop = false;
-    p.muted = true;
-  });
-
-  useEffect(() =>
-  {
-    if (media.local || uri)
-    {
-      return;
-    }
-    let activo = true;
-    (async () =>
-    {
-      try
-      {
-        const guardado = await leerDisco(media.path, "video/mp4");
-        if (guardado)
-        {
-          if (activo)
-          {
-            setUri(guardado);
-          }
-          return;
-        }
-        const { url } = await api.urlMedia(media.path);
-        const resp = await fetch(url);
-        const bytes = new Uint8Array(await resp.arrayBuffer());
-        const claro = descifrarArchivo(encodeBase64(bytes), media.k, media.n);
-        if (claro)
-        {
-          const archivo = (await guardarDisco(media.path, claro, "video/mp4")) || (await escribirTemp(claro, "mp4"));
-          guardarCache(media.path, archivo);
-          if (activo)
-          {
-            setUri(archivo);
-          }
-        }
-      }
-      catch (e)
-      {
-      }
-    })();
-    return () => { activo = false; };
-  }, [media.path]);
 
   useEffect(() =>
   {
     if (uri)
     {
-      player.replace(uri);
+      return;
     }
+    let activo = true;
+    obtenerMedia(media, (p) => activo && setProgreso(p))
+      .then((final) =>
+      {
+        if (activo)
+        {
+          guardarCache(media.path, final);
+          setUri(final);
+        }
+      })
+      .catch(() => {});
+    return () => { activo = false; };
+  }, [media.path]);
+
+  useEffect(() =>
+  {
+    if (!uri || poster)
+    {
+      return;
+    }
+    let activo = true;
+    miniaturaDe(uri, media.path || media.local)
+      .then((t) => activo && setPoster(t))
+      .catch(() => {});
+    return () => { activo = false; };
   }, [uri]);
 
-  const dimCuadrado = cuadrado ? { width: cuadrado, height: cuadrado, borderRadius: 10 } : null;
-
-  if (!uri)
+  useEffect(() =>
   {
-    return (
-      <View style={[estilos.caja, dimCuadrado]}>
-        <ActivityIndicator color={color} />
-      </View>
-    );
-  }
+    if (!media.pid)
+    {
+      return;
+    }
+    return alProgreso(media.pid, setProgreso);
+  }, [media.pid]);
+
+  const marco = cuadrado
+    ? { width: cuadrado, height: cuadrado, borderRadius: 10 }
+    : ajustarMedida(media.w, media.h, 240, 300) || { width: 240, height: 300 };
+  const subiendo = media.pid && progreso != null && progreso < 1;
+  const ocupado = !uri || subiendo;
+  const dur = duracionCorta(media.dur);
 
   return (
     <>
       <Pressable
         ref={ref}
-        onPress={() => (seleccionando ? onToggle?.() : setAbierto(true))}
+        onPress={() => (seleccionando ? onToggle?.() : uri && !subiendo ? setAbierto(true) : null)}
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
         delayLongPress={250}
-        style={[estilos.miniatura, dimCuadrado]}
+        style={[estilos.miniatura, marco]}
       >
-        <VideoView player={player} style={estilos.video} contentFit="cover" nativeControls={false} pointerEvents="none" />
+        <Image
+          source={poster ? { uri: poster } : null}
+          placeholder={media.prev ? { uri: media.prev } : null}
+          placeholderContentFit="cover"
+          contentFit="cover"
+          transition={180}
+          style={estilos.llena}
+        />
         <View style={estilos.capa} pointerEvents="none">
-          <Play tamano={cuadrado ? 30 : 52} />
+          {ocupado ? <AnilloProgreso progreso={progreso} color="#fff" /> : <Play tamano={cuadrado ? 30 : 52} />}
         </View>
+        {dur && !cuadrado ? (
+          <View style={estilos.duracion} pointerEvents="none">
+            <Text style={estilos.duracionTxt}>{dur}</Text>
+          </View>
+        ) : null}
       </Pressable>
       <Modal visible={abierto} transparent animationType="fade" onRequestClose={() => setAbierto(false)}>
         <VisorVideo uri={uri} onCerrar={() => setAbierto(false)} />
@@ -110,11 +122,21 @@ export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cu
 }
 
 const estilos = StyleSheet.create({
-  miniatura: { width: 240, height: 300, borderRadius: 14, overflow: "hidden" },
-  video: { width: "100%", height: "100%", backgroundColor: "#000" },
-  caja: { width: 240, height: 300, borderRadius: 14, backgroundColor: "#000", alignItems: "center", justifyContent: "center" },
+  miniatura: { borderRadius: 14, overflow: "hidden", backgroundColor: "#000" },
+  llena: { width: "100%", height: "100%" },
   capa: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center" },
   boton: { backgroundColor: "rgba(0,0,0,0.45)", alignItems: "center", justifyContent: "center" },
+  duracion:
+  {
+    position: "absolute",
+    top: 8,
+    left: 8,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  duracionTxt: { color: "#fff", fontSize: 11 },
   triangulo:
   {
     width: 0,

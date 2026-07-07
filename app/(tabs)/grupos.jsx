@@ -170,6 +170,9 @@ export default function Grupos()
       <FlatList
         data={grupos}
         keyExtractor={(g) => g.id}
+        windowSize={7}
+        maxToRenderPerBatch={10}
+        initialNumToRender={12}
         style={estilos.lista}
         refreshControl={
           <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.texto]} />

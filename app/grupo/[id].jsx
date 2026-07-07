@@ -378,7 +378,14 @@ export default function GrupoChat()
     }
     for (const a of r.assets)
     {
-      await enviarMedia({ uri: a.uri, tipo: a.type === "video" ? "video" : "img", mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg") });
+      await enviarMedia({
+        uri: a.uri,
+        tipo: a.type === "video" ? "video" : "img",
+        mime: a.mimeType || (a.type === "video" ? "video/mp4" : "image/jpeg"),
+        ancho: a.width,
+        alto: a.height,
+        dur: a.duration ? Math.round(a.duration / 1000) : undefined,
+      });
     }
   }
 
@@ -573,6 +580,9 @@ export default function GrupoChat()
         ref={lista}
         data={datos}
         keyExtractor={(m) => m.id}
+        windowSize={9}
+        maxToRenderPerBatch={8}
+        initialNumToRender={14}
         inverted={!esWeb}
         contentContainerStyle={estilos.lista}
         onEndReached={cargarMas}
