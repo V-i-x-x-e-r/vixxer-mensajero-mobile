@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, Animated, Easing, Alert, Linking, Dimensions, StyleSheet } from "react-native";
+import { View, Text, Pressable, ScrollView, Animated, Easing, Alert, Linking, Dimensions, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
 import Svg, { Circle, Line } from "react-native-svg";
 import { estadoCercania, alCambio, listaPeers, cercaniaSoportada, activarModo } from "../lib/cercania";
@@ -7,7 +7,7 @@ import { estadisticasMesh } from "../lib/bleMensajeria";
 import { obtenerSocket } from "../lib/socket";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
-import { Logo } from "../components/Logo";
+import { LogoPendulo } from "../components/LogoPendulo";
 
 const AZUL = "#38BDF8";
 const VERDE = "#22C55E";
@@ -115,7 +115,7 @@ export default function Cercania()
         : { texto: "Modo cercanía apagado", detalle: "Actívalo en Ajustes → Sin internet para mensajear sin red.", color: colores.muted };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colores.fondo }}>
+    <ScrollView style={{ flex: 1, backgroundColor: colores.fondo }} contentContainerStyle={{ paddingBottom: 30 }}>
       <Stack.Screen options={{ title: "Radar de cercanía" }} />
 
       <View style={estilos.zonaRadar}>
@@ -132,6 +132,7 @@ export default function Cercania()
             <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: rotacion }] }]} pointerEvents="none">
               <View style={[estilos.barrido, { left: centro - 1, height: centro - 8, backgroundColor: salida.color }]} />
               <View style={[estilos.estela, { left: centro - 5, height: centro - 8, backgroundColor: salida.color }]} />
+              <View style={[estilos.estela, { left: centro - 12, width: 24, height: centro - 8, opacity: 0.05, backgroundColor: salida.color }]} />
             </Animated.View>
           ) : null}
 
@@ -179,7 +180,7 @@ export default function Cercania()
           })}
 
           <Pressable onPress={alternarRadar} style={[estilos.centro, { left: centro - 24, top: centro - 24, backgroundColor: colores.fondo, borderColor: salida.color }]}>
-            <Logo alto={22} />
+            <LogoPendulo alto={22} velocidad={1300} quieto={!cerca.activo} colorBarra={colores.texto} />
           </Pressable>
         </View>
 
@@ -248,7 +249,7 @@ export default function Cercania()
           Este build no trae el módulo de cercanía.
         </Text>
       ) : null}
-    </View>
+    </ScrollView>
   );
 }
 

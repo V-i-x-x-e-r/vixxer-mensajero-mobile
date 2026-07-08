@@ -36,7 +36,7 @@ export function VisorVideo({ uri, onCerrar })
       setPos(player.currentTime || 0);
       setDur(player.duration || 0);
       setPausado(!player.playing);
-    }, 120);
+    }, 80);
     return () => clearInterval(t);
   }, [player]);
 

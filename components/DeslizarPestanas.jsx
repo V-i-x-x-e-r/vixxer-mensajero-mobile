@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Gesture, GestureDetector, Directions } from "react-native-gesture-handler";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming } from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
 import { router, useFocusEffect } from "expo-router";
 
 const ORDEN = ["chats", "grupos", "amigos"];
@@ -16,10 +16,10 @@ export function DeslizarPestanas({ actual, children })
   {
     if (direccion !== 0)
     {
-      tx.value = 30 * direccion;
-      op.value = 0.35;
-      tx.value = withTiming(0, { duration: 230 });
-      op.value = withTiming(1, { duration: 230 });
+      tx.value = 64 * direccion;
+      op.value = 0.25;
+      tx.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+      op.value = withTiming(1, { duration: 240 });
       direccion = 0;
     }
   }, []));

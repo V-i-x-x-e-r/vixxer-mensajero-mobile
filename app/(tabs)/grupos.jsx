@@ -205,7 +205,7 @@ export default function Grupos()
         initialNumToRender={12}
         style={estilos.lista}
         refreshControl={
-          <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.texto]} />
+          <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.texto} colors={[colores.texto]} progressBackgroundColor={colores.surface} />
         }
         ListEmptyComponent={
           <EstadoLista
