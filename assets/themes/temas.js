@@ -28,6 +28,21 @@ export const oscuro =
   error: "#F87171",
 };
 
+export const colorido =
+{
+  fondo: "#FBFCF9",
+  surface: "#F1F7F1",
+  texto: "#14201A",
+  muted: "#7C8A80",
+  borde: "#DCE8DC",
+  bordeFoco: "#17A15F",
+  botonFondo: "#17A15F",
+  botonTexto: "#FFFFFF",
+  enlace: "#3E7BFA",
+  placeholder: "#9AA79E",
+  error: "#DC2626",
+};
+
 export const barras = ["#35D487", "#65A7FF", "#FFD166"];
 
 export const fuentes =

@@ -77,10 +77,10 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
       <View style={[estilos.caja, estilos.centro, marco]}>
         {error ? (
           <Pressable onPress={reintentar} style={estilos.centro}>
-            <Text style={[estilos.reintentar, { color }]}>Reintentar</Text>
+            <Text style={estilos.reintentar}>Reintentar</Text>
           </Pressable>
         ) : (
-          <ActivityIndicator color={color} />
+          <ActivityIndicator color="#8E8E93" />
         )}
       </View>
     );

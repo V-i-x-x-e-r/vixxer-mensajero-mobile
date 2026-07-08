@@ -81,7 +81,7 @@ export function AdjuntoAudio({ media, color })
     setVelocidad(sig);
     try
     {
-      player.setPlaybackRate(VELOCIDADES[sig]);
+      player.setPlaybackRate(VELOCIDADES[sig], "high");
     }
     catch (e)
     {

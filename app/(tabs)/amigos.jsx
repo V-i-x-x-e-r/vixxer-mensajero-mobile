@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import * as api from "../../lib/api";
 import { useTema } from "../../components/tema";
+import { DeslizarPestanas } from "../../components/DeslizarPestanas";
 import { fuentes } from "../../assets/themes/temas";
 import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
@@ -100,6 +101,7 @@ export default function AmigosPantalla()
   }
 
   return (
+    <DeslizarPestanas actual="amigos">
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
       {sel ? (
         <View style={estilos.cabecera}>
@@ -185,6 +187,7 @@ export default function AmigosPantalla()
         onCancelar={() => setConfirmar(false)}
       />
     </View>
+    </DeslizarPestanas>
   );
 }
 

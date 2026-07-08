@@ -22,6 +22,8 @@ export function useEnvioMedia({ miId, setMensajes, enviarPlano, alPersistir })
       dur: actual.dur,
       cap: actual.cap,
       wf: actual.wf,
+      nombre: actual.nombre,
+      peso: actual.peso,
       pid: localId,
     });
     pendientes.current[localId] = actual;
@@ -53,6 +55,8 @@ export function useEnvioMedia({ miId, setMensajes, enviarPlano, alPersistir })
         dur: actual.dur,
         cap: actual.cap,
         wf: actual.wf,
+        nombre: actual.nombre,
+        peso: actual.peso,
         prev: extra.prev,
       });
       const r = await enviarPlano(plano, localId);

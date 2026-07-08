@@ -18,7 +18,7 @@ import { PREFIJO_VINCULO } from "../components/VincularDispositivo";
 
 export default function Recuperar()
 {
-  const { colores } = useTema();
+  const { coloresAuth: colores } = useTema();
   const insets = useSafeAreaInsets();
   const [codigo, setCodigo] = useState("");
   const [error, setError] = useState("");

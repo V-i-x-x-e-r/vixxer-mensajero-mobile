@@ -16,7 +16,7 @@ import { RespaldoCodigo } from "../components/RespaldoCodigo";
 
 export default function Registro()
 {
-  const { colores } = useTema();
+  const { coloresAuth: colores } = useTema();
   const insets = useSafeAreaInsets();
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");

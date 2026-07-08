@@ -10,6 +10,7 @@ import { leerVistos } from "../../lib/grupoVisto";
 import { leerCacheGrupos, guardarCacheGrupos } from "../../lib/chatCache";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
+import { DeslizarPestanas } from "../../components/DeslizarPestanas";
 import { fuentes } from "../../assets/themes/temas";
 import { Presionable } from "../../components/Presionable";
 import { Avatar } from "../../components/Avatar";
@@ -44,6 +45,7 @@ function resumen(texto)
     if (texto.includes("\"t\":\"video\"")) { return "Video"; }
     if (texto.includes("\"t\":\"audio\"")) { return "Audio"; }
     if (texto.includes("\"t\":\"sticker\"")) { return "Sticker"; }
+    if (texto.includes("\"t\":\"file\"")) { return "Documento"; }
   }
   return texto;
 }
@@ -185,6 +187,7 @@ export default function Grupos()
   }
 
   return (
+    <DeslizarPestanas actual="grupos">
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
       <View style={estilos.cabecera}>
         <Text style={[estilos.titulo, { color: colores.texto }]}>Grupos</Text>
@@ -272,6 +275,7 @@ export default function Grupos()
         onCancelar={() => { setConfirmarSalir(false); setSel(null); }}
       />
     </View>
+    </DeslizarPestanas>
   );
 }
 

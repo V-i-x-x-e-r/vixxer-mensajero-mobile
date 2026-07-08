@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, KeyboardAvoidingView, Platform, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
@@ -10,7 +10,6 @@ import { cerrarSesion } from "../lib/storage";
 import { desconectarSocket } from "../lib/socket";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
-import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
 import { CodigoQR } from "../components/CodigoQR";
@@ -28,7 +27,7 @@ const PERFIL_CACHE = "vixxer_perfil";
 
 export default function Ajustes()
 {
-  const { colores } = useTema();
+  const { colores, nombre: nombreTema, elegirTema } = useTema();
   const [usuario, setUsuario] = useState("");
   const [codigo, setCodigo] = useState("");
   const [avatar, setAvatar] = useState(null);
@@ -92,10 +91,11 @@ export default function Ajustes()
   async function alternarCercania(valor)
   {
     setCercania(valor);
-    const activo = await activarModo(valor);
-    if (valor && !activo)
+    const r = await activarModo(valor);
+    if (valor && !r.ok)
     {
       setCercania(false);
+      Alert.alert("No se pudo activar", r.razon || "Inténtalo de nuevo.");
     }
   }
 
@@ -356,8 +356,18 @@ export default function Ajustes()
       <Seccion titulo="APARIENCIA" />
       <View style={tarjeta}>
         <View style={estilos.fila}>
-          <Text style={[estilos.etiqueta, { color: colores.texto }]}>Tema claro / oscuro</Text>
-          <BotonTema />
+          <Text style={[estilos.etiqueta, { color: colores.texto }]}>Tema</Text>
+          <View style={estilos.temas}>
+            {[["claro", "Claro"], ["oscuro", "Oscuro"], ["colorido", "Colorido"]].map(([clave, etiqueta]) => (
+              <Pressable
+                key={clave}
+                onPress={() => elegirTema(clave)}
+                style={[estilos.temaChip, { borderColor: colores.borde, backgroundColor: nombreTema === clave ? colores.botonFondo : "transparent" }]}
+              >
+                <Text style={[estilos.temaChipTxt, { color: nombreTema === clave ? colores.botonTexto : colores.texto }]}>{etiqueta}</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </View>
 
@@ -500,6 +510,9 @@ const estilos = StyleSheet.create({
   seccion: { fontSize: 12, fontWeight: "600", letterSpacing: 1, marginTop: 24, marginBottom: 8 },
   tarjeta: { borderWidth: 1, borderRadius: 14, overflow: "hidden" },
   fila: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, minHeight: 52 },
+  temas: { flexDirection: "row", gap: 6 },
+  temaChip: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5 },
+  temaChipTxt: { fontSize: 12, fontFamily: fuentes.media },
   filaDerecha: { flexDirection: "row", alignItems: "center", gap: 8 },
   etiqueta: { fontSize: 15 },
   valor: { fontSize: 15, fontFamily: fuentes.media },
