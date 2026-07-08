@@ -32,6 +32,7 @@ import { Pin } from "../../components/Pin";
 import { Visto } from "../../components/Visto";
 import { Clip } from "../../components/Clip";
 import { Documento } from "../../components/Documento";
+import { Vidrio } from "../../components/Vidrio";
 import { PrevioMedia } from "../../components/chat/PrevioMedia";
 
 function leerMedia(texto)
@@ -53,7 +54,7 @@ function leerMedia(texto)
 
 export default function GrupoChat()
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const { id, nombre } = useLocalSearchParams();
   const [mensajes, setMensajes] = useState([]);
   const [borrador, setBorrador] = useState("");
@@ -717,7 +718,7 @@ export default function GrupoChat()
             <View>
               <Text style={[estilos.encabezadoTxt, { color: colores.texto }]}>{grupo?.nombre || nombre || "Grupo"}</Text>
               {escribiendoDe ? (
-                <Text style={[estilos.encabezadoSub, { color: colores.botonFondo }]}>{escribiendoDe} escribe…</Text>
+                <Text style={[estilos.encabezadoSub, { color: colores.exito || colores.botonFondo }]}>{escribiendoDe} escribe…</Text>
               ) : miembros.length ? (
                 <Text style={[estilos.encabezadoSub, { color: colores.muted }]}>{miembros.length} miembros</Text>
               ) : null}
@@ -880,7 +881,8 @@ export default function GrupoChat()
 
       <Modal transparent visible={adjuntando} animationType="fade" onRequestClose={() => setAdjuntando(false)}>
         <Pressable style={estilos.adjFondo} onPress={() => setAdjuntando(false)}>
-          <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pressable>
+          <Vidrio tinte={oscuro ? "dark" : "light"} style={[estilos.adjHoja, { backgroundColor: `${colores.surface}E0`, borderColor: colores.borde }]}>
             <Pressable onPress={adjuntar} style={({ pressed }) => [estilos.adjItem, pressed && { opacity: 0.7 }]}>
               <Clip color={colores.texto} tamano={20} />
               <Text style={[estilos.adjTxt, { color: colores.texto }]}>Fotos y videos</Text>
@@ -889,6 +891,7 @@ export default function GrupoChat()
               <Documento color={colores.texto} tamano={20} />
               <Text style={[estilos.adjTxt, { color: colores.texto }]}>Documento</Text>
             </Pressable>
+          </Vidrio>
           </Pressable>
         </Pressable>
       </Modal>
@@ -965,7 +968,7 @@ const estilos = StyleSheet.create({
   toast: { position: "absolute", bottom: 96, alignSelf: "center", backgroundColor: "rgba(20,20,24,0.92)", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   toastTxt: { color: "#FFF", fontSize: 13 },
   adjFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-  adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26 },
+  adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26, overflow: "hidden" },
   adjItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 14 },
   adjTxt: { fontSize: 16, fontFamily: fuentes.media },
   sugerencias: { borderWidth: 1, borderRadius: 12, marginHorizontal: 12, marginBottom: 6, paddingVertical: 4 },

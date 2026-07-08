@@ -136,7 +136,11 @@ export function Burbuja({ mio, autor, cita, citaMini, borrado, media, texto, met
   return (
     <Contenedor
       entering={aparecer ? FadeInDown.duration(180) : undefined}
-      style={resaltada ? { backgroundColor: `${colores.botonFondo}1F`, borderLeftWidth: 3, borderLeftColor: colores.botonFondo, borderRadius: 10 } : null}
+      style={resaltada
+        ? mio
+          ? { backgroundColor: `${colores.botonFondo}1F`, borderRightWidth: 3, borderRightColor: colores.botonFondo, borderRadius: 10 }
+          : { backgroundColor: `${colores.botonFondo}1F`, borderLeftWidth: 3, borderLeftColor: colores.botonFondo, borderRadius: 10 }
+        : null}
     >
       {autor ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{autor}</Text> : null}
       <BurbujaMedible

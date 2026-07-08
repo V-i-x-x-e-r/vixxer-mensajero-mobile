@@ -55,6 +55,7 @@ import { resumenMensaje, miniaturaDe } from "../../lib/resumen";
 import { Image as ImagenExpo } from "expo-image";
 import { Clip } from "../../components/Clip";
 import { Documento } from "../../components/Documento";
+import { Vidrio } from "../../components/Vidrio";
 import { tick } from "../../lib/haptica";
 
 const GRIS_VISTO = "#8E8E93";
@@ -97,7 +98,7 @@ function existente(lista, m)
 
 export default function Chat()
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const insets = useSafeAreaInsets();
   const esWeb = Platform.OS === "web";
   const { id: otroId, usuario, avatar } = useLocalSearchParams();
@@ -1442,7 +1443,7 @@ export default function Chat()
           );
 
           return (
-            <View>
+            <Pressable onPress={seleccionando ? () => alternarSeleccion(item) : undefined} disabled={!seleccionando}>
               {nuevoDia ? (
                 <View style={estilos.dia}>
                   <Text style={[estilos.diaTxt, { color: colores.muted, backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -1474,7 +1475,7 @@ export default function Chat()
                   {detalleTexto(item, mio)}
                 </Text>
               ) : null}
-            </View>
+            </Pressable>
           );
         }}
       />
@@ -1657,7 +1658,8 @@ export default function Chat()
 
       <Modal transparent visible={borrandoSel} animationType="fade" onRequestClose={() => setBorrandoSel(false)}>
         <Pressable style={estilos.adjFondo} onPress={() => setBorrandoSel(false)}>
-          <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pressable>
+          <Vidrio tinte={oscuro ? "dark" : "light"} style={[estilos.adjHoja, { backgroundColor: `${colores.surface}E0`, borderColor: colores.borde }]}>
             <Text style={[estilos.adjTitulo, { color: colores.muted }]}>
               Eliminar {seleccionados.length} mensaje{seleccionados.length === 1 ? "" : "s"}
             </Text>
@@ -1672,13 +1674,15 @@ export default function Chat()
             <Pressable onPress={() => setBorrandoSel(false)} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
               <Text style={[estilos.adjTxt, { color: colores.muted }]}>Cancelar</Text>
             </Pressable>
+          </Vidrio>
           </Pressable>
         </Pressable>
       </Modal>
 
       <Modal transparent visible={adjuntando} animationType="fade" onRequestClose={() => setAdjuntando(false)}>
         <Pressable style={estilos.adjFondo} onPress={() => setAdjuntando(false)}>
-          <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pressable>
+          <Vidrio tinte={oscuro ? "dark" : "light"} style={[estilos.adjHoja, { backgroundColor: `${colores.surface}E0`, borderColor: colores.borde }]}>
             <Pressable onPress={adjuntar} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
               <Clip color={colores.texto} tamano={20} />
               <Text style={[estilos.adjTxt, { color: colores.texto }]}>Fotos y videos</Text>
@@ -1687,6 +1691,7 @@ export default function Chat()
               <Documento color={colores.texto} tamano={20} />
               <Text style={[estilos.adjTxt, { color: colores.texto }]}>Documento</Text>
             </Pressable>
+          </Vidrio>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1736,7 +1741,7 @@ const estilos = StyleSheet.create({
   fallidoFila: { flexDirection: "row", alignItems: "center", gap: 6 },
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
   adjFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
-  adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26 },
+  adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26, overflow: "hidden" },
   adjItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 14 },
   adjTxt: { fontSize: 16, fontFamily: fuentes.media },
   adjTitulo: { fontSize: 12, fontFamily: fuentes.semibold, letterSpacing: 1, textTransform: "uppercase", paddingHorizontal: 24, paddingTop: 8, paddingBottom: 4 },

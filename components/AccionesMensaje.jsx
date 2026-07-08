@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Modal, View, Text, TextInput, Pressable, StyleSheet, Dimensions } from "react-native";
 import { useTema } from "./tema";
+import { Vidrio } from "./Vidrio";
 import { fuentes } from "../assets/themes/temas";
 import { Responder } from "./Responder";
 import { Reenviar } from "./Reenviar";
@@ -27,7 +28,7 @@ function Accion({ icono, etiqueta, onPress, color })
 
 export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onResponder, onReenviar, onSeleccionar, onCopiar, onEditar, onBorrar, onBorrarLocal, onInfo, onDescargar, onFijar, onCerrar })
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const entrada = useRef(null);
   const [emoji, setEmoji] = useState("");
 
@@ -79,7 +80,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
   return (
     <Modal transparent visible animationType="fade" onRequestClose={onCerrar}>
       <Pressable style={estilos.fondo} onPress={onCerrar}>
-        <View style={[estilos.barra, { width: ancho, top, left, backgroundColor: colores.surface, borderColor: colores.borde }]}>
+        <Vidrio tinte={oscuro ? "dark" : "light"} style={[estilos.barra, { width: ancho, top, left, backgroundColor: `${colores.surface}E0`, borderColor: colores.borde }]}>
           {onReaccionar ? (
             <>
               <View style={estilos.reacciones}>
@@ -108,7 +109,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
             {onBorrarLocal ? <Accion icono={<Bote color={colores.texto} tamano={20} />} etiqueta="Para mí" onPress={() => onBorrarLocal(mensaje)} color={colores.texto} /> : null}
             {esMio && onBorrar ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
           </View>
-        </View>
+        </Vidrio>
 
         <TextInput
           ref={entrada}
@@ -129,6 +130,7 @@ const estilos = StyleSheet.create({
     position: "absolute",
     borderWidth: 1,
     borderRadius: 16,
+    overflow: "hidden",
     padding: 8,
     gap: 6,
     shadowColor: "#000",
