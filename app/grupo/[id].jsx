@@ -15,7 +15,8 @@ import { guardarMedia } from "../../lib/descargas";
 import { leerOcultos, ocultarMensaje } from "../../lib/ocultos";
 import { normalizarMuestras } from "../../lib/audioWave";
 import { aFecha, hora, mismoDia, etiquetaDia } from "../../lib/fechas";
-import { resumenMensaje } from "../../lib/resumen";
+import { resumenMensaje, miniaturaDe } from "../../lib/resumen";
+import { Image as ImagenExpo } from "expo-image";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
@@ -71,6 +72,7 @@ export default function GrupoChat()
   const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const estadoGrab = useAudioRecorderState(grabadora, 150);
   const muestras = useRef([]);
+  const durMs = useRef(0);
   const [ocultos, setOcultos] = useState(() => new Set());
   const [previo, setPrevio] = useState(null);
   const [adjuntando, setAdjuntando] = useState(false);
@@ -499,32 +501,10 @@ export default function GrupoChat()
     enviarMedia({ uri, tipo: "sticker", mime: "image/png" });
   }
 
-  async function grabarToggle()
+  async function iniciarGrabacion()
   {
     if (miembros.length === 0)
     {
-      return;
-    }
-    if (grabando)
-    {
-      setGrabando(false);
-      setSubiendo(true);
-      try
-      {
-        const dur = Math.max(1, Math.round(grabadora.currentTime || 0));
-        await grabadora.stop();
-        if (grabadora.uri)
-        {
-          await enviarMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4", dur, wf: normalizarMuestras(muestras.current) || undefined });
-        }
-      }
-      catch (e)
-      {
-      }
-      finally
-      {
-        setSubiendo(false);
-      }
       return;
     }
     const permiso = await AudioModule.requestRecordingPermissionsAsync();
@@ -535,12 +515,54 @@ export default function GrupoChat()
     try
     {
       muestras.current = [];
+      durMs.current = 0;
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
     }
     catch (e)
     {
+    }
+  }
+
+  async function terminarGrabacion(mandarAudio)
+  {
+    if (!grabando)
+    {
+      return;
+    }
+    setGrabando(false);
+    const ms = durMs.current || (grabadora.currentTime || 0) * 1000;
+    try
+    {
+      await grabadora.stop();
+    }
+    catch (e)
+    {
+    }
+    if (!mandarAudio)
+    {
+      return;
+    }
+    if (ms < 700)
+    {
+      mostrarAviso("Nota muy corta");
+      return;
+    }
+    setSubiendo(true);
+    try
+    {
+      if (grabadora.uri)
+      {
+        await enviarMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4", dur: Math.max(1, Math.round(ms / 1000)), wf: normalizarMuestras(muestras.current) || undefined });
+      }
+    }
+    catch (e)
+    {
+    }
+    finally
+    {
+      setSubiendo(false);
     }
   }
 
@@ -653,9 +675,16 @@ export default function GrupoChat()
 
   useEffect(() =>
   {
-    if (grabando && estadoGrab && typeof estadoGrab.metering === "number")
+    if (grabando && estadoGrab)
     {
-      muestras.current.push(estadoGrab.metering);
+      if (typeof estadoGrab.metering === "number")
+      {
+        muestras.current.push(estadoGrab.metering);
+      }
+      if (estadoGrab.durationMillis)
+      {
+        durMs.current = estadoGrab.durationMillis;
+      }
     }
   }, [estadoGrab, grabando]);
 
@@ -728,7 +757,8 @@ export default function GrupoChat()
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const citadoCrudo = item.respuestaTexto
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
-          const cita = citadoCrudo && leerMedia(citadoCrudo) ? "Multimedia" : citadoCrudo;
+          const citadoMedia = citadoCrudo ? leerMedia(citadoCrudo) : null;
+          const cita = citadoMedia ? resumenMensaje(citadoCrudo) : citadoCrudo;
           const lecturas = Object.keys(item.leido_por || {}).length;
           const todos = miembros.length > 1 && lecturas >= miembros.length - 1;
           const pie = (
@@ -759,6 +789,7 @@ export default function GrupoChat()
                 mio={mio}
                 autor={!mio ? (item.autor || nombres.current[item.remitente_id] || "…") : null}
                 cita={cita}
+                citaMini={miniaturaDe(citadoMedia)}
                 borrado={item.borrado}
                 media={item.borrado ? null : media}
                 texto={item.texto}
@@ -782,8 +813,11 @@ export default function GrupoChat()
         onEnviar={enviar}
         onAdjuntar={() => setAdjuntando(true)}
         onSticker={() => setStickers(true)}
-        onMic={grabarToggle}
         grabando={grabando}
+        tiempoGrabacion={Math.floor((estadoGrab?.durationMillis || 0) / 1000)}
+        onIniciarGrabacion={iniciarGrabacion}
+        onCancelarGrabacion={() => terminarGrabacion(false)}
+        onEnviarGrabacion={() => terminarGrabacion(true)}
         subiendo={subiendo}
       >
         {sugerencias.length > 0 ? (
@@ -798,6 +832,9 @@ export default function GrupoChat()
         ) : null}
         {respondiendo ? (
           <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            {miniaturaDe(leerMedia(respondiendo.texto)) ? (
+              <ImagenExpo source={{ uri: miniaturaDe(leerMedia(respondiendo.texto)) }} contentFit="cover" style={estilos.avisoMini} />
+            ) : null}
             <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>Respondiendo: {resumenMensaje(respondiendo.texto)}</Text>
             <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
               <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
@@ -923,6 +960,7 @@ const estilos = StyleSheet.create({
   fijadoTxt: { flex: 1, fontSize: 13 },
   pieTxt: { fontSize: 10 },
   aviso: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 10, marginHorizontal: 12, marginBottom: 6, paddingHorizontal: 12, paddingVertical: 8 },
+  avisoMini: { width: 32, height: 32, borderRadius: 6 },
   avisoTxt: { flex: 1, fontSize: 13 },
   toast: { position: "absolute", bottom: 96, alignSelf: "center", backgroundColor: "rgba(20,20,24,0.92)", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   toastTxt: { color: "#FFF", fontSize: 13 },

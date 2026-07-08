@@ -9,6 +9,7 @@ import { TarjetaEnlace } from "../TarjetaEnlace";
 import { extraerUrl } from "../../lib/enlaces";
 import { Responder } from "../Responder";
 import { tick } from "../../lib/haptica";
+import { Image as ImagenExpo } from "expo-image";
 
 const PressableAnimado = Animated.createAnimatedComponent(Pressable);
 const UMBRAL = 30;
@@ -122,12 +123,14 @@ function TextoMensaje({ texto, mio, conMenciones, colores })
   );
 }
 
-export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reacciones, onMenu, onPress, onResponder, seleccionando, onToggle, resaltada, aparecer, conMenciones })
+export function Burbuja({ mio, autor, cita, citaMini, borrado, media, texto, meta, reacciones, onMenu, onPress, onResponder, seleccionando, onToggle, resaltada, aparecer, conMenciones })
 {
   const { colores } = useTema();
   const grupos = agrupar(reacciones);
   const urlEnlace = !media && !borrado && typeof texto === "string" ? extraerUrl(texto) : null;
-  const mediaSolo = media && (media.t === "img" || media.t === "video" || media.t === "sticker") && !borrado && !cita && !media.cap;
+  const mediaVisual = media && (media.t === "img" || media.t === "video" || media.t === "sticker");
+  const mediaSolo = mediaVisual && !borrado && !cita && !media.cap;
+  const mediaConTexto = mediaVisual && !borrado && !cita && !!media.cap;
   const Contenedor = aparecer ? Animated.View : View;
 
   return (
@@ -144,16 +147,27 @@ export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reaccio
           estilos.burbuja,
           mediaSolo
             ? { alignSelf: mio ? "flex-end" : "flex-start", paddingHorizontal: 0, paddingVertical: 0, overflow: "hidden" }
-            : mio
+            : mediaConTexto
+              ? {
+                  alignSelf: mio ? "flex-end" : "flex-start",
+                  paddingHorizontal: 4,
+                  paddingVertical: 4,
+                  overflow: "hidden",
+                  backgroundColor: mio ? colores.botonFondo : colores.surface,
+                  borderWidth: mio ? 0 : 1,
+                  borderColor: colores.borde,
+                }
+              : mio
               ? { alignSelf: "flex-end", backgroundColor: colores.botonFondo }
               : { alignSelf: "flex-start", backgroundColor: colores.surface, borderWidth: 1, borderColor: colores.borde },
         ]}
       >
         {cita ? (
           <View style={[estilos.cita, { borderColor: mio ? colores.botonTexto : colores.borde }]}>
-            <Text numberOfLines={1} style={{ color: mio ? colores.botonTexto : colores.muted, fontSize: 13, opacity: 0.8 }}>
+            <Text numberOfLines={2} style={{ flex: 1, color: mio ? colores.botonTexto : colores.muted, fontSize: 13, opacity: 0.8 }}>
               {cita}
             </Text>
+            {citaMini ? <ImagenExpo source={{ uri: citaMini }} contentFit="cover" style={estilos.citaMini} /> : null}
           </View>
         ) : null}
 
@@ -170,7 +184,9 @@ export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reaccio
         {urlEnlace ? <TarjetaEnlace url={urlEnlace} claro={mio} /> : null}
 
         {media && media.cap && !borrado ? (
-          <Text style={[estilos.caption, { color: mio ? colores.botonTexto : colores.texto }]}>{media.cap}</Text>
+          <Text style={[estilos.caption, mediaConTexto && estilos.captionMedia, { color: mio ? colores.botonTexto : colores.texto }]}>
+            {media.cap}
+          </Text>
         ) : null}
 
         {meta ? (
@@ -198,8 +214,10 @@ export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reaccio
 const estilos = StyleSheet.create({
   autor: { fontSize: 12, fontFamily: fuentes.semibold, marginLeft: 6, marginBottom: 2 },
   burbuja: { maxWidth: "80%", borderRadius: 16, paddingHorizontal: 14, paddingVertical: 9 },
-  cita: { borderLeftWidth: 3, paddingLeft: 8, marginBottom: 6, opacity: 0.9 },
-  caption: { fontSize: 14, marginTop: 6, paddingHorizontal: 0 },
+  cita: { flexDirection: "row", alignItems: "center", gap: 8, borderLeftWidth: 3, paddingLeft: 8, marginBottom: 6, opacity: 0.9, minWidth: 120 },
+  citaMini: { width: 36, height: 36, borderRadius: 7 },
+  caption: { fontSize: 14, marginTop: 6 },
+  captionMedia: { paddingHorizontal: 7, paddingTop: 5, paddingBottom: 2, marginTop: 0 },
   meta: { flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: 5, marginTop: 3 },
   metaMedia:
   {
