@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, KeyboardAvoidingView, Platform, Alert, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, ScrollView, Modal, KeyboardAvoidingView, Platform, Alert, Linking, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
@@ -95,7 +95,10 @@ export default function Ajustes()
     if (valor && !r.ok)
     {
       setCercania(false);
-      Alert.alert("No se pudo activar", r.razon || "Inténtalo de nuevo.");
+      const botones = r.abrirAjustes
+        ? [{ text: "Cancelar", style: "cancel" }, { text: "Abrir ajustes", onPress: () => Linking.openSettings() }]
+        : undefined;
+      Alert.alert("No se pudo activar", r.razon || "Inténtalo de nuevo.", botones);
     }
   }
 

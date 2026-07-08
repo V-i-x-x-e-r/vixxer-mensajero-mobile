@@ -13,6 +13,7 @@ import { escucharLlamadas } from "../lib/llamadas";
 import { arrancarSiActivo } from "../lib/cercania";
 import { respaldoAutomatico } from "../lib/respaldo";
 import { registrarPush } from "../lib/push";
+import { cargarLlavero } from "../lib/llavero";
 import { leer, TOKEN } from "../lib/storage";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
@@ -70,6 +71,7 @@ function Contenido()
     respaldoAutomatico();
     arrancarSiActivo().catch(() => {});
     leer(TOKEN).then((t) => t && registrarPush()).catch(() => {});
+    cargarLlavero().catch(() => {});
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")

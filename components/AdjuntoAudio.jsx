@@ -103,9 +103,9 @@ export function AdjuntoAudio({ media, color })
             <View
               key={i}
               style={{
-                width: 2.5,
+                width: 3,
                 height: 4 + v * 18,
-                borderRadius: 1.5,
+                borderRadius: 3,
                 backgroundColor: color,
                 opacity: (i + 0.5) / barras.length <= progreso ? 1 : 0.35,
               }}
@@ -129,6 +129,6 @@ const estilos = StyleSheet.create({
   centro: { gap: 3 },
   onda: { width: ANCHO_ONDA, height: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   tiempo: { fontSize: 11, opacity: 0.8 },
-  velocidad: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3 },
+  velocidad: { borderWidth: 1, borderRadius: 10, width: 44, alignItems: "center", paddingVertical: 3 },
   velocidadTxt: { fontSize: 11, fontFamily: fuentes.semibold },
 });

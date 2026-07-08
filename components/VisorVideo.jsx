@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Pressable, Text, StyleSheet } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { duracionCorta } from "../lib/mediaPreview";
-
-const ANCHO_BARRA = { flex: 1 };
+import { fuentes } from "../assets/themes/temas";
 
 export function VisorVideo({ uri, onCerrar })
 {
@@ -11,7 +11,8 @@ export function VisorVideo({ uri, onCerrar })
   const [pos, setPos] = useState(0);
   const [dur, setDur] = useState(0);
   const [pausado, setPausado] = useState(false);
-  const barra = useRef(0);
+  const [arrastre, setArrastre] = useState(null);
+  const anchoBarra = useRef(1);
   const player = useVideoPlayer(uri, (p) =>
   {
     p.loop = false;
@@ -25,7 +26,7 @@ export function VisorVideo({ uri, onCerrar })
       setPos(player.currentTime || 0);
       setDur(player.duration || 0);
       setPausado(!player.playing);
-    }, 250);
+    }, 120);
     return () => clearInterval(t);
   }, [player]);
 
@@ -45,17 +46,24 @@ export function VisorVideo({ uri, onCerrar })
     }
   }
 
-  function buscar(e)
-  {
-    if (dur <= 0 || barra.current <= 0)
+  const barrido = Gesture.Pan()
+    .minDistance(0)
+    .runOnJS(true)
+    .onBegin((e) => setArrastre(Math.min(1, Math.max(0, e.x / anchoBarra.current))))
+    .onUpdate((e) => setArrastre(Math.min(1, Math.max(0, e.x / anchoBarra.current))))
+    .onFinalize((e) =>
     {
-      return;
-    }
-    const x = Math.min(1, Math.max(0, e.nativeEvent.locationX / barra.current));
-    player.currentTime = x * dur;
-  }
+      const frac = Math.min(1, Math.max(0, e.x / anchoBarra.current));
+      if (dur > 0)
+      {
+        player.currentTime = frac * dur;
+        setPos(frac * dur);
+      }
+      setArrastre(null);
+    });
 
-  const progreso = dur > 0 ? Math.min(1, pos / dur) : 0;
+  const progreso = arrastre != null ? arrastre : dur > 0 ? Math.min(1, pos / dur) : 0;
+  const tiempoActual = arrastre != null && dur > 0 ? arrastre * dur : pos;
 
   return (
     <View style={estilos.fondo}>
@@ -69,23 +77,28 @@ export function VisorVideo({ uri, onCerrar })
             <Text style={estilos.cerrarTxt}>✕</Text>
           </Pressable>
 
-          <Pressable onPress={alternar} hitSlop={16} style={estilos.play} pointerEvents="box-only">
-            <Text style={estilos.playTxt}>{pausado ? "▶" : "❚❚"}</Text>
-          </Pressable>
-
-          <View style={estilos.abajo} pointerEvents="box-none">
-            <Text style={estilos.tiempo}>{duracionCorta(pos)}</Text>
-            <Pressable
-              onPress={buscar}
-              onLayout={(e) => { barra.current = e.nativeEvent.layout.width; }}
-              style={[ANCHO_BARRA, estilos.zonaBarra]}
-              hitSlop={{ top: 14, bottom: 14 }}
-            >
-              <View style={estilos.pista}>
-                <View style={[estilos.avance, { width: `${progreso * 100}%` }]} />
-              </View>
-              <View style={[estilos.perilla, { left: `${progreso * 100}%` }]} />
+          {pausado ? (
+            <Pressable onPress={alternar} hitSlop={16} style={estilos.playCentro}>
+              <Text style={[estilos.playCentroTxt, { marginLeft: 4 }]}>▶</Text>
             </Pressable>
+          ) : null}
+
+          <View style={estilos.panel}>
+            <Pressable onPress={alternar} hitSlop={10} style={estilos.playChico}>
+              <Text style={estilos.playChicoTxt}>{pausado ? "▶" : "❚❚"}</Text>
+            </Pressable>
+            <Text style={estilos.tiempo}>{duracionCorta(tiempoActual)}</Text>
+            <GestureDetector gesture={barrido}>
+              <View
+                style={estilos.zonaBarra}
+                onLayout={(e) => { anchoBarra.current = Math.max(1, e.nativeEvent.layout.width); }}
+              >
+                <View style={estilos.pista}>
+                  <View style={[estilos.avance, { width: `${progreso * 100}%` }]} />
+                </View>
+                <View style={[estilos.perilla, { left: `${progreso * 100}%` }, arrastre != null && estilos.perillaActiva]} />
+              </View>
+            </GestureDetector>
             <Text style={estilos.tiempo}>{duracionCorta(dur)}</Text>
           </View>
         </>
@@ -97,35 +110,72 @@ export function VisorVideo({ uri, onCerrar })
 const estilos = StyleSheet.create({
   fondo: { flex: 1, backgroundColor: "#000" },
   video: { flex: 1 },
-  cerrar: { position: "absolute", top: 44, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center" },
-  cerrarTxt: { color: "#FFF", fontSize: 20, fontWeight: "600" },
-  play:
+  cerrar:
   {
     position: "absolute",
-    top: "50%",
-    alignSelf: "center",
-    marginTop: -32,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "rgba(0,0,0,0.45)",
+    top: 48,
+    right: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
-  playTxt: { color: "#FFF", fontSize: 24 },
-  abajo:
+  cerrarTxt: { color: "#FFF", fontSize: 17, fontFamily: fuentes.semibold },
+  playCentro:
   {
     position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 40,
+    top: "50%",
+    left: "50%",
+    marginTop: -34,
+    marginLeft: -34,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playCentroTxt: { color: "#FFF", fontSize: 26 },
+  panel:
+  {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    bottom: 34,
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    backgroundColor: "rgba(255,255,255,0.10)",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.22)",
+    borderRadius: 26,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  zonaBarra: { justifyContent: "center", height: 24 },
-  pista: { height: 3.5, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.3)", overflow: "hidden" },
-  avance: { height: "100%", backgroundColor: "#FFF" },
-  perilla: { position: "absolute", marginLeft: -6, width: 12, height: 12, borderRadius: 6, backgroundColor: "#FFF" },
-  tiempo: { color: "#FFF", fontSize: 12, minWidth: 34, textAlign: "center" },
+  playChico: { width: 24, alignItems: "center" },
+  playChicoTxt: { color: "#FFF", fontSize: 16 },
+  zonaBarra: { flex: 1, justifyContent: "center", height: 28 },
+  pista: { height: 3.5, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.28)", overflow: "hidden" },
+  avance: { height: "100%", backgroundColor: "#FFF", borderRadius: 2 },
+  perilla:
+  {
+    position: "absolute",
+    marginLeft: -6,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#FFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  perillaActiva: { transform: [{ scale: 1.35 }] },
+  tiempo: { color: "rgba(255,255,255,0.92)", fontSize: 12, fontFamily: fuentes.media, minWidth: 34, textAlign: "center" },
 });

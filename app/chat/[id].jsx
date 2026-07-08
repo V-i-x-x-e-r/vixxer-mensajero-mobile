@@ -51,7 +51,8 @@ import { Lupa } from "../../components/Lupa";
 import { Kebab } from "../../components/Kebab";
 import { Pin } from "../../components/Pin";
 import { aFecha, mismoDia, etiquetaDia, hora } from "../../lib/fechas";
-import { resumenMensaje } from "../../lib/resumen";
+import { resumenMensaje, miniaturaDe } from "../../lib/resumen";
+import { Image as ImagenExpo } from "expo-image";
 import { Clip } from "../../components/Clip";
 import { Documento } from "../../components/Documento";
 import { tick } from "../../lib/haptica";
@@ -114,6 +115,7 @@ export default function Chat()
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
   const [adjuntando, setAdjuntando] = useState(false);
+  const [borrandoSel, setBorrandoSel] = useState(false);
   const [stickers, setStickers] = useState(false);
   const [reenviando, setReenviando] = useState(null);
   const [reenviandoMulti, setReenviandoMulti] = useState(false);
@@ -138,6 +140,7 @@ export default function Chat()
   const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const estadoGrab = useAudioRecorderState(grabadora, 150);
   const muestras = useRef([]);
+  const durMs = useRef(0);
   const [ocultos, setOcultos] = useState(() => new Set());
   const miId = useRef(null);
   const lista = useRef(null);
@@ -904,37 +907,8 @@ export default function Chat()
     subirYEnviar(actual, localId);
   }
 
-  async function grabarToggle()
+  async function iniciarGrabacion()
   {
-    if (grabando)
-    {
-      setGrabando(false);
-      setSubiendo(true);
-      try
-      {
-        const dur = Math.max(1, Math.round(grabadora.currentTime || 0));
-        await grabadora.stop();
-        const uri = grabadora.uri;
-        if (uri)
-        {
-          const wf = normalizarMuestras(muestras.current);
-          const base64 = await leerBase64(uri);
-          const cif = cifrarArchivo(base64);
-          const { path } = await api.subirMedia(cif.datos);
-          await mandar(JSON.stringify({ t: "audio", path, mime: "audio/mp4", k: cif.clave, n: cif.nonce, dur, wf: wf || undefined }));
-        }
-      }
-      catch (e)
-      {
-        Alert.alert("No se pudo enviar la nota de voz", "Revisa tu conexión e intenta de nuevo.");
-      }
-      finally
-      {
-        setSubiendo(false);
-      }
-      return;
-    }
-
     const permiso = await AudioModule.requestRecordingPermissionsAsync();
     if (!permiso.granted)
     {
@@ -943,12 +917,61 @@ export default function Chat()
     try
     {
       muestras.current = [];
+      durMs.current = 0;
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
     }
     catch (e)
     {
+    }
+  }
+
+  async function terminarGrabacion(mandarAudio)
+  {
+    if (!grabando)
+    {
+      return;
+    }
+    setGrabando(false);
+    const ms = durMs.current || (grabadora.currentTime || 0) * 1000;
+    try
+    {
+      await grabadora.stop();
+    }
+    catch (e)
+    {
+    }
+    if (!mandarAudio)
+    {
+      return;
+    }
+    if (ms < 700)
+    {
+      setToast("Nota muy corta");
+      setTimeout(() => setToast(""), 1500);
+      return;
+    }
+    setSubiendo(true);
+    try
+    {
+      const uri = grabadora.uri;
+      if (uri)
+      {
+        const wf = normalizarMuestras(muestras.current);
+        const base64 = await leerBase64(uri);
+        const cif = cifrarArchivo(base64);
+        const { path } = await api.subirMedia(cif.datos);
+        await mandar(JSON.stringify({ t: "audio", path, mime: "audio/mp4", k: cif.clave, n: cif.nonce, dur: Math.max(1, Math.round(ms / 1000)), wf: wf || undefined }));
+      }
+    }
+    catch (e)
+    {
+      Alert.alert("No se pudo enviar la nota de voz", "Revisa tu conexión e intenta de nuevo.");
+    }
+    finally
+    {
+      setSubiendo(false);
     }
   }
 
@@ -1057,8 +1080,33 @@ export default function Chat()
     setSeleccionados([]);
   }
 
-  function borrarSeleccionados()
+  function seleccionTodosMios()
   {
+    return seleccionados.every((id) =>
+    {
+      const m = mensajes.find((x) => x.id === id);
+      return m && m.remitente_id === miId.current && !String(id).startsWith("local-");
+    });
+  }
+
+  async function borrarSelParaMi()
+  {
+    setBorrandoSel(false);
+    let set = null;
+    for (const id of seleccionados)
+    {
+      set = await ocultarMensaje(otroId, id);
+    }
+    if (set)
+    {
+      setOcultos(new Set(set));
+    }
+    salirSeleccion();
+  }
+
+  function borrarSelParaTodos()
+  {
+    setBorrandoSel(false);
     const mios = mensajes.filter((m) => seleccionados.includes(m.id) && m.remitente_id === miId.current && !String(m.id).startsWith("local-"));
     const ids = mios.map((m) => m.id);
     ids.forEach((id) => socket_emit("mensaje:borrar", { id }));
@@ -1098,9 +1146,16 @@ export default function Chat()
 
   useEffect(() =>
   {
-    if (grabando && estadoGrab && typeof estadoGrab.metering === "number")
+    if (grabando && estadoGrab)
     {
-      muestras.current.push(estadoGrab.metering);
+      if (typeof estadoGrab.metering === "number")
+      {
+        muestras.current.push(estadoGrab.metering);
+      }
+      if (estadoGrab.durationMillis)
+      {
+        durMs.current = estadoGrab.durationMillis;
+      }
     }
   }, [estadoGrab, grabando]);
 
@@ -1316,7 +1371,8 @@ export default function Chat()
           const citadoCrudo = item.respuestaTexto
             ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
           const citadoEf = citadoCrudo ? leerEfimero(citadoCrudo) : null;
-          const citado = citadoCrudo && leerMedia(citadoCrudo) ? "Foto" : citadoEf ? citadoEf.m : citadoCrudo;
+          const citadoMedia = citadoCrudo ? leerMedia(citadoCrudo) : null;
+          const citado = citadoMedia ? resumenMensaje(citadoCrudo) : citadoEf ? citadoEf.m : citadoCrudo;
 
           const ef = leerEfimero(item.texto);
           const textoMostrar = ef ? ef.m : item.texto;
@@ -1398,6 +1454,7 @@ export default function Chat()
               <Burbuja
                 mio={mio}
                 cita={citado}
+                citaMini={miniaturaDe(citadoMedia)}
                 borrado={borrado}
                 media={media}
                 texto={textoMostrar}
@@ -1477,7 +1534,7 @@ export default function Chat()
               <Reenviar color={colores.texto} tamano={22} />
             </Pressable>
             <Pressable
-              onPress={borrarSeleccionados}
+              onPress={() => setBorrandoSel(true)}
               disabled={seleccionados.length === 0}
               hitSlop={8}
               style={({ pressed }) => [{ opacity: seleccionados.length === 0 ? 0.4 : 1 }, pressed && estilos.enviarPresionado]}
@@ -1495,13 +1552,19 @@ export default function Chat()
           onEnviar={enviar}
           onAdjuntar={() => setAdjuntando(true)}
           onSticker={() => setStickers(true)}
-          onMic={grabarToggle}
           grabando={grabando}
+          tiempoGrabacion={Math.floor((estadoGrab?.durationMillis || 0) / 1000)}
+          onIniciarGrabacion={iniciarGrabacion}
+          onCancelarGrabacion={() => terminarGrabacion(false)}
+          onEnviarGrabacion={() => terminarGrabacion(true)}
           subiendo={subiendo}
           editando={!!editando}
         >
           {respondiendo ? (
             <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+              {miniaturaDe(leerMedia(respondiendo.texto)) ? (
+                <ImagenExpo source={{ uri: miniaturaDe(leerMedia(respondiendo.texto)) }} contentFit="cover" style={estilos.avisoMini} />
+              ) : null}
               <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
                 Respondiendo: {resumenMensaje(respondiendo.texto)}
               </Text>
@@ -1592,6 +1655,27 @@ export default function Chat()
         </Pressable>
       </Modal>
 
+      <Modal transparent visible={borrandoSel} animationType="fade" onRequestClose={() => setBorrandoSel(false)}>
+        <Pressable style={estilos.adjFondo} onPress={() => setBorrandoSel(false)}>
+          <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.adjTitulo, { color: colores.muted }]}>
+              Eliminar {seleccionados.length} mensaje{seleccionados.length === 1 ? "" : "s"}
+            </Text>
+            <Pressable onPress={borrarSelParaMi} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
+              <Text style={[estilos.adjTxt, { color: colores.texto }]}>Eliminar para mí</Text>
+            </Pressable>
+            {seleccionTodosMios() ? (
+              <Pressable onPress={borrarSelParaTodos} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
+                <Text style={[estilos.adjTxt, { color: colores.error }]}>Eliminar para todos</Text>
+              </Pressable>
+            ) : null}
+            <Pressable onPress={() => setBorrandoSel(false)} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
+              <Text style={[estilos.adjTxt, { color: colores.muted }]}>Cancelar</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <Modal transparent visible={adjuntando} animationType="fade" onRequestClose={() => setAdjuntando(false)}>
         <Pressable style={estilos.adjFondo} onPress={() => setAdjuntando(false)}>
           <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
@@ -1655,6 +1739,7 @@ const estilos = StyleSheet.create({
   adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26 },
   adjItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 14 },
   adjTxt: { fontSize: 16, fontFamily: fuentes.media },
+  adjTitulo: { fontSize: 12, fontFamily: fuentes.semibold, letterSpacing: 1, textTransform: "uppercase", paddingHorizontal: 24, paddingTop: 8, paddingBottom: 4 },
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
   topOverlay: { position: "absolute", top: 3, left: 0, right: 0, zIndex: 20 },
@@ -1711,6 +1796,7 @@ const estilos = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
   },
+  avisoMini: { width: 32, height: 32, borderRadius: 6 },
   avisoTxt: { flex: 1, fontSize: 13, marginRight: 8 },
   inputFila: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 12, paddingTop: 12, borderTopWidth: 1 },
   campo: { flex: 1, borderWidth: 1, borderRadius: 22, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 10, maxHeight: 120, fontSize: 15 },

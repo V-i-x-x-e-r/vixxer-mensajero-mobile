@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, Animated, Easing, Alert, Dimensions, StyleSheet } from "react-native";
+import { View, Text, Pressable, Animated, Easing, Alert, Linking, Dimensions, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
 import Svg, { Circle, Line } from "react-native-svg";
 import { estadoCercania, alCambio, listaPeers, cercaniaSoportada, activarModo } from "../lib/cercania";
@@ -95,7 +95,10 @@ export default function Cercania()
     const r = await activarModo(true);
     if (!r.ok && r.razon)
     {
-      Alert.alert("No se pudo activar", r.razon);
+      const botones = r.abrirAjustes
+        ? [{ text: "Cancelar", style: "cancel" }, { text: "Abrir ajustes", onPress: () => Linking.openSettings() }]
+        : undefined;
+      Alert.alert("No se pudo activar", r.razon, botones);
     }
   }
 
