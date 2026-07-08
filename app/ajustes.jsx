@@ -21,6 +21,9 @@ import { RespaldoCodigo } from "../components/RespaldoCodigo";
 import { leerConfig, guardarConfig, FRECUENCIAS, ETIQUETA_FRECUENCIA } from "../lib/respaldoConfig";
 import { hacerRespaldo, exportarRespaldoLocal } from "../lib/respaldo";
 import { cercaniaSoportada, modoGuardado, activarModo } from "../lib/cercania";
+import { importarRespaldoArchivo } from "../lib/respaldo";
+import { abrirRespaldo } from "../lib/crypto";
+import { recordarLlave } from "../lib/llavero";
 import { VincularDispositivo } from "../components/VincularDispositivo";
 
 const PERFIL_CACHE = "vixxer_perfil";
@@ -47,6 +50,10 @@ export default function Ajustes()
   const [vinculo, setVinculo] = useState("");
   const [vinculando, setVinculando] = useState(false);
   const [cambiandoPass, setCambiandoPass] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const [importArchivo, setImportArchivo] = useState(null);
+  const [importCodigo, setImportCodigo] = useState("");
+  const [importEstado, setImportEstado] = useState("");
   const [passActual, setPassActual] = useState("");
   const [passNueva, setPassNueva] = useState("");
   const [passRepetir, setPassRepetir] = useState("");
@@ -100,6 +107,46 @@ export default function Ajustes()
         : undefined;
       Alert.alert("No se pudo activar", r.razon || "Inténtalo de nuevo.", botones);
     }
+  }
+
+  async function elegirArchivoLlave()
+  {
+    setImportEstado("");
+    const r = await importarRespaldoArchivo().catch(() => null);
+    if (r)
+    {
+      setImportArchivo(r);
+    }
+    else
+    {
+      setImportEstado("Archivo no válido.");
+    }
+  }
+
+  async function importarLlaveAnterior()
+  {
+    setImportEstado("");
+    if (!importArchivo || !importCodigo.trim())
+    {
+      setImportEstado("Elige el archivo y escribe su código.");
+      return;
+    }
+    const secreta = abrirRespaldo(importArchivo, importCodigo.trim());
+    if (!secreta)
+    {
+      setImportEstado("El código no abre ese respaldo.");
+      return;
+    }
+    await recordarLlave(secreta);
+    setImportEstado("listo");
+  }
+
+  function cerrarImportar()
+  {
+    setImportando(false);
+    setImportArchivo(null);
+    setImportCodigo("");
+    setImportEstado("");
   }
 
   function guardarRespaldoCfg(cambios)
@@ -426,6 +473,8 @@ export default function Ajustes()
       <View style={tarjeta}>
         <FilaNav etiqueta="Vincular otro dispositivo" onPress={vincularDispositivo} cargando={vinculando} />
         <Sep />
+        <FilaNav etiqueta="Importar llave anterior" onPress={() => setImportando(true)} />
+        <Sep />
         <FilaNav etiqueta="Cambiar contraseña" onPress={abrirCambioPass} />
         <Sep />
         <Pressable onPress={() => setConfirmar(true)} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado]}>
@@ -480,6 +529,47 @@ export default function Ajustes()
               <Pressable onPress={confirmarCambioPass} disabled={passOcupado || passListo} style={({ pressed }) => [estilos.modalBoton, { backgroundColor: colores.botonFondo, borderColor: colores.botonFondo }, pressed && estilos.presionado]}>
                 <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>{passOcupado ? "Cambiando…" : "Cambiar"}</Text>
               </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal transparent visible={importando} animationType="fade" onRequestClose={cerrarImportar}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+        <Pressable style={estilos.modalFondo} onPress={cerrarImportar}>
+          <Pressable style={[estilos.modalCaja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.modalTitulo, { color: colores.texto }]}>Importar llave anterior</Text>
+            <Text style={[estilos.nota, { color: colores.muted, paddingHorizontal: 0 }]}>
+              Si tienes el archivo de respaldo y el código de una identidad vieja, podrás volver a leer esos chats sin perder los actuales.
+            </Text>
+            <Pressable onPress={elegirArchivoLlave} style={({ pressed }) => [estilos.modalBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+              <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>
+                {importArchivo ? "Archivo listo ✓" : "Elegir archivo de respaldo"}
+              </Text>
+            </Pressable>
+            <TextInput
+              value={importCodigo}
+              onChangeText={setImportCodigo}
+              placeholder="Código de recuperación de esa llave"
+              placeholderTextColor={colores.placeholder}
+              autoCapitalize="characters"
+              style={[estilos.modalCampo, { color: colores.texto, borderColor: colores.borde }]}
+            />
+            {importEstado === "listo" ? (
+              <Text style={{ color: colores.texto, fontSize: 13 }}>Llave importada. Tus chats viejos vuelven a leerse.</Text>
+            ) : importEstado ? (
+              <Text style={{ color: colores.error, fontSize: 13 }}>{importEstado}</Text>
+            ) : null}
+            <View style={estilos.modalAcciones}>
+              <Pressable onPress={cerrarImportar} style={({ pressed }) => [estilos.modalBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
+                <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>{importEstado === "listo" ? "Cerrar" : "Cancelar"}</Text>
+              </Pressable>
+              {importEstado !== "listo" ? (
+                <Pressable onPress={importarLlaveAnterior} style={({ pressed }) => [estilos.modalBoton, { backgroundColor: colores.botonFondo, borderColor: colores.botonFondo }, pressed && estilos.presionado]}>
+                  <Text style={{ color: colores.botonTexto, fontFamily: fuentes.semibold }}>Importar</Text>
+                </Pressable>
+              ) : null}
             </View>
           </Pressable>
         </Pressable>

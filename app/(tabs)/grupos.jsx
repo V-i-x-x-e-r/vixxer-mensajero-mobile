@@ -233,7 +233,7 @@ export default function Grupos()
             <View style={estilos.centro}>
               <Text style={[estilos.nombre, { color: colores.texto }]} numberOfLines={1}>{item.nombre}</Text>
               {escribiendo[item.id] ? (
-                <Text style={[estilos.sub, { color: colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
+                <Text style={[estilos.sub, { color: colores.exito || colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
               ) : (
                 <Text style={[estilos.sub, { color: colores.muted }]} numberOfLines={1}>
                   {item.preview || `${item.miembros} miembros`}

@@ -30,17 +30,19 @@ export const oscuro =
 
 export const colorido =
 {
-  fondo: "#F6F9FE",
-  surface: "#EBF1FB",
-  texto: "#0F1A2A",
-  muted: "#64748B",
-  borde: "#D6E2F2",
-  bordeFoco: "#3B82F6",
-  botonFondo: "#3B82F6",
+  fondo: "#FBFAFF",
+  surface: "#F2EFFC",
+  texto: "#1B1730",
+  muted: "#6E6A85",
+  borde: "#E3DDF6",
+  bordeFoco: "#6C5CE7",
+  botonFondo: "#6C5CE7",
   botonTexto: "#FFFFFF",
-  enlace: "#2563EB",
-  placeholder: "#94A3B8",
-  error: "#DC2626",
+  enlace: "#2E6BE6",
+  placeholder: "#9B96B5",
+  error: "#E0356B",
+  acento: "#F5A623",
+  exito: "#1FB874",
 };
 
 export const barras = ["#35D487", "#65A7FF", "#FFD166"];

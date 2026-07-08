@@ -21,6 +21,16 @@ export function VisorVideo({ uri, onCerrar })
 
   useEffect(() =>
   {
+    if (!controles || pausado || arrastre != null)
+    {
+      return;
+    }
+    const t = setTimeout(() => setControles(false), 3000);
+    return () => clearTimeout(t);
+  }, [controles, pausado, arrastre]);
+
+  useEffect(() =>
+  {
     const t = setInterval(() =>
     {
       setPos(player.currentTime || 0);
@@ -30,17 +40,41 @@ export function VisorVideo({ uri, onCerrar })
     return () => clearInterval(t);
   }, [player]);
 
+  function irA(segundos)
+  {
+    const objetivo = Math.min(Math.max(0, segundos), dur > 0 ? dur : segundos);
+    try
+    {
+      player.currentTime = objetivo;
+    }
+    catch (e)
+    {
+    }
+    if (Math.abs((player.currentTime || 0) - objetivo) > 0.4)
+    {
+      try
+      {
+        player.seekBy(objetivo - (player.currentTime || 0));
+      }
+      catch (e)
+      {
+      }
+    }
+    setPos(objetivo);
+  }
+
   function alternar()
   {
     if (player.playing)
     {
       player.pause();
+      setControles(true);
     }
     else
     {
       if (dur > 0 && pos >= dur - 0.2)
       {
-        player.currentTime = 0;
+        irA(0);
       }
       player.play();
     }
@@ -56,8 +90,7 @@ export function VisorVideo({ uri, onCerrar })
       const frac = Math.min(1, Math.max(0, e.x / anchoBarra.current));
       if (dur > 0)
       {
-        player.currentTime = frac * dur;
-        setPos(frac * dur);
+        irA(frac * dur);
       }
       setArrastre(null);
     });
@@ -67,7 +100,14 @@ export function VisorVideo({ uri, onCerrar })
 
   return (
     <View style={estilos.fondo}>
-      <Pressable style={estilos.fondo} onPress={() => setControles((v) => !v)}>
+      <Pressable
+        style={estilos.fondo}
+        onPress={() =>
+        {
+          setControles(true);
+          alternar();
+        }}
+      >
         <VideoView player={player} style={estilos.video} contentFit="contain" nativeControls={false} />
       </Pressable>
 

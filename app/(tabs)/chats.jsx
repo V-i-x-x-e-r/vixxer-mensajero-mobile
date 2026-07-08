@@ -441,7 +441,7 @@ export default function Chats()
                   {silenciado ? <Silencio color={colores.muted} tamano={13} /> : null}
                 </View>
                 {tecleando[item.id] ? (
-                  <Text style={[estilos.preview, { color: colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
+                  <Text style={[estilos.preview, { color: colores.exito || colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
                 ) : c ? (
                   <View style={estilos.lineaPreview}>
                     {c.mio ? <Visto color={c.leido ? colores.botonFondo : "#8E8E93"} dos={c.entregado || c.leido} tamano={13} /> : null}
@@ -453,7 +453,7 @@ export default function Chats()
                 <View style={estilos.derecha}>
                   <Text style={[estilos.hora, { color: colores.muted }]}>{cuando(c.enviado_en)}</Text>
                   {c.noLeidos > 0 ? (
-                    <View style={[estilos.badge, { backgroundColor: silenciado ? colores.muted : colores.botonFondo }]}>
+                    <View style={[estilos.badge, { backgroundColor: silenciado ? colores.muted : colores.acento || colores.botonFondo }]}>
                       <Text style={[estilos.badgeTxt, { color: silenciado ? colores.fondo : colores.botonTexto }]}>{c.noLeidos}</Text>
                     </View>
                   ) : null}
