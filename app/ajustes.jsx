@@ -8,7 +8,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as api from "../lib/api";
 import { cerrarSesion } from "../lib/storage";
 import { desconectarSocket } from "../lib/socket";
-import { useTema } from "../components/tema";
+import { useTema, ACENTOS } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { Confirmacion } from "../components/Confirmacion";
 import { Avatar } from "../components/Avatar";
@@ -24,13 +24,14 @@ import { cercaniaSoportada, modoGuardado, activarModo } from "../lib/cercania";
 import { importarRespaldoArchivo } from "../lib/respaldo";
 import { abrirRespaldo } from "../lib/crypto";
 import { recordarLlave } from "../lib/llavero";
+import { Documento } from "../components/Documento";
 import { VincularDispositivo } from "../components/VincularDispositivo";
 
 const PERFIL_CACHE = "vixxer_perfil";
 
 export default function Ajustes()
 {
-  const { colores, nombre: nombreTema, elegirTema } = useTema();
+  const { colores, nombre: nombreTema, elegirTema, acento, elegirAcento } = useTema();
   const [usuario, setUsuario] = useState("");
   const [codigo, setCodigo] = useState("");
   const [avatar, setAvatar] = useState(null);
@@ -419,6 +420,23 @@ export default function Ajustes()
             ))}
           </View>
         </View>
+        {nombreTema === "colorido" ? (
+          <>
+            <Sep />
+            <View style={estilos.fila}>
+              <Text style={[estilos.etiqueta, { color: colores.texto }]}>Color</Text>
+              <View style={estilos.temas}>
+                {ACENTOS.map((c) => (
+                  <Pressable
+                    key={c}
+                    onPress={() => elegirAcento(c)}
+                    style={[estilos.swatch, { backgroundColor: c }, acento === c && { borderWidth: 2.5, borderColor: colores.texto }]}
+                  />
+                ))}
+              </View>
+            </View>
+          </>
+        ) : null}
       </View>
 
       <Seccion titulo="PRIVACIDAD" />
@@ -456,7 +474,7 @@ export default function Ajustes()
 
       <Seccion titulo="COPIA DE SEGURIDAD" />
       <View style={tarjeta}>
-        <FilaValor etiqueta="Destino" valor={respaldoCfg.destino === "nube" ? "Nube" : "Local"} onPress={cambiarDestino} />
+        <FilaValor etiqueta="Destino" valor={respaldoCfg.destino === "nube" ? "Servidor (cifrada)" : "Archivo"} onPress={cambiarDestino} />
         <Sep />
         <FilaValor etiqueta="Frecuencia" valor={ETIQUETA_FRECUENCIA[respaldoCfg.frecuencia]} onPress={cambiarFrecuencia} />
         <Sep />
@@ -543,9 +561,13 @@ export default function Ajustes()
             <Text style={[estilos.nota, { color: colores.muted, paddingHorizontal: 0 }]}>
               Si tienes el archivo de respaldo y el código de una identidad vieja, podrás volver a leer esos chats sin perder los actuales.
             </Text>
-            <Pressable onPress={elegirArchivoLlave} style={({ pressed }) => [estilos.modalBoton, { borderColor: colores.borde }, pressed && estilos.presionado]}>
-              <Text style={{ color: colores.texto, fontFamily: fuentes.semibold }}>
-                {importArchivo ? "Archivo listo ✓" : "Elegir archivo de respaldo"}
+            <Pressable
+              onPress={elegirArchivoLlave}
+              style={({ pressed }) => [estilos.zonaArchivo, { borderColor: importArchivo ? colores.botonFondo : colores.borde, backgroundColor: colores.fondo }, pressed && estilos.presionado]}
+            >
+              <Documento color={importArchivo ? colores.botonFondo : colores.muted} tamano={22} />
+              <Text style={{ color: importArchivo ? colores.texto : colores.muted, fontFamily: fuentes.media, fontSize: 14, flexShrink: 1 }}>
+                {importArchivo ? "Respaldo cargado ✓  (toca para cambiar)" : "Toca para elegir el archivo .json del respaldo"}
               </Text>
             </Pressable>
             <TextInput
@@ -606,6 +628,8 @@ const estilos = StyleSheet.create({
   temas: { flexDirection: "row", gap: 6 },
   temaChip: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 5 },
   temaChipTxt: { fontSize: 12, fontFamily: fuentes.media },
+  swatch: { width: 24, height: 24, borderRadius: 12 },
+  zonaArchivo: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1.5, borderStyle: "dashed", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 14 },
   filaDerecha: { flexDirection: "row", alignItems: "center", gap: 8 },
   etiqueta: { fontSize: 15 },
   valor: { fontSize: 15, fontFamily: fuentes.media },

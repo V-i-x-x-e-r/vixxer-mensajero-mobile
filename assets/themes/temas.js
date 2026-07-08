@@ -30,18 +30,18 @@ export const oscuro =
 
 export const colorido =
 {
-  fondo: "#FBFAFF",
-  surface: "#F2EFFC",
-  texto: "#1B1730",
-  muted: "#6E6A85",
-  borde: "#E3DDF6",
-  bordeFoco: "#6C5CE7",
-  botonFondo: "#6C5CE7",
+  fondo: "#FAFAF7",
+  surface: "#F0F0EA",
+  texto: "#1C1B18",
+  muted: "#78766D",
+  borde: "#E2E1D8",
+  bordeFoco: "#14B8A6",
+  botonFondo: "#14B8A6",
   botonTexto: "#FFFFFF",
-  enlace: "#2E6BE6",
-  placeholder: "#9B96B5",
+  enlace: "#14B8A6",
+  placeholder: "#A3A198",
   error: "#E0356B",
-  acento: "#F5A623",
+  acento: "#F59E0B",
   exito: "#1FB874",
 };
 

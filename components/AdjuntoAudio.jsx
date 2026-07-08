@@ -14,6 +14,7 @@ export function AdjuntoAudio({ media, color })
 {
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [velocidad, setVelocidad] = useState(0);
+  const [posSuave, setPosSuave] = useState(0);
   const player = useAudioPlayer(null);
   const estado = useAudioPlayerStatus(player);
   const barras = Array.isArray(media.wf) && media.wf.length > 0 ? media.wf : barrasDeterministas(media.path || media.local);
@@ -39,8 +40,22 @@ export function AdjuntoAudio({ media, color })
     }
   }, [uri]);
 
+  useEffect(() =>
+  {
+    if (!(estado && estado.playing))
+    {
+      setPosSuave(estado?.currentTime || 0);
+      return;
+    }
+    const base = estado.currentTime || 0;
+    const inicio = Date.now();
+    const ritmo = VELOCIDADES[velocidad];
+    const t = setInterval(() => setPosSuave(base + ((Date.now() - inicio) / 1000) * ritmo), 90);
+    return () => clearInterval(t);
+  }, [estado?.playing, estado?.currentTime, velocidad]);
+
   const duracion = estado && estado.duration ? estado.duration : media.dur || 0;
-  const posicion = estado && estado.currentTime ? estado.currentTime : 0;
+  const posicion = posSuave;
   const progreso = duracion > 0 ? Math.min(1, posicion / duracion) : 0;
   const reproduciendo = estado && estado.playing;
   const tiempo = duracionCorta(reproduciendo || posicion > 0.3 ? Math.max(0, duracion - posicion) : duracion) || "0:00";

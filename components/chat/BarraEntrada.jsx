@@ -12,7 +12,7 @@ import { Check } from "../Check";
 import { Microfono } from "../Microfono";
 import { Bote } from "../Bote";
 
-export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker, grabando, tiempoGrabacion, onIniciarGrabacion, onCancelarGrabacion, onEnviarGrabacion, subiendo, editando, children })
+export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker, grabando, grabPausado, tiempoGrabacion, onIniciarGrabacion, onPausarGrabacion, onCancelarGrabacion, onEnviarGrabacion, subiendo, editando, children })
 {
   const { colores } = useTema();
   const insets = useSafeAreaInsets();
@@ -27,7 +27,7 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
 
   useEffect(() =>
   {
-    if (!grabando)
+    if (!grabando || grabPausado)
     {
       return;
     }
@@ -39,7 +39,7 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
     );
     anim.start();
     return () => anim.stop();
-  }, [grabando]);
+  }, [grabando, grabPausado]);
 
   useEffect(() =>
   {
@@ -65,11 +65,11 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
           <Pressable onPress={onCancelarGrabacion} hitSlop={8} style={({ pressed }) => [estilos.icono, pressed && estilos.presionado]}>
             <Bote color={colores.error} tamano={22} />
           </Pressable>
-          <View style={estilos.grabCentro}>
-            <Animated.View style={[estilos.grabPunto, { backgroundColor: colores.error, opacity: pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 0.25] }) }]} />
+          <Pressable onPress={onPausarGrabacion} style={estilos.grabCentro}>
+            <Animated.View style={[estilos.grabPunto, { backgroundColor: colores.error, opacity: grabPausado ? 0.4 : pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 0.25] }) }]} />
             <Text style={[estilos.grabTiempo, { color: colores.texto }]}>{duracionCorta(tiempoGrabacion || 0)}</Text>
-            <Text style={[estilos.grabTxt, { color: colores.muted }]}>Grabando…</Text>
-          </View>
+            <Text style={[estilos.grabTxt, { color: colores.muted }]}>{grabPausado ? "En pausa · toca para seguir" : "Grabando · toca para pausar"}</Text>
+          </Pressable>
           <Pressable onPress={onEnviarGrabacion} style={({ pressed }) => [estilos.enviar, { backgroundColor: colores.botonFondo }, pressed && estilos.presionado]}>
             <Flecha color={colores.botonTexto} tamano={20} />
           </Pressable>

@@ -15,6 +15,7 @@ import { leerAlias } from "../../lib/alias";
 import { estadoCercania, alCambio } from "../../lib/cercania";
 import { useTema } from "../../components/tema";
 import { DeslizarPestanas } from "../../components/DeslizarPestanas";
+import { LogoPendulo } from "../../components/LogoPendulo";
 import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
 import { Engrane } from "../../components/Engrane";
@@ -343,7 +344,7 @@ export default function Chats()
       ) : (
         <View style={estilos.cabecera}>
           <View style={estilos.marca}>
-            <Logo alto={24} />
+            <LogoPendulo alto={26} velocidad={950} colorBarra={colores.texto} />
             <Text style={[estilos.titulo, { color: colores.texto }]}>Vixxer</Text>
           </View>
           <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
@@ -392,7 +393,7 @@ export default function Chats()
         initialNumToRender={12}
         style={estilos.lista}
         refreshControl={
-          <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.texto]} />
+          <RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.texto} colors={[colores.texto]} progressBackgroundColor={colores.surface} />
         }
         ListEmptyComponent={
           <EstadoLista

@@ -142,6 +142,7 @@ export default function Chat()
   const estadoGrab = useAudioRecorderState(grabadora, 150);
   const muestras = useRef([]);
   const durMs = useRef(0);
+  const [grabPausado, setGrabPausado] = useState(false);
   const [ocultos, setOcultos] = useState(() => new Set());
   const miId = useRef(null);
   const lista = useRef(null);
@@ -922,6 +923,26 @@ export default function Chat()
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
+      setGrabPausado(false);
+    }
+    catch (e)
+    {
+    }
+  }
+
+  function alternarPausaGrabacion()
+  {
+    try
+    {
+      if (grabPausado)
+      {
+        grabadora.record();
+      }
+      else
+      {
+        grabadora.pause();
+      }
+      setGrabPausado(!grabPausado);
     }
     catch (e)
     {
@@ -935,6 +956,7 @@ export default function Chat()
       return;
     }
     setGrabando(false);
+    setGrabPausado(false);
     const ms = durMs.current || (grabadora.currentTime || 0) * 1000;
     try
     {
@@ -1347,11 +1369,11 @@ export default function Chat()
         inverted={!esWeb}
         style={estilos.flex}
         contentContainerStyle={estilos.lista}
-        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.muted} colors={[colores.botonFondo]} />}
+        refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.texto} colors={[colores.texto]} progressBackgroundColor={colores.surface} />}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
         onEndReached={esWeb ? undefined : cargarMas}
-        onEndReachedThreshold={0.3}
+        onEndReachedThreshold={0.9}
         onContentSizeChange={esWeb ? () => lista.current?.scrollToEnd({ animated: false }) : undefined}
         onScrollToIndexFailed={() => {}}
         ListFooterComponent={
@@ -1554,6 +1576,8 @@ export default function Chat()
           onAdjuntar={() => setAdjuntando(true)}
           onSticker={() => setStickers(true)}
           grabando={grabando}
+          grabPausado={grabPausado}
+          onPausarGrabacion={alternarPausaGrabacion}
           tiempoGrabacion={Math.floor((estadoGrab?.durationMillis || 0) / 1000)}
           onIniciarGrabacion={iniciarGrabacion}
           onCancelarGrabacion={() => terminarGrabacion(false)}
