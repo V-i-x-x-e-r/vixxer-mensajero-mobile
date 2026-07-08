@@ -12,6 +12,8 @@ import { asegurarSocket } from "../lib/socket";
 import { escucharLlamadas } from "../lib/llamadas";
 import { arrancarSiActivo } from "../lib/cercania";
 import { respaldoAutomatico } from "../lib/respaldo";
+import { registrarPush } from "../lib/push";
+import { leer, TOKEN } from "../lib/storage";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
 
@@ -67,6 +69,7 @@ function Contenido()
     asegurarSocket().then(() => escucharLlamadas()).catch(() => {});
     respaldoAutomatico();
     arrancarSiActivo().catch(() => {});
+    leer(TOKEN).then((t) => t && registrarPush()).catch(() => {});
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")

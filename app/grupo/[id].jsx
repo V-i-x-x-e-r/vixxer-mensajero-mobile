@@ -15,6 +15,7 @@ import { guardarMedia } from "../../lib/descargas";
 import { leerOcultos, ocultarMensaje } from "../../lib/ocultos";
 import { normalizarMuestras } from "../../lib/audioWave";
 import { aFecha, hora, mismoDia, etiquetaDia } from "../../lib/fechas";
+import { resumenMensaje } from "../../lib/resumen";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
@@ -28,6 +29,8 @@ import { SelectorContacto } from "../../components/SelectorContacto";
 import { SelectorSticker } from "../../components/SelectorSticker";
 import { Pin } from "../../components/Pin";
 import { Visto } from "../../components/Visto";
+import { Clip } from "../../components/Clip";
+import { Documento } from "../../components/Documento";
 import { PrevioMedia } from "../../components/chat/PrevioMedia";
 
 function leerMedia(texto)
@@ -39,7 +42,7 @@ function leerMedia(texto)
   try
   {
     const obj = JSON.parse(texto);
-    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio" || obj.t === "sticker") ? obj : null;
+    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio" || obj.t === "sticker" || obj.t === "file") ? obj : null;
   }
   catch (e)
   {
@@ -70,6 +73,7 @@ export default function GrupoChat()
   const muestras = useRef([]);
   const [ocultos, setOcultos] = useState(() => new Set());
   const [previo, setPrevio] = useState(null);
+  const [adjuntando, setAdjuntando] = useState(false);
   const [escribiendoDe, setEscribiendoDe] = useState(null);
   const [infoDe, setInfoDe] = useState(null);
   const tecleando = useRef(null);
@@ -446,8 +450,22 @@ export default function GrupoChat()
     mandarTexto(pend.texto, item.id, pend.respuestaA);
   }
 
+  async function adjuntarDocumento()
+  {
+    setAdjuntando(false);
+    const DocumentPicker = require("expo-document-picker");
+    const r = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+    if (r.canceled || !r.assets?.length)
+    {
+      return;
+    }
+    const a = r.assets[0];
+    await enviarMedia({ uri: a.uri, tipo: "file", mime: a.mimeType || "application/octet-stream", nombre: a.name, peso: a.size });
+  }
+
   async function adjuntar()
   {
+    setAdjuntando(false);
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permiso.granted)
     {
@@ -472,15 +490,7 @@ export default function GrupoChat()
       alto: a.height,
       dur: a.duration ? Math.round(a.duration / 1000) : undefined,
     }));
-    if (items.length === 1)
-    {
-      setPrevio(items[0]);
-      return;
-    }
-    for (const item of items)
-    {
-      await enviarMedia(item);
-    }
+    setPrevio(items);
   }
 
   function enviarSticker(uri)
@@ -580,7 +590,7 @@ export default function GrupoChat()
     }
     mostrarAviso("Descargando…");
     const r = await guardarMedia(media);
-    mostrarAviso(r === "ok" ? "Guardado en tu galería" : r === "sin_permiso" ? "Sin permiso de galería" : "No se pudo descargar");
+    mostrarAviso(r.estado === "ok" ? "Guardado en tu galería" : r.estado === "sin_permiso" ? "Sin permiso de galería" : r.estado === "compartido" ? "Guárdalo desde el menú" : `No se pudo guardar${r.detalle ? `: ${r.detalle}` : ""}`);
   }
 
   async function borrarMensaje(mensaje)
@@ -694,7 +704,7 @@ export default function GrupoChat()
           style={[estilos.fijado, { backgroundColor: colores.surface, borderColor: colores.borde }]}
         >
           <Pin color={colores.muted} tamano={13} />
-          <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.muted }]}>{ultimoFijado.texto}</Text>
+          <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.muted }]}>{resumenMensaje(ultimoFijado.texto)}</Text>
         </Pressable>
       ) : null}
 
@@ -770,7 +780,7 @@ export default function GrupoChat()
         valor={borrador}
         onCambiar={escribir}
         onEnviar={enviar}
-        onAdjuntar={adjuntar}
+        onAdjuntar={() => setAdjuntando(true)}
         onSticker={() => setStickers(true)}
         onMic={grabarToggle}
         grabando={grabando}
@@ -788,7 +798,7 @@ export default function GrupoChat()
         ) : null}
         {respondiendo ? (
           <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-            <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>Respondiendo: {respondiendo.texto}</Text>
+            <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>Respondiendo: {resumenMensaje(respondiendo.texto)}</Text>
             <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
               <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
             </Pressable>
@@ -831,36 +841,57 @@ export default function GrupoChat()
 
       <SelectorSticker visible={stickers} onElegir={enviarSticker} onCerrar={() => setStickers(false)} />
 
+      <Modal transparent visible={adjuntando} animationType="fade" onRequestClose={() => setAdjuntando(false)}>
+        <Pressable style={estilos.adjFondo} onPress={() => setAdjuntando(false)}>
+          <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Pressable onPress={adjuntar} style={({ pressed }) => [estilos.adjItem, pressed && { opacity: 0.7 }]}>
+              <Clip color={colores.texto} tamano={20} />
+              <Text style={[estilos.adjTxt, { color: colores.texto }]}>Fotos y videos</Text>
+            </Pressable>
+            <Pressable onPress={adjuntarDocumento} style={({ pressed }) => [estilos.adjItem, pressed && { opacity: 0.7 }]}>
+              <Documento color={colores.texto} tamano={20} />
+              <Text style={[estilos.adjTxt, { color: colores.texto }]}>Documento</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <PrevioMedia
         visible={!!previo}
-        media={previo}
+        items={previo}
         onCancelar={() => setPrevio(null)}
-        onEnviar={(cap) =>
+        onEnviar={(lista) =>
         {
-          const item = previo;
           setPrevio(null);
-          if (item)
+          (async () =>
           {
-            enviarMedia({ ...item, cap });
-          }
+            for (const item of lista)
+            {
+              await enviarMedia(item);
+            }
+          })();
         }}
       />
 
       <Modal transparent visible={!!infoDe} animationType="fade" onRequestClose={() => setInfoDe(null)}>
         <Pressable style={estilos.infoFondo} onPress={() => setInfoDe(null)}>
           <Pressable style={[estilos.infoHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-            <Text style={[estilos.infoTitulo, { color: colores.texto }]}>Visto por</Text>
-            {miembros.filter((m) => m.id !== miId.current).map((m) =>
-            {
-              const t = infoDe ? (infoDe.leido_por || {})[m.id] : null;
-              return (
+            <Text style={[estilos.infoTitulo, { color: colores.texto }]}>
+              Visto por {Object.keys(infoDe?.leido_por || {}).length} de {Math.max(0, miembros.length - 1)}
+            </Text>
+            {miembros
+              .filter((m) => m.id !== miId.current && (infoDe?.leido_por || {})[m.id])
+              .sort((a, b) => String(infoDe.leido_por[a.id]).localeCompare(String(infoDe.leido_por[b.id])))
+              .map((m) => (
                 <View key={m.id} style={estilos.infoFila}>
                   <Avatar nombre={m.usuario} uri={m.avatar_url || null} tamano={30} />
                   <Text style={[estilos.infoNombre, { color: colores.texto }]}>{m.usuario}</Text>
-                  <Text style={[estilos.infoHora, { color: t ? colores.texto : colores.muted }]}>{t ? hora(t) : "pendiente"}</Text>
+                  <Text style={[estilos.infoHora, { color: colores.texto }]}>{hora(infoDe.leido_por[m.id])}</Text>
                 </View>
-              );
-            })}
+              ))}
+            {Object.keys(infoDe?.leido_por || {}).length === 0 ? (
+              <Text style={[estilos.infoHora, { color: colores.muted }]}>Nadie lo ha visto todavía.</Text>
+            ) : null}
           </Pressable>
         </Pressable>
       </Modal>
@@ -895,6 +926,10 @@ const estilos = StyleSheet.create({
   avisoTxt: { flex: 1, fontSize: 13 },
   toast: { position: "absolute", bottom: 96, alignSelf: "center", backgroundColor: "rgba(20,20,24,0.92)", paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
   toastTxt: { color: "#FFF", fontSize: 13 },
+  adjFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26 },
+  adjItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 14 },
+  adjTxt: { fontSize: 16, fontFamily: fuentes.media },
   sugerencias: { borderWidth: 1, borderRadius: 12, marginHorizontal: 12, marginBottom: 6, paddingVertical: 4 },
   sugerencia: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 8 },
   sugerenciaTxt: { fontSize: 14, fontFamily: fuentes.media },

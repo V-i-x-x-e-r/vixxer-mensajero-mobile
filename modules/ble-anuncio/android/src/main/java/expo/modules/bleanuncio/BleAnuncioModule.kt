@@ -35,11 +35,12 @@ class BleAnuncioModule : Module() {
     Function("iniciar") { servicioUuid: String, caracteristicaUuid: String ->
       try {
         val manager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        val adapter = manager.adapter ?: return@Function false
+        val adapter = manager.adapter ?: return@Function "sin-bluetooth"
+        if (!adapter.isEnabled) return@Function "bt-apagado"
 
         abrirServidor(manager, servicioUuid, caracteristicaUuid)
 
-        val adv = adapter.bluetoothLeAdvertiser ?: return@Function false
+        val adv = adapter.bluetoothLeAdvertiser ?: return@Function "sin-anunciante"
         advertiser = adv
         callback?.let { adv.stopAdvertising(it) }
 
@@ -57,9 +58,9 @@ class BleAnuncioModule : Module() {
         val cb = object : AdvertiseCallback() {}
         callback = cb
         adv.startAdvertising(settings, data, cb)
-        true
+        "ok"
       } catch (e: Exception) {
-        false
+        "error: " + (e.message ?: e.javaClass.simpleName)
       }
     }
 

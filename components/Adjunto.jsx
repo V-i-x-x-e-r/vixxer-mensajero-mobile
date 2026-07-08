@@ -1,6 +1,7 @@
 import { AdjuntoImagen } from "./AdjuntoImagen";
 import { AdjuntoVideo } from "./AdjuntoVideo";
 import { AdjuntoAudio } from "./AdjuntoAudio";
+import { AdjuntoArchivo } from "./AdjuntoArchivo";
 
 export function Adjunto({ media, color, onMenu, seleccionando, onToggle })
 {
@@ -11,6 +12,10 @@ export function Adjunto({ media, color, onMenu, seleccionando, onToggle })
   if (media.t === "audio")
   {
     return <AdjuntoAudio media={media} color={color} />;
+  }
+  if (media.t === "file")
+  {
+    return <AdjuntoArchivo media={media} color={color} />;
   }
   return <AdjuntoImagen media={media} color={color} onMenu={onMenu} seleccionando={seleccionando} onToggle={onToggle} />;
 }

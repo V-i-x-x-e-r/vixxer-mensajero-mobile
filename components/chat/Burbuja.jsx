@@ -11,7 +11,7 @@ import { Responder } from "../Responder";
 import { tick } from "../../lib/haptica";
 
 const PressableAnimado = Animated.createAnimatedComponent(Pressable);
-const UMBRAL = 44;
+const UMBRAL = 30;
 
 export function agrupar(reacciones)
 {
@@ -44,12 +44,12 @@ export function BurbujaMedible({ style, onSeleccionar, onPress, onResponder, chi
   );
 
   const gesto = Gesture.Pan()
-    .activeOffsetX(16)
+    .activeOffsetX(12)
     .failOffsetX(-12)
-    .failOffsetY([-12, 12])
+    .failOffsetY([-16, 16])
     .onUpdate((e) =>
     {
-      const x = Math.min(72, Math.max(0, e.translationX * 0.55));
+      const x = Math.min(60, Math.max(0, e.translationX * 0.6));
       arrastre.value = x;
       if (x > UMBRAL && !armado.value)
       {
@@ -127,11 +127,14 @@ export function Burbuja({ mio, autor, cita, borrado, media, texto, meta, reaccio
   const { colores } = useTema();
   const grupos = agrupar(reacciones);
   const urlEnlace = !media && !borrado && typeof texto === "string" ? extraerUrl(texto) : null;
-  const mediaSolo = media && media.t !== "audio" && !borrado && !cita && !media.cap;
+  const mediaSolo = media && (media.t === "img" || media.t === "video" || media.t === "sticker") && !borrado && !cita && !media.cap;
   const Contenedor = aparecer ? Animated.View : View;
 
   return (
-    <Contenedor entering={aparecer ? FadeInDown.duration(180) : undefined} style={resaltada ? { backgroundColor: colores.surface } : null}>
+    <Contenedor
+      entering={aparecer ? FadeInDown.duration(180) : undefined}
+      style={resaltada ? { backgroundColor: `${colores.botonFondo}1F`, borderLeftWidth: 3, borderLeftColor: colores.botonFondo, borderRadius: 10 } : null}
+    >
       {autor ? <Text style={[estilos.autor, { color: colores.botonFondo }]}>{autor}</Text> : null}
       <BurbujaMedible
         onSeleccionar={borrado ? undefined : onMenu}

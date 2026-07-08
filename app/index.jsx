@@ -16,7 +16,7 @@ import { Confirmacion } from "../components/Confirmacion";
 
 export default function Login()
 {
-  const { colores } = useTema();
+  const { coloresAuth: colores } = useTema();
   const insets = useSafeAreaInsets();
   const [usuario, setUsuario] = useState("");
   const [contrasena, setContrasena] = useState("");

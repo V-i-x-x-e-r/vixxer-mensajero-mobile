@@ -14,6 +14,7 @@ import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
 import { leerAlias } from "../../lib/alias";
 import { estadoCercania, alCambio } from "../../lib/cercania";
 import { useTema } from "../../components/tema";
+import { DeslizarPestanas } from "../../components/DeslizarPestanas";
 import { fuentes } from "../../assets/themes/temas";
 import { Logo } from "../../components/Logo";
 import { Engrane } from "../../components/Engrane";
@@ -106,6 +107,7 @@ export default function Chats()
           else if (texto.includes("\"t\":\"video\"")) { texto = "Video"; }
           else if (texto.includes("\"t\":\"audio\"")) { texto = "Audio"; }
           else if (texto.includes("\"t\":\"sticker\"")) { texto = "Sticker"; }
+          else if (texto.includes("\"t\":\"file\"")) { texto = "Documento"; }
           else if (texto.includes("\"t\":\"tmpaviso\"")) { texto = "Mensajes temporales"; }
           else if (texto.includes("\"t\":\"tmp\"")) { try { texto = JSON.parse(texto).m; } catch (err) { texto = "Mensaje"; } }
         }
@@ -304,6 +306,7 @@ export default function Chats()
   }, [verArchivados, numArchivados]);
 
   return (
+    <DeslizarPestanas actual="chats">
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 12 }]}>
       {sel ? (
         <View style={estilos.cabecera}>
@@ -477,6 +480,7 @@ export default function Chats()
         </Pressable>
       </Modal>
     </View>
+    </DeslizarPestanas>
   );
 }
 

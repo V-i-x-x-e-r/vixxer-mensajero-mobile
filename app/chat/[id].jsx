@@ -51,6 +51,9 @@ import { Lupa } from "../../components/Lupa";
 import { Kebab } from "../../components/Kebab";
 import { Pin } from "../../components/Pin";
 import { aFecha, mismoDia, etiquetaDia, hora } from "../../lib/fechas";
+import { resumenMensaje } from "../../lib/resumen";
+import { Clip } from "../../components/Clip";
+import { Documento } from "../../components/Documento";
 import { tick } from "../../lib/haptica";
 
 const GRIS_VISTO = "#8E8E93";
@@ -64,7 +67,7 @@ function leerMedia(texto)
   try
   {
     const obj = JSON.parse(texto);
-    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio" || obj.t === "sticker") ? obj : null;
+    return obj && (obj.t === "img" || obj.t === "video" || obj.t === "audio" || obj.t === "sticker" || obj.t === "file") ? obj : null;
   }
   catch (e)
   {
@@ -110,6 +113,7 @@ export default function Chat()
   const [subiendo, setSubiendo] = useState(false);
   const [grabando, setGrabando] = useState(false);
   const [previo, setPrevio] = useState(null);
+  const [adjuntando, setAdjuntando] = useState(false);
   const [stickers, setStickers] = useState(false);
   const [reenviando, setReenviando] = useState(null);
   const [reenviandoMulti, setReenviandoMulti] = useState(false);
@@ -215,9 +219,9 @@ export default function Chat()
     }
     setToast("Descargando…");
     const r = await guardarMedia(media);
-    const etiquetas = { ok: "Guardado en tu galería ✓", web: "No disponible en web", sin_permiso: "Sin permiso de galería", error: "No se pudo guardar" };
-    setToast(etiquetas[r] || "No se pudo guardar");
-    setTimeout(() => setToast(""), 2000);
+    const etiquetas = { ok: "Guardado en tu galería ✓", web: "No disponible en web", sin_permiso: "Sin permiso de galería", compartido: "Guárdalo desde el menú" };
+    setToast(etiquetas[r.estado] || `No se pudo guardar${r.detalle ? `: ${r.detalle}` : ""}`);
+    setTimeout(() => setToast(""), 3000);
   }
 
   async function alternarSilencio()
@@ -762,8 +766,25 @@ export default function Chat()
     };
   }
 
+  async function adjuntarDocumento()
+  {
+    setAdjuntando(false);
+    const DocumentPicker = require("expo-document-picker");
+    const r = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: false });
+    if (r.canceled || !r.assets?.length)
+    {
+      return;
+    }
+    const a = r.assets[0];
+    const actual = { uri: a.uri, tipo: "file", mime: a.mimeType || "application/octet-stream", nombre: a.name, peso: a.size };
+    const localId = mostrarMediaOptimista(actual);
+    lista.current?.scrollToOffset({ offset: 0, animated: true });
+    subirYEnviar(actual, localId);
+  }
+
   async function adjuntar()
   {
+    setAdjuntando(false);
     const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permiso.granted)
     {
@@ -780,12 +801,7 @@ export default function Chat()
     {
       return;
     }
-    if (r.assets.length === 1)
-    {
-      setPrevio(aMedia(r.assets[0]));
-      return;
-    }
-    await enviarVarios(r.assets.map(aMedia));
+    setPrevio(r.assets.map(aMedia));
   }
 
   function tipoDe(actual)
@@ -805,6 +821,8 @@ export default function Chat()
       dur: actual.dur,
       cap: actual.cap,
       wf: actual.wf,
+      nombre: actual.nombre,
+      peso: actual.peso,
       pid: localId,
     });
     setMensajes((prev) => [
@@ -836,6 +854,8 @@ export default function Chat()
         dur: actual.dur,
         cap: actual.cap,
         wf: actual.wf,
+        nombre: actual.nombre,
+        peso: actual.peso,
         prev: extra.prev,
       });
       const priv = await leer(CLAVE_PRIVADA);
@@ -865,17 +885,14 @@ export default function Chat()
     }
   }
 
-  function confirmarEnvio(cap)
+  function confirmarEnvio(items)
   {
     if (!previo)
     {
       return;
     }
-    const actual = { ...previo, cap };
     setPrevio(null);
-    const localId = mostrarMediaOptimista(actual);
-    lista.current?.scrollToOffset({ offset: 0, animated: true });
-    subirYEnviar(actual, localId);
+    enviarVarios(items);
   }
 
   function enviarSticker(uri)
@@ -1246,7 +1263,7 @@ export default function Chat()
             <Pin color={colores.muted} tamano={15} />
             <View style={estilos.fijadoCentro}>
               <Text style={[estilos.fijadoTitulo, { color: colores.muted }]}>{fijados.length > 1 ? `Fijados (${fijados.length})` : "Mensaje fijado"}</Text>
-              <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{fijadoActual.texto}</Text>
+              <Text numberOfLines={1} style={[estilos.fijadoTxt, { color: colores.texto }]}>{resumenMensaje(fijadoActual.texto)}</Text>
             </View>
             <Pressable onPress={() => quitarFijar(fijadoActual.id)} hitSlop={8}>
               <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
@@ -1426,7 +1443,13 @@ export default function Chat()
 
       {lejos ? (
         <Pressable
-          onPress={() => lista.current?.scrollToOffset({ offset: 0, animated: true })}
+          onPress={() =>
+          {
+            lista.current?.scrollToOffset({ offset: 0, animated: true });
+            lejosRef.current = false;
+            setLejos(false);
+            setNuevosAbajo(0);
+          }}
           style={[estilos.bajar, { backgroundColor: colores.surface, borderColor: colores.borde }]}
         >
           <Text style={{ color: colores.texto, fontSize: 18 }}>{"↓"}</Text>
@@ -1470,7 +1493,7 @@ export default function Chat()
           valor={texto}
           onCambiar={escribir}
           onEnviar={enviar}
-          onAdjuntar={adjuntar}
+          onAdjuntar={() => setAdjuntando(true)}
           onSticker={() => setStickers(true)}
           onMic={grabarToggle}
           grabando={grabando}
@@ -1480,7 +1503,7 @@ export default function Chat()
           {respondiendo ? (
             <View style={[estilos.aviso, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
               <Text numberOfLines={1} style={[estilos.avisoTxt, { color: colores.muted }]}>
-                Respondiendo: {respondiendo.texto}
+                Respondiendo: {resumenMensaje(respondiendo.texto)}
               </Text>
               <Pressable onPress={() => setRespondiendo(null)} hitSlop={8}>
                 <Text style={{ color: colores.muted, fontSize: 16 }}>{"✕"}</Text>
@@ -1569,7 +1592,22 @@ export default function Chat()
         </Pressable>
       </Modal>
 
-      <PrevioMedia visible={!!previo} media={previo} onCancelar={() => setPrevio(null)} onEnviar={confirmarEnvio} />
+      <Modal transparent visible={adjuntando} animationType="fade" onRequestClose={() => setAdjuntando(false)}>
+        <Pressable style={estilos.adjFondo} onPress={() => setAdjuntando(false)}>
+          <Pressable style={[estilos.adjHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Pressable onPress={adjuntar} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
+              <Clip color={colores.texto} tamano={20} />
+              <Text style={[estilos.adjTxt, { color: colores.texto }]}>Fotos y videos</Text>
+            </Pressable>
+            <Pressable onPress={adjuntarDocumento} style={({ pressed }) => [estilos.adjItem, pressed && estilos.presionadoLeve]}>
+              <Documento color={colores.texto} tamano={20} />
+              <Text style={[estilos.adjTxt, { color: colores.texto }]}>Documento</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <PrevioMedia visible={!!previo} items={previo} onCancelar={() => setPrevio(null)} onEnviar={confirmarEnvio} />
     </View>
   );
 }
@@ -1613,6 +1651,10 @@ const estilos = StyleSheet.create({
   reintentar: { marginLeft: 2 },
   fallidoFila: { flexDirection: "row", alignItems: "center", gap: 6 },
   reintentarTxt: { fontSize: 10, fontFamily: fuentes.media },
+  adjFondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "flex-end" },
+  adjHoja: { borderTopLeftRadius: 18, borderTopRightRadius: 18, borderWidth: 1, paddingVertical: 10, paddingBottom: 26 },
+  adjItem: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 24, paddingVertical: 14 },
+  adjTxt: { fontSize: 16, fontFamily: fuentes.media },
   pill: { position: "absolute", bottom: 90, left: 0, right: 0, alignItems: "center" },
   pillTxt: { fontSize: 13, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, overflow: "hidden" },
   topOverlay: { position: "absolute", top: 3, left: 0, right: 0, zIndex: 20 },
