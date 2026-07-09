@@ -24,7 +24,7 @@ export function Boton({ titulo, onPress, cargando = false, disabled = false })
         style={{
           backgroundColor: colores.botonFondo,
           borderRadius: 8,
-          paddingVertical: 13,
+          paddingVertical: 11,
           alignItems: "center",
           opacity: inactivo ? 0.6 : 1,
         }}

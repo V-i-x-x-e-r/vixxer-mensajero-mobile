@@ -20,7 +20,7 @@ export function Campo({ valor, setValor, placeholder, secureTextEntry = false, .
           borderColor: enfocado ? colores.bordeFoco : colores.borde,
           borderRadius: 8,
           paddingHorizontal: 16,
-          paddingVertical: 12,
+          paddingVertical: 10,
           paddingRight: secureTextEntry ? 44 : 16,
           fontSize: 14,
           color: colores.texto,
