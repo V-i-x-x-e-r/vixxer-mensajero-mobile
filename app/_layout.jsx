@@ -7,6 +7,7 @@ import { useFonts, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from "
 import { ProveedorTema, useTema } from "../components/tema";
 import { ProveedorSolicitudes } from "../components/Solicitudes";
 import { BloqueoPin } from "../components/BloqueoPin";
+import { SplashOrbita } from "../components/SplashOrbita";
 import { tienePin } from "../lib/pin";
 import { asegurarSocket } from "../lib/socket";
 import { escucharLlamadas } from "../lib/llamadas";
@@ -57,7 +58,9 @@ function Navegacion()
 
 function Contenido()
 {
+  const { colores } = useTema();
   const [bloqueado, setBloqueado] = useState(false);
+  const [splash, setSplash] = useState(true);
   const tiene = useRef(false);
 
   useEffect(() =>
@@ -95,6 +98,7 @@ function Contenido()
           <BloqueoPin onDesbloquear={() => setBloqueado(false)} />
         </View>
       ) : null}
+      {splash ? <SplashOrbita fondo={colores.fondo} onDone={() => setSplash(false)} /> : null}
     </>
   );
 }
