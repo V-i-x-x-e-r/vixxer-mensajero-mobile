@@ -16,7 +16,7 @@ import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
-import { leerBorrador, guardarBorrador, limpiarBorrador, guardarAudioBorrador } from "../../lib/borradores";
+import { leerBorrador, guardarBorrador, guardarAudioBorrador } from "../../lib/borradores";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion, envolverAviso, leerAviso, textoAviso } from "../../lib/efimero";
 import { aliasDe } from "../../lib/alias";
@@ -1056,7 +1056,6 @@ export default function Chat()
         wf: audioDraft.wf,
       }));
       setAudioDraft(null);
-      await limpiarBorrador(claveBorrador);
     }
     catch (e)
     {
@@ -1239,7 +1238,7 @@ export default function Chat()
 
   useEffect(() =>
   {
-    if (grabando && estadoGrab)
+    if (grabando && !grabPausado && estadoGrab)
     {
       if (typeof estadoGrab.metering === "number")
       {
@@ -1250,7 +1249,7 @@ export default function Chat()
         durMs.current = estadoGrab.durationMillis;
       }
     }
-  }, [estadoGrab, grabando]);
+  }, [estadoGrab, grabando, grabPausado]);
 
   async function borrarLocal(mensaje)
   {

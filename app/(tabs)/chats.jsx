@@ -11,6 +11,7 @@ import { llavePublicaDe, sembrarLlave } from "../../lib/llaves";
 import { leer, TOKEN, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerEstados, alternarFijado, alternarSilenciado, alternarArchivado, alternarFavorito, ocultar, mostrar } from "../../lib/chatLocal";
 import { leerCacheLista, guardarCacheLista } from "../../lib/chatCache";
+import { leerBorrador } from "../../lib/borradores";
 import { leerAlias } from "../../lib/alias";
 import { estadoCercania, alCambio } from "../../lib/cercania";
 import { useTema } from "../../components/tema";
@@ -32,6 +33,25 @@ import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 import { Lupa } from "../../components/Lupa";
 
 const DORADO = "#F5B301";
+
+async function aplicarBorradores(amigos, mapa)
+{
+  const pares = await Promise.all(amigos.map(async (a) => [a.id, await leerBorrador(`chat-${a.id}`)]));
+  const salida = { ...mapa };
+  for (const [id, b] of pares)
+  {
+    if (b && (b.texto || b.audio))
+    {
+      salida[id] = {
+        ...(salida[id] || {}),
+        preview: b.texto ? `Borrador: ${b.texto}` : "Borrador: nota de voz",
+        borrador: true,
+        enviado_en: salida[id]?.enviado_en || new Date().toISOString(),
+      };
+    }
+  }
+  return salida;
+}
 
 function cuando(iso)
 {
@@ -122,14 +142,15 @@ export default function Chats()
         };
       }
 
-      const visibles = lista.filter((a) => mapa[a.id] && !e.ocultos.includes(a.id));
-      visibles.sort((a, b) => (mapa[b.id]?.enviado_en || "").localeCompare(mapa[a.id]?.enviado_en || ""));
+      const mapaConBorradores = await aplicarBorradores(lista, mapa);
+      const visibles = lista.filter((a) => mapaConBorradores[a.id] && !e.ocultos.includes(a.id));
+      visibles.sort((a, b) => (mapaConBorradores[b.id]?.enviado_en || "").localeCompare(mapaConBorradores[a.id]?.enviado_en || ""));
       const fijados = visibles.filter((a) => e.fijados.includes(a.id));
       const resto = visibles.filter((a) => !e.fijados.includes(a.id));
       const ordenados = [...fijados, ...resto];
       setAmigos(ordenados);
-      setConvs(mapa);
-      guardarCacheLista({ amigos: ordenados, convs: mapa });
+      setConvs(mapaConBorradores);
+      guardarCacheLista({ amigos: ordenados, convs: mapaConBorradores });
     }
     catch (e)
     {
@@ -446,7 +467,7 @@ export default function Chats()
                 ) : c ? (
                   <View style={estilos.lineaPreview}>
                     {c.mio ? <Visto color={c.leido ? colores.botonFondo : "#8E8E93"} dos={c.entregado || c.leido} tamano={13} /> : null}
-                    <Text style={[estilos.preview, { color: colores.muted, flexShrink: 1 }]} numberOfLines={1}>{c.preview}</Text>
+                    <Text style={[estilos.preview, { color: c.borrador ? colores.error : colores.muted, flexShrink: 1 }]} numberOfLines={1}>{c.preview}</Text>
                   </View>
                 ) : null}
               </View>

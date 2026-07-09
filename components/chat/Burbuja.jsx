@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withSpring, runOnJS } from "react-native-reanimated";
@@ -123,7 +123,7 @@ function TextoMensaje({ texto, mio, conMenciones, colores })
   );
 }
 
-export function Burbuja({ mio, autor, cita, citaMini, borrado, media, texto, meta, reacciones, onMenu, onPress, onResponder, seleccionando, onToggle, resaltada, aparecer, conMenciones })
+function BurbujaBase({ mio, autor, cita, citaMini, borrado, media, texto, meta, reacciones, onMenu, onPress, onResponder, seleccionando, onToggle, resaltada, aparecer, conMenciones })
 {
   const { colores } = useTema();
   const grupos = agrupar(reacciones);
@@ -214,6 +214,8 @@ export function Burbuja({ mio, autor, cita, citaMini, borrado, media, texto, met
     </Contenedor>
   );
 }
+
+export const Burbuja = memo(BurbujaBase);
 
 const estilos = StyleSheet.create({
   autor: { fontSize: 12, fontFamily: fuentes.semibold, marginLeft: 6, marginBottom: 2 },

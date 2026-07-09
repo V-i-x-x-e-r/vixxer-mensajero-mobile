@@ -13,6 +13,7 @@ export function VisorVideo({ uri, onCerrar })
   const [pausado, setPausado] = useState(false);
   const [arrastre, setArrastre] = useState(null);
   const anchoBarra = useRef(1);
+  const base = useRef({ pos: 0, t: Date.now() });
   const player = useVideoPlayer(uri, (p) =>
   {
     p.loop = false;
@@ -33,12 +34,25 @@ export function VisorVideo({ uri, onCerrar })
   {
     const t = setInterval(() =>
     {
-      setPos(player.currentTime || 0);
-      setDur(player.duration || 0);
+      const nativo = player.currentTime || 0;
+      const duracion = player.duration || 0;
+      setDur(duracion);
       setPausado(!player.playing);
-    }, 80);
+      if (!player.playing || arrastre != null)
+      {
+        base.current = { pos: nativo, t: Date.now() };
+        setPos(nativo);
+        return;
+      }
+      if (Math.abs(nativo - base.current.pos) > 0.35)
+      {
+        base.current = { pos: nativo, t: Date.now() };
+      }
+      const vivo = base.current.pos + (Date.now() - base.current.t) / 1000;
+      setPos(duracion > 0 ? Math.min(duracion, vivo) : vivo);
+    }, 45);
     return () => clearInterval(t);
-  }, [player]);
+  }, [player, arrastre]);
 
   function irA(segundos)
   {
@@ -61,6 +75,7 @@ export function VisorVideo({ uri, onCerrar })
       }
     }
     setPos(objetivo);
+    base.current = { pos: objetivo, t: Date.now() };
   }
 
   function alternar()

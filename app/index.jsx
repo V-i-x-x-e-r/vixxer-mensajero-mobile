@@ -13,6 +13,7 @@ import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
+import { LiquidGlass } from "../components/LiquidGlass";
 
 export default function Login()
 {
@@ -96,14 +97,14 @@ export default function Login()
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={estilos.logoHero}>
-          <LogoPendulo alto={170} titulo colorBarra={colores.muted} />
+          <LogoPendulo alto={225} titulo colorBarra="#8A96A8" />
         </View>
         <View style={estilos.titulos}>
           <Text style={[estilos.titulo, { color: colores.texto }]}>Iniciar sesión</Text>
           <Text style={[estilos.subtitulo, { color: colores.muted }]}>Bienvenido de vuelta</Text>
         </View>
 
-        <View style={[estilos.form, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: colores.borde }]}>
+        <LiquidGlass style={estilos.form} borde="rgba(255,255,255,0.14)" fondo="rgba(255,255,255,0.055)" intenso>
           <Campo
             valor={usuario}
             setValor={setUsuario}
@@ -123,7 +124,7 @@ export default function Login()
           {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
 
           <Boton titulo="Entrar" onPress={entrar} cargando={cargando} />
-        </View>
+        </LiquidGlass>
 
         <Text style={[estilos.pie, { color: colores.muted }]}>
           ¿No tienes cuenta?{" "}
@@ -159,7 +160,7 @@ const estilos = StyleSheet.create({
     top: -180,
     height: 420,
     borderRadius: 210,
-    backgroundColor: "rgba(100,116,139,0.18)",
+    backgroundColor: "rgba(100,116,139,0.20)",
   },
   cabecera:
   {
@@ -170,11 +171,11 @@ const estilos = StyleSheet.create({
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   nombre: { fontSize: 18, fontFamily: fuentes.semibold },
   zona: { flex: 1, justifyContent: "center" },
-  logoHero: { alignItems: "center", marginBottom: 18 },
-  titulos: { marginBottom: 22 },
+  logoHero: { alignItems: "center", marginTop: -18, marginBottom: 10 },
+  titulos: { marginBottom: 20 },
   titulo: { fontSize: 24, fontFamily: fuentes.semibold, letterSpacing: -0.5 },
   subtitulo: { marginTop: 4, fontSize: 14 },
-  form: { gap: 12, borderWidth: 1, borderRadius: 24, padding: 18 },
+  form: { gap: 12, borderRadius: 26, padding: 18 },
   olvido: { alignSelf: "flex-end", fontSize: 12, marginTop: -2 },
   error: { fontSize: 13 },
   pie: { marginTop: 28, textAlign: "center", fontSize: 14 },

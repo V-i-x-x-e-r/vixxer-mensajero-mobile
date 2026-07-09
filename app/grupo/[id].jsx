@@ -9,7 +9,7 @@ import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
-import { leerBorrador, guardarBorrador, limpiarBorrador, guardarAudioBorrador } from "../../lib/borradores";
+import { leerBorrador, guardarBorrador, guardarAudioBorrador } from "../../lib/borradores";
 import { marcarVisto } from "../../lib/grupoVisto";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { guardarMedia } from "../../lib/descargas";
@@ -653,7 +653,6 @@ export default function GrupoChat()
         wf: audioDraft.wf,
       });
       setAudioDraft(null);
-      await limpiarBorrador(claveBorrador);
     }
     catch (e)
     {
@@ -773,7 +772,7 @@ export default function GrupoChat()
 
   useEffect(() =>
   {
-    if (grabando && estadoGrab)
+    if (grabando && !grabPausado && estadoGrab)
     {
       if (typeof estadoGrab.metering === "number")
       {
@@ -784,7 +783,7 @@ export default function GrupoChat()
         durMs.current = estadoGrab.durationMillis;
       }
     }
-  }, [estadoGrab, grabando]);
+  }, [estadoGrab, grabando, grabPausado]);
 
   const visibles = useMemo(() => (ocultos.size ? mensajes.filter((m) => !ocultos.has(m.id)) : mensajes), [mensajes, ocultos]);
   const datos = useMemo(() => (esWeb ? visibles : visibles.slice().reverse()), [visibles]);
