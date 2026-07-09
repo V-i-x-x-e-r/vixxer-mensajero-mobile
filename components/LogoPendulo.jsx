@@ -7,21 +7,14 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 
 function VCincelada({ cx, cy, r })
 {
-  const w = r * 0.62;
-  const top = cy - r * 0.6;
-  const botO = cy + r * 0.72;
-  const botF = cy + r * 0.62;
-  const innerY = cy + r * 0.4;
-  const t = r * 0.4;
-  const outline = `M ${cx - w} ${top} L ${cx} ${botO} L ${cx + w} ${top}`;
-  const izq = `M ${cx - w} ${top} L ${cx} ${botF} L ${cx} ${innerY} L ${cx - w + t} ${top} Z`;
-  const der = `M ${cx + w} ${top} L ${cx} ${botF} L ${cx} ${innerY} L ${cx + w - t} ${top} Z`;
+  const w = r * 0.7;
+  const top = cy - r * 0.67;
+  const bot = cy + r * 0.82;
+  const iw = r * 0.37;
+  const ib = cy + r * 0.19;
+  const banda = `M ${cx - w} ${top} L ${cx} ${bot} L ${cx + w} ${top} L ${cx + iw} ${top} L ${cx} ${ib} L ${cx - iw} ${top} Z`;
   return (
-    <G>
-      <Path d={outline} fill="none" stroke="#050609" strokeWidth={Math.max(2, r * 0.42)} strokeLinecap="round" strokeLinejoin="round" />
-      <Path d={izq} fill="#F1F4F9" />
-      <Path d={der} fill="#9AA3AF" />
-    </G>
+    <Path d={banda} fill="url(#vxVluz)" stroke="#060709" strokeWidth={Math.max(1, r * 0.09)} strokeLinejoin="round" strokeLinecap="round" />
   );
 }
 
@@ -52,20 +45,25 @@ function Gradientes()
 {
   return (
     <Defs>
-      <RadialGradient id="vxIron" cx="35%" cy="26%" r="76%">
-        <Stop offset="0%" stopColor="#C9D0D9" />
-        <Stop offset="14%" stopColor="#7C838D" />
-        <Stop offset="40%" stopColor="#3C424A" />
-        <Stop offset="70%" stopColor="#191D22" />
-        <Stop offset="100%" stopColor="#070609" />
+      <RadialGradient id="vxIron" cx="36%" cy="28%" r="74%">
+        <Stop offset="0%" stopColor="#EAF0F8" />
+        <Stop offset="14%" stopColor="#9BA3AE" />
+        <Stop offset="38%" stopColor="#525A66" />
+        <Stop offset="66%" stopColor="#252A31" />
+        <Stop offset="100%" stopColor="#090B0F" />
       </RadialGradient>
-      <RadialGradient id="vxIronC" cx="37%" cy="24%" r="78%">
-        <Stop offset="0%" stopColor="#D6DCE3" />
-        <Stop offset="15%" stopColor="#868D96" />
-        <Stop offset="42%" stopColor="#343A42" />
-        <Stop offset="72%" stopColor="#15181D" />
-        <Stop offset="100%" stopColor="#050407" />
+      <RadialGradient id="vxIronC" cx="38%" cy="26%" r="76%">
+        <Stop offset="0%" stopColor="#F2F6FB" />
+        <Stop offset="15%" stopColor="#A6AEB9" />
+        <Stop offset="40%" stopColor="#474E59" />
+        <Stop offset="68%" stopColor="#1E232A" />
+        <Stop offset="100%" stopColor="#07090C" />
       </RadialGradient>
+      <LinearGradient id="vxVluz" x1="0" y1="0" x2="1" y2="0.5">
+        <Stop offset="0%" stopColor="#F4F7FB" />
+        <Stop offset="55%" stopColor="#C2CAD5" />
+        <Stop offset="100%" stopColor="#828B98" />
+      </LinearGradient>
       <LinearGradient id="vxMarco" x1="0" y1="0" x2="0.3" y2="1">
         <Stop offset="0%" stopColor="#9AA3B2" />
         <Stop offset="22%" stopColor="#606877" />
@@ -76,7 +74,7 @@ function Gradientes()
   );
 }
 
-const LOGIN_CX = [50, 100, 150, 200, 250];
+const LOGIN_CX = [58, 104, 150, 196, 242];
 const LOGIN_PIV = 26;
 const LOGIN_BY = 130;
 
