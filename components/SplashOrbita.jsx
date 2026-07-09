@@ -76,8 +76,9 @@ export function SplashOrbita({ onDone, fondo = "#0C1015" })
         <Orbe i={4} t={t} r={19} />
         <Orbe i={2} t={t} r={20} />
         <AnimatedG animatedProps={propsV}>
-          <Path d={`M ${CX - 10} ${CY - 8} L ${CX} ${CY + 14} L ${CX + 10} ${CY - 8}`} fill="none" stroke="#05070A" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-          <Path d={`M ${CX - 10} ${CY - 8} L ${CX} ${CY + 14} L ${CX + 10} ${CY - 8}`} fill="none" stroke="#AEB7C3" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.9" />
+          <Path d={`M ${CX - 12.4} ${CY - 12} L ${CX} ${CY + 14.4} L ${CX + 12.4} ${CY - 12}`} fill="none" stroke="#050609" strokeWidth="8.4" strokeLinecap="round" strokeLinejoin="round" />
+          <Path d={`M ${CX - 12.4} ${CY - 12} L ${CX} ${CY + 12.4} L ${CX} ${CY + 8} L ${CX - 4.4} ${CY - 12} Z`} fill="#F1F4F9" />
+          <Path d={`M ${CX + 12.4} ${CY - 12} L ${CX} ${CY + 12.4} L ${CX} ${CY + 8} L ${CX + 4.4} ${CY - 12} Z`} fill="#9AA3AF" />
         </AnimatedG>
       </Svg>
     </Animated.View>
