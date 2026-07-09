@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { Pressable } from "react-native";
-import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from "react-native-svg";
+import { Pressable, View, Text } from "react-native";
+import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import Animated, { Easing, useAnimatedProps, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 const AnimatedG = Animated.createAnimatedComponent(G);
@@ -75,7 +75,7 @@ function Gradientes()
 }
 
 const LOGIN_CX = [58, 104, 150, 196, 242];
-const LOGIN_PIV = 26;
+const LOGIN_PIV = 21;
 const LOGIN_BY = 130;
 
 export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velocidad = 1500, colorBarra = "#9AA2AD", colorTexto = "#EEF2F7" })
@@ -134,25 +134,42 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
     const ancho = 300 * (alto / 264);
     return (
       <Pressable onPress={golpear} hitSlop={8}>
-        <Svg width={ancho} height={alto} viewBox="0 0 300 264">
-          <Gradientes />
-          <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
-          <Rect x="32" y="22" width="236" height="210" rx="45" fill="none" stroke="#98A2B0" strokeWidth="1.6" opacity="0.45" />
-          <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="#B9C1CC" strokeWidth="1" opacity="0.3" />
-          <Path d="M72 240 q-16 12 -26 4" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
-          <Path d="M228 240 q16 12 26 4" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
-          <G stroke={colorBarra} strokeWidth="1.4" opacity="0.8">
-            <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY} />
-            <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY} />
-            <Line x1={LOGIN_CX[3]} y1={LOGIN_PIV} x2={LOGIN_CX[3]} y2={LOGIN_BY} />
-          </G>
-          <Bola x={LOGIN_CX[1]} y={LOGIN_BY} r={19} />
-          <Bola x={LOGIN_CX[2]} y={LOGIN_BY} r={20} central />
-          <Bola x={LOGIN_CX[3]} y={LOGIN_BY} r={19} />
-          <Colgante x={LOGIN_CX[0]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={izq} colorHilo={colorBarra} />
-          <Colgante x={LOGIN_CX[4]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={der} colorHilo={colorBarra} />
-          <SvgText x="156" y="204" textAnchor="middle" fill={colorTexto} fontSize="24" fontWeight="400" letterSpacing="12">VIXXER</SvgText>
-        </Svg>
+        <View style={{ width: ancho, height: alto }}>
+          <Svg width={ancho} height={alto} viewBox="0 0 300 264">
+            <Gradientes />
+            <Path d="M76 236 q-11 13 -20 12" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
+            <Path d="M224 236 q11 13 20 12" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
+            <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
+            <Rect x="32" y="22" width="236" height="210" rx="45" fill="none" stroke="#98A2B0" strokeWidth="1.6" opacity="0.45" />
+            <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="#B9C1CC" strokeWidth="1" opacity="0.3" />
+            <G stroke={colorBarra} strokeWidth="1.4" opacity="0.8">
+              <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY} />
+              <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY} />
+              <Line x1={LOGIN_CX[3]} y1={LOGIN_PIV} x2={LOGIN_CX[3]} y2={LOGIN_BY} />
+            </G>
+            <Bola x={LOGIN_CX[1]} y={LOGIN_BY} r={19} />
+            <Bola x={LOGIN_CX[2]} y={LOGIN_BY} r={20} central />
+            <Bola x={LOGIN_CX[3]} y={LOGIN_BY} r={19} />
+            <Colgante x={LOGIN_CX[0]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={izq} colorHilo={colorBarra} />
+            <Colgante x={LOGIN_CX[4]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={der} colorHilo={colorBarra} />
+          </Svg>
+          <Text
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: alto * 0.727,
+              textAlign: "center",
+              color: colorTexto,
+              fontSize: alto * 0.092,
+              letterSpacing: alto * 0.045,
+              fontWeight: "400",
+            }}
+          >
+            VIXXER
+          </Text>
+        </View>
       </Pressable>
     );
   }
