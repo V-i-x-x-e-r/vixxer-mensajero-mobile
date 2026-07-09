@@ -8,10 +8,14 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 function PenduloAnimado({ pivote, angulo, children })
 {
   const props = useAnimatedProps(() => ({
-    transform: `translate(${pivote} 24) rotate(${angulo.value}) translate(${-pivote} -24)`,
+    rotation: angulo.value,
   }));
 
-  return <AnimatedG animatedProps={props}>{children}</AnimatedG>;
+  return (
+    <AnimatedG animatedProps={props} originX={pivote} originY={24}>
+      {children}
+    </AnimatedG>
+  );
 }
 
 function Bola({ x, central })
