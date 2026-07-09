@@ -92,7 +92,7 @@ export default function Login()
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={estilos.logoHero}>
-          <LogoPendulo variante="login" alto={158} colorTexto={colores.texto} />
+          <LogoPendulo variante="login" alto={144} colorTexto={colores.texto} />
         </View>
         <View style={estilos.titulos}>
           <Text style={[estilos.titulo, { color: colores.texto }]}>Iniciar sesión</Text>
@@ -153,14 +153,14 @@ const estilos = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
   },
-  zona: { flex: 1, justifyContent: "center" },
-  logoHero: { alignItems: "center", marginBottom: 22 },
-  titulos: { marginBottom: 28 },
+  zona: { flex: 1, justifyContent: "center", paddingBottom: 72 },
+  logoHero: { alignItems: "center", marginBottom: 12 },
+  titulos: { marginBottom: 18 },
   titulo: { fontSize: 24, fontFamily: fuentes.semibold, letterSpacing: -0.5 },
   subtitulo: { marginTop: 4, fontSize: 14 },
-  form: { gap: 12 },
+  form: { gap: 10 },
   olvido: { alignSelf: "flex-end", fontSize: 12, marginTop: -2 },
   error: { fontSize: 13 },
-  pie: { marginTop: 28, textAlign: "center", fontSize: 14 },
+  pie: { marginTop: 22, textAlign: "center", fontSize: 14 },
   enlace: { fontWeight: "600", textDecorationLine: "underline" },
 });
