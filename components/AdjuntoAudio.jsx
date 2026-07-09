@@ -8,7 +8,12 @@ import { barrasDeterministas } from "../lib/audioWave";
 import { fuentes } from "../assets/themes/temas";
 
 const VELOCIDADES = [1, 1.5, 2];
-const ANCHO_ONDA = 148;
+const ANCHO_ONDA = 172;
+
+function conAlpha(color, alpha)
+{
+  return typeof color === "string" && color.length === 7 ? `${color}${alpha}` : `rgba(255,255,255,0.${alpha === "33" ? "20" : "10"})`;
+}
 
 export function AdjuntoAudio({ media, color, compacto })
 {
@@ -86,7 +91,8 @@ export function AdjuntoAudio({ media, color, compacto })
     {
       return;
     }
-    const x = Math.min(1, Math.max(0, e.nativeEvent.locationX / ANCHO_ONDA));
+    const ancho = compacto ? 136 : ANCHO_ONDA;
+    const x = Math.min(1, Math.max(0, e.nativeEvent.locationX / ancho));
     player.seekTo(x * duracion);
   }
 
@@ -104,12 +110,12 @@ export function AdjuntoAudio({ media, color, compacto })
   }
 
   return (
-    <View style={[estilos.fila, compacto && estilos.filaCompacta]}>
-      <Pressable onPress={alternar} hitSlop={8} style={estilos.play}>
+    <View style={[estilos.tarjeta, compacto && estilos.tarjetaCompacta, { borderColor: conAlpha(color, "33"), backgroundColor: conAlpha(color, "12") }]}>
+      <Pressable onPress={alternar} hitSlop={8} style={[estilos.play, { borderColor: conAlpha(color, "40"), backgroundColor: conAlpha(color, "18") }]}>
         {!uri ? (
           <ActivityIndicator color={color} />
         ) : (
-          <Text style={{ color, fontSize: 20 }}>{reproduciendo ? "❚❚" : "▶"}</Text>
+          <Text style={[estilos.playTxt, { color }]}>{reproduciendo ? "Ⅱ" : "▶"}</Text>
         )}
       </Pressable>
       <View style={estilos.centro}>
@@ -118,8 +124,8 @@ export function AdjuntoAudio({ media, color, compacto })
             <View
               key={i}
               style={{
-                width: 3,
-                height: 4 + v * 18,
+                width: compacto ? 2.2 : 2.5,
+                height: 5 + v * (compacto ? 19 : 24),
                 borderRadius: 3,
                 backgroundColor: color,
                 opacity: (i + 0.5) / barras.length <= progreso ? 1 : 0.35,
@@ -127,7 +133,10 @@ export function AdjuntoAudio({ media, color, compacto })
             />
           ))}
         </Pressable>
-        <Text style={[estilos.tiempo, { color }]}>{tiempo}</Text>
+        <View style={estilos.tiempoFila}>
+          <Text style={[estilos.tiempo, { color }]}>{tiempo}</Text>
+          {!compacto ? <Text style={[estilos.tiempo, { color, opacity: 0.55 }]}>{duracionCorta(duracion) || "0:00"}</Text> : null}
+        </View>
       </View>
       {uri && !compacto ? (
         <Pressable onPress={cambiarVelocidad} hitSlop={6} style={[estilos.velocidad, { borderColor: color }]}>
@@ -139,13 +148,15 @@ export function AdjuntoAudio({ media, color, compacto })
 }
 
 const estilos = StyleSheet.create({
-  fila: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
-  filaCompacta: { paddingVertical: 0 },
-  play: { width: 28, alignItems: "center" },
+  tarjeta: { minWidth: 248, flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 22, paddingHorizontal: 10, paddingVertical: 9 },
+  tarjetaCompacta: { minWidth: 0, flex: 1, paddingHorizontal: 6, paddingVertical: 4, borderWidth: 0, backgroundColor: "transparent" },
+  play: { width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  playTxt: { fontSize: 18, fontFamily: fuentes.semibold, marginLeft: 1 },
   centro: { gap: 3 },
   onda: { width: ANCHO_ONDA, height: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  ondaCompacta: { width: 136 },
+  ondaCompacta: { width: 136, height: 22 },
+  tiempoFila: { flexDirection: "row", justifyContent: "space-between" },
   tiempo: { fontSize: 11, opacity: 0.8 },
-  velocidad: { borderWidth: 1, borderRadius: 10, width: 44, alignItems: "center", paddingVertical: 3 },
+  velocidad: { borderWidth: 1, borderRadius: 14, width: 46, height: 30, alignItems: "center", justifyContent: "center" },
   velocidadTxt: { fontSize: 11, fontFamily: fuentes.semibold },
 });

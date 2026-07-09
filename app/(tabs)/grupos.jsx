@@ -8,6 +8,7 @@ import { descifrar } from "../../lib/crypto";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerVistos } from "../../lib/grupoVisto";
 import { leerCacheGrupos, guardarCacheGrupos } from "../../lib/chatCache";
+import { leerBorrador } from "../../lib/borradores";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
 import { DeslizarPestanas } from "../../components/DeslizarPestanas";
@@ -50,6 +51,25 @@ function resumen(texto)
   return texto;
 }
 
+async function aplicarBorradores(lista)
+{
+  const pares = await Promise.all(lista.map(async (g) => [g.id, await leerBorrador(`grupo-${g.id}`)]));
+  const porId = Object.fromEntries(pares);
+  return lista.map((g) =>
+  {
+    const b = porId[g.id];
+    if (!b || (!b.texto && !b.audio))
+    {
+      return g;
+    }
+    return {
+      ...g,
+      preview: b.texto ? `Borrador: ${b.texto}` : "Borrador: nota de voz",
+      borrador: true,
+    };
+  });
+}
+
 export default function Grupos()
 {
   const { colores } = useTema();
@@ -90,8 +110,9 @@ export default function Grupos()
           nuevo: !mio && (!visto || g.ultimo.enviado_en > visto),
         };
       });
-      setGrupos(lista);
-      guardarCacheGrupos(lista);
+      const conBorradores = await aplicarBorradores(lista);
+      setGrupos(conBorradores);
+      guardarCacheGrupos(conBorradores);
     }
     catch (e)
     {
@@ -235,7 +256,7 @@ export default function Grupos()
               {escribiendo[item.id] ? (
                 <Text style={[estilos.sub, { color: colores.exito || colores.botonFondo }]} numberOfLines={1}>escribiendo…</Text>
               ) : (
-                <Text style={[estilos.sub, { color: colores.muted }]} numberOfLines={1}>
+                <Text style={[estilos.sub, { color: item.borrador ? colores.error : colores.muted }]} numberOfLines={1}>
                   {item.preview || `${item.miembros} miembros`}
                 </Text>
               )}
