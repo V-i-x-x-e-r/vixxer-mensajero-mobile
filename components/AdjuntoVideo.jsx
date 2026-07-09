@@ -36,28 +36,38 @@ export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cu
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [poster, setPoster] = useState(() => miniaturas.get(media.path || media.local) || null);
   const [progreso, setProgreso] = useState(null);
+  const [descargando, setDescargando] = useState(false);
   const [abierto, setAbierto] = useState(false);
   const ref = useRef(null);
 
-  useEffect(() =>
+  async function abrirVideo()
   {
-    if (uri)
+    if (seleccionando)
+    {
+      onToggle?.();
+      return;
+    }
+    if (uri && !subiendo)
+    {
+      setAbierto(true);
+      return;
+    }
+    if (descargando || subiendo)
     {
       return;
     }
-    let activo = true;
-    obtenerMedia(media, (p) => activo && setProgreso(p))
+    setDescargando(true);
+    setProgreso(0);
+    obtenerMedia(media, setProgreso)
       .then((final) =>
       {
-        if (activo)
-        {
-          guardarCache(media.path, final);
-          setUri(final);
-        }
+        guardarCache(media.path, final);
+        setUri(final);
+        setAbierto(true);
       })
-      .catch(() => {});
-    return () => { activo = false; };
-  }, [media.path]);
+      .catch(() => {})
+      .finally(() => setDescargando(false));
+  }
 
   useEffect(() =>
   {
@@ -85,14 +95,14 @@ export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cu
     ? { width: cuadrado, height: cuadrado, borderRadius: 10 }
     : ajustarMedida(media.w, media.h, 240, 300) || { width: 240, height: 300 };
   const subiendo = media.pid && progreso != null && progreso < 1;
-  const ocupado = !uri || subiendo;
+  const ocupado = descargando || subiendo;
   const dur = duracionCorta(media.dur);
 
   return (
     <>
       <Pressable
         ref={ref}
-        onPress={() => (seleccionando ? onToggle?.() : uri && !subiendo ? setAbierto(true) : null)}
+        onPress={abrirVideo}
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
         delayLongPress={250}
         style={[estilos.miniatura, marco]}

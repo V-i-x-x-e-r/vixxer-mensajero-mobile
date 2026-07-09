@@ -8,7 +8,7 @@ import { publicarLlaveFirma } from "../lib/firma";
 import { guardar, leer, TOKEN, MI_ID, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
-import { Logo } from "../components/Logo";
+import { LogoPendulo } from "../components/LogoPendulo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
@@ -83,9 +83,9 @@ export default function Login()
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
+      <View style={estilos.aura} />
       <View style={[estilos.cabecera, { paddingTop: insets.top + 16 }]}>
         <View style={estilos.marca}>
-          <Logo alto={26} />
           <Text style={[estilos.nombre, { color: colores.texto }]}>Vixxer</Text>
         </View>
         <BotonTema />
@@ -95,12 +95,15 @@ export default function Login()
         style={estilos.zona}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <View style={estilos.logoHero}>
+          <LogoPendulo alto={170} titulo colorBarra={colores.muted} />
+        </View>
         <View style={estilos.titulos}>
           <Text style={[estilos.titulo, { color: colores.texto }]}>Iniciar sesión</Text>
           <Text style={[estilos.subtitulo, { color: colores.muted }]}>Bienvenido de vuelta</Text>
         </View>
 
-        <View style={estilos.form}>
+        <View style={[estilos.form, { backgroundColor: "rgba(255,255,255,0.04)", borderColor: colores.borde }]}>
           <Campo
             valor={usuario}
             setValor={setUsuario}
@@ -147,7 +150,17 @@ export default function Login()
 }
 
 const estilos = StyleSheet.create({
-  pantalla: { flex: 1, paddingHorizontal: 28 },
+  pantalla: { flex: 1, paddingHorizontal: 28, overflow: "hidden" },
+  aura:
+  {
+    position: "absolute",
+    left: -80,
+    right: -80,
+    top: -180,
+    height: 420,
+    borderRadius: 210,
+    backgroundColor: "rgba(100,116,139,0.18)",
+  },
   cabecera:
   {
     flexDirection: "row",
@@ -157,10 +170,11 @@ const estilos = StyleSheet.create({
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   nombre: { fontSize: 18, fontFamily: fuentes.semibold },
   zona: { flex: 1, justifyContent: "center" },
-  titulos: { marginBottom: 36 },
+  logoHero: { alignItems: "center", marginBottom: 18 },
+  titulos: { marginBottom: 22 },
   titulo: { fontSize: 24, fontFamily: fuentes.semibold, letterSpacing: -0.5 },
   subtitulo: { marginTop: 4, fontSize: 14 },
-  form: { gap: 12 },
+  form: { gap: 12, borderWidth: 1, borderRadius: 24, padding: 18 },
   olvido: { alignSelf: "flex-end", fontSize: 12, marginTop: -2 },
   error: { fontSize: 13 },
   pie: { marginTop: 28, textAlign: "center", fontSize: 14 },

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { View, Text, Pressable, FlatList, Modal, Platform, Alert, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, Modal, Platform, Alert, ActivityIndicator, StyleSheet } from "react-native";
 import { Stack, useLocalSearchParams, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
@@ -9,6 +9,7 @@ import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
+import { leerBorrador, guardarBorrador, limpiarBorrador, guardarAudioBorrador } from "../../lib/borradores";
 import { marcarVisto } from "../../lib/grupoVisto";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { guardarMedia } from "../../lib/descargas";
@@ -62,6 +63,7 @@ export default function GrupoChat()
   const [grupo, setGrupo] = useState(null);
   const [grabando, setGrabando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [masCargando, setMasCargando] = useState(false);
   const [stickers, setStickers] = useState(false);
   const [sel, setSel] = useState(null);
   const [respondiendo, setRespondiendo] = useState(null);
@@ -77,6 +79,7 @@ export default function GrupoChat()
   const [grabPausado, setGrabPausado] = useState(false);
   const [ocultos, setOcultos] = useState(() => new Set());
   const [previo, setPrevio] = useState(null);
+  const [audioDraft, setAudioDraft] = useState(null);
   const [adjuntando, setAdjuntando] = useState(false);
   const [escribiendoDe, setEscribiendoDe] = useState(null);
   const [infoDe, setInfoDe] = useState(null);
@@ -92,11 +95,43 @@ export default function GrupoChat()
   const cargandoMas = useRef(false);
   const lista = useRef(null);
   const esWeb = Platform.OS === "web";
+  const claveBorrador = `grupo-${id}`;
 
   function persistir(items)
   {
     guardarCacheChat(`g-${id}`, items);
   }
+
+  useEffect(() =>
+  {
+    let activo = true;
+    leerBorrador(claveBorrador).then((b) =>
+    {
+      if (!activo)
+      {
+        return;
+      }
+      if (b.texto)
+      {
+        setBorrador(b.texto);
+      }
+      if (b.audio)
+      {
+        setAudioDraft(b.audio);
+      }
+    });
+    return () => { activo = false; };
+  }, [claveBorrador]);
+
+  useEffect(() =>
+  {
+    if (editando)
+    {
+      return;
+    }
+    const t = setTimeout(() => guardarBorrador(claveBorrador, { texto: borrador, audio: audioDraft }), 250);
+    return () => clearTimeout(t);
+  }, [claveBorrador, borrador, audioDraft, editando]);
 
   function descifrarFila(f)
   {
@@ -298,6 +333,7 @@ export default function GrupoChat()
       return;
     }
     cargandoMas.current = true;
+    setMasCargando(true);
     try
     {
       const filas = await api.historialGrupo(id, mensajes[0].enviado_en);
@@ -314,7 +350,11 @@ export default function GrupoChat()
     catch (e)
     {
     }
-    cargandoMas.current = false;
+    finally
+    {
+      cargandoMas.current = false;
+      setMasCargando(false);
+    }
   }
 
   function reportarLeidos(lista)
@@ -572,13 +612,48 @@ export default function GrupoChat()
       mostrarAviso("Nota muy corta");
       return;
     }
-    setSubiendo(true);
     try
     {
       if (grabadora.uri)
       {
-        await enviarMedia({ uri: grabadora.uri, tipo: "audio", mime: "audio/mp4", dur: Math.max(1, Math.round(ms / 1000)), wf: normalizarMuestras(muestras.current) || undefined });
+        const estable = await guardarAudioBorrador(claveBorrador, grabadora.uri);
+        setAudioDraft({
+          uri: estable,
+          t: "audio",
+          mime: "audio/mp4",
+          dur: Math.max(1, Math.round(ms / 1000)),
+          wf: normalizarMuestras(muestras.current) || undefined,
+        });
       }
+    }
+    catch (e)
+    {
+    }
+  }
+
+  function cancelarAudioDraft()
+  {
+    setAudioDraft(null);
+  }
+
+  async function enviarAudioDraft()
+  {
+    if (!audioDraft || subiendo)
+    {
+      return;
+    }
+    setSubiendo(true);
+    try
+    {
+      await enviarMedia({
+        uri: audioDraft.uri,
+        tipo: "audio",
+        mime: audioDraft.mime || "audio/mp4",
+        dur: audioDraft.dur,
+        wf: audioDraft.wf,
+      });
+      setAudioDraft(null);
+      await limpiarBorrador(claveBorrador);
     }
     catch (e)
     {
@@ -771,6 +846,7 @@ export default function GrupoChat()
         contentContainerStyle={estilos.lista}
         onEndReached={cargarMas}
         onEndReachedThreshold={0.9}
+        ListFooterComponent={masCargando ? <ActivityIndicator color={colores.muted} style={estilos.masSpinner} /> : null}
         onContentSizeChange={esWeb ? () => lista.current?.scrollToEnd({ animated: false }) : undefined}
         renderItem={({ item, index }) =>
         {
@@ -836,6 +912,9 @@ export default function GrupoChat()
         onEnviar={enviar}
         onAdjuntar={() => setAdjuntando(true)}
         onSticker={() => setStickers(true)}
+        audioDraft={audioDraft}
+        onCancelarAudioDraft={cancelarAudioDraft}
+        onEnviarAudioDraft={enviarAudioDraft}
         grabando={grabando}
         grabPausado={grabPausado}
         onPausarGrabacion={alternarPausaGrabacion}
@@ -978,6 +1057,7 @@ export default function GrupoChat()
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
   lista: { padding: 14, gap: 8 },
+  masSpinner: { paddingVertical: 12 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
   encabezadoTxt: { fontSize: 16, fontFamily: fuentes.semibold },
   encabezadoSub: { fontSize: 11 },
