@@ -1,7 +1,24 @@
 import { useRef } from "react";
 import { View, Pressable, Text, ActivityIndicator, Animated, StyleSheet } from "react-native";
+import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 import { useTema } from "./tema";
 import { fuentes } from "../assets/themes/temas";
+
+function Gloss()
+{
+  return (
+    <Svg style={StyleSheet.absoluteFill} pointerEvents="none">
+      <Defs>
+        <LinearGradient id="vxGloss" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity="0.22" />
+          <Stop offset="0.5" stopColor="#FFFFFF" stopOpacity="0.02" />
+          <Stop offset="1" stopColor="#000000" stopOpacity="0.12" />
+        </LinearGradient>
+      </Defs>
+      <Rect x="0" y="0" width="100%" height="100%" fill="url(#vxGloss)" />
+    </Svg>
+  );
+}
 
 export function Boton({ titulo, onPress, cargando = false, disabled = false, glass = false })
 {
@@ -29,8 +46,7 @@ export function Boton({ titulo, onPress, cargando = false, disabled = false, gla
           disabled={inactivo}
           style={[estilos.glass, { backgroundColor: colores.botonFondo, borderColor: colores.bordeFoco || colores.borde, opacity: inactivo ? 0.6 : 1 }]}
         >
-          <View pointerEvents="none" style={estilos.brilloTop} />
-          <View pointerEvents="none" style={estilos.brilloBottom} />
+          <Gloss />
           <View style={estilos.centroGlass}>{contenido}</View>
         </Pressable>
       </Animated.View>
@@ -71,6 +87,4 @@ const estilos = StyleSheet.create({
     elevation: 6,
   },
   centroGlass: { paddingVertical: 13, alignItems: "center" },
-  brilloTop: { position: "absolute", left: 0, right: 0, top: 0, height: "52%", backgroundColor: "rgba(255,255,255,0.16)" },
-  brilloBottom: { position: "absolute", left: 0, right: 0, bottom: 0, height: "48%", backgroundColor: "rgba(0,0,0,0.10)" },
 });
