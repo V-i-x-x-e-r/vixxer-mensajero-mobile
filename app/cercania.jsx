@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, Animated, Easing, Alert, Linking, Dimensions, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
-import Svg, { Circle, Line } from "react-native-svg";
+import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from "react-native-svg";
 import { estadoCercania, alCambio, listaPeers, cercaniaSoportada, activarModo } from "../lib/cercania";
 import { estadisticasMesh } from "../lib/bleMensajeria";
 import { obtenerSocket } from "../lib/socket";
@@ -130,9 +130,21 @@ export default function Cercania()
 
           {cerca.activo ? (
             <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: rotacion }] }]} pointerEvents="none">
-              <View style={[estilos.barrido, { left: centro - 1, height: centro - 8, backgroundColor: salida.color }]} />
-              <View style={[estilos.estela, { left: centro - 5, height: centro - 8, backgroundColor: salida.color }]} />
-              <View style={[estilos.estela, { left: centro - 12, width: 24, height: centro - 8, opacity: 0.05, backgroundColor: salida.color }]} />
+              <Svg width={lado} height={lado}>
+                <Defs>
+                  <LinearGradient id="haz" x1="0" y1="1" x2="0" y2="0">
+                    <Stop offset="0%" stopColor={salida.color} stopOpacity="0" />
+                    <Stop offset="100%" stopColor={salida.color} stopOpacity="0.95" />
+                  </LinearGradient>
+                </Defs>
+                <Path
+                  d={`M ${centro} ${centro} L ${centro} 6 L ${centro - (centro - 6) * 0.52} ${centro - (centro - 6) * 0.85} Z`}
+                  fill={salida.color}
+                  opacity={0.13}
+                />
+                <Line x1={centro} y1={centro} x2={centro} y2={6} stroke="url(#haz)" strokeWidth={3} strokeLinecap="round" />
+                <Circle cx={centro} cy={10} r={4.5} fill={salida.color} opacity={0.9} />
+              </Svg>
             </Animated.View>
           ) : null}
 

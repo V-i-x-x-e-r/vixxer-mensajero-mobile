@@ -118,7 +118,7 @@ export default function Login()
 
           {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
 
-          <Boton titulo="Entrar" onPress={entrar} cargando={cargando} />
+          <Boton titulo="Entrar" onPress={entrar} cargando={cargando} glass />
         </View>
 
         <Text style={[estilos.pie, { color: colores.muted }]}>

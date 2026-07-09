@@ -7,19 +7,14 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 
 function VCincelada({ cx, cy, r })
 {
-  const w = r * 0.52;
-  const arriba = cy - r * 0.48;
-  const abajo = cy + r * 0.62;
-  const t = r * 0.34;
-  const tv = r * 0.4;
-  const izq = `M ${cx - w} ${arriba} L ${cx} ${abajo} L ${cx} ${abajo - tv} L ${cx - w + t} ${arriba} Z`;
-  const der = `M ${cx + w} ${arriba} L ${cx} ${abajo} L ${cx} ${abajo - tv} L ${cx + w - t} ${arriba} Z`;
-  const linea = `M ${cx - w} ${arriba} L ${cx} ${abajo} L ${cx + w} ${arriba}`;
+  const w = r * 0.5;
+  const arriba = cy - r * 0.4;
+  const abajo = cy + r * 0.72;
+  const d = `M ${cx - w} ${arriba} L ${cx} ${abajo} L ${cx + w} ${arriba}`;
   return (
     <G>
-      <Path d={linea} fill="none" stroke="#08090C" strokeWidth={Math.max(1, r * 0.08)} strokeLinejoin="miter" opacity={0.7} />
-      <Path d={izq} fill="#EEF2F7" />
-      <Path d={der} fill="#B4BCC7" />
+      <Path d={d} fill="none" stroke="#05070A" strokeWidth={Math.max(1.6, r * 0.24)} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={d} fill="none" stroke="#AEB7C3" strokeWidth={Math.max(0.8, r * 0.085)} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
     </G>
   );
 }
@@ -71,13 +66,17 @@ function Gradientes()
         <Stop offset="55%" stopColor="#2C333D" />
         <Stop offset="100%" stopColor="#0E1319" />
       </LinearGradient>
+      <LinearGradient id="vxBase" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0%" stopColor="#7B8494" />
+        <Stop offset="100%" stopColor="#333C48" />
+      </LinearGradient>
     </Defs>
   );
 }
 
 const LOGIN_CX = [50, 100, 150, 200, 250];
 const LOGIN_PIV = 28;
-const LOGIN_BY = 150;
+const LOGIN_BY = 117;
 
 export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velocidad = 1500, colorBarra = "#9AA2AD", colorTexto = "#EEF2F7" })
 {
@@ -132,26 +131,29 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
 
   if (esLogin)
   {
-    const ancho = 300 * (alto / 250);
+    const ancho = 300 * (alto / 264);
     return (
       <Pressable onPress={golpear} hitSlop={8}>
-        <Svg width={ancho} height={alto} viewBox="0 0 300 250">
+        <Svg width={ancho} height={alto} viewBox="0 0 300 264">
           <Gradientes />
-          <Rect x="22" y="16" width="256" height="214" rx="54" fill="none" stroke="url(#vxMarco)" strokeWidth="12" strokeLinejoin="round" />
-          <Rect x="22" y="16" width="256" height="214" rx="54" fill="none" stroke="#AEB7C3" strokeWidth="1.4" opacity="0.32" />
-          <Path d="M74 230 q-20 7 -32 -2" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
-          <Path d="M226 230 q20 7 32 -2" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
-          <G stroke={colorBarra} strokeWidth="1.5" opacity="0.7">
-            <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY - 20} />
-            <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY - 21} />
-            <Line x1={LOGIN_CX[3]} y1={LOGIN_PIV} x2={LOGIN_CX[3]} y2={LOGIN_BY - 20} />
+          <Rect x="24" y="14" width="252" height="226" rx="54" fill="none" stroke="url(#vxMarco)" strokeWidth="11" strokeLinejoin="round" />
+          <Rect x="24" y="14" width="252" height="226" rx="54" fill="none" stroke="#AEB7C3" strokeWidth="1.3" opacity="0.3" />
+          <Rect x="52" y="198" width="196" height="16" rx="8" fill="#0A0E13" />
+          <Rect x="50" y="190" width="200" height="13" rx="6.5" fill="url(#vxBase)" />
+          <Rect x="54" y="191" width="192" height="2" rx="1" fill="#C3CCD8" opacity="0.5" />
+          <Path d="M70 226 q-16 6 -26 -2" stroke="url(#vxMarco)" strokeWidth="7" fill="none" strokeLinecap="round" />
+          <Path d="M230 226 q16 6 26 -2" stroke="url(#vxMarco)" strokeWidth="7" fill="none" strokeLinecap="round" />
+          <G stroke={colorBarra} strokeWidth="1.5" opacity="0.72">
+            <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY - 19} />
+            <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY - 20} />
+            <Line x1={LOGIN_CX[3]} y1={LOGIN_PIV} x2={LOGIN_CX[3]} y2={LOGIN_BY - 19} />
           </G>
-          <Bola x={LOGIN_CX[1]} y={LOGIN_BY} r={20} />
-          <Bola x={LOGIN_CX[2]} y={LOGIN_BY} r={21} central />
-          <Bola x={LOGIN_CX[3]} y={LOGIN_BY} r={20} />
-          <Colgante x={LOGIN_CX[0]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={20} angulo={izq} colorHilo={colorBarra} />
-          <Colgante x={LOGIN_CX[4]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={20} angulo={der} colorHilo={colorBarra} />
-          <SvgText x="156" y="208" textAnchor="middle" fill={colorTexto} fontSize="26" fontWeight="300" letterSpacing="12">VIXXER</SvgText>
+          <Bola x={LOGIN_CX[1]} y={LOGIN_BY} r={19} />
+          <Bola x={LOGIN_CX[2]} y={LOGIN_BY} r={20} central />
+          <Bola x={LOGIN_CX[3]} y={LOGIN_BY} r={19} />
+          <Colgante x={LOGIN_CX[0]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={izq} colorHilo={colorBarra} />
+          <Colgante x={LOGIN_CX[4]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={der} colorHilo={colorBarra} />
+          <SvgText x="156" y="170" textAnchor="middle" fill={colorTexto} fontSize="23" fontWeight="300" letterSpacing="11">VIXXER</SvgText>
         </Svg>
       </Pressable>
     );

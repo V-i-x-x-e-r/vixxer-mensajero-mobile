@@ -365,8 +365,7 @@ export default function Chats()
       ) : (
         <View style={estilos.cabecera}>
           <View style={estilos.marca}>
-            <LogoPendulo alto={26} />
-            <Text style={[estilos.titulo, { color: colores.texto }]}>Vixxer</Text>
+            <LogoPendulo alto={30} />
           </View>
           <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
             <Engrane color={colores.texto} />
