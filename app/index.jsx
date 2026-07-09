@@ -92,7 +92,7 @@ export default function Login()
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <View style={estilos.logoHero}>
-          <LogoPendulo alto={128} titulo colorBarra="#5A6880" colorTexto={colores.texto} />
+          <LogoPendulo variante="login" alto={158} colorTexto={colores.texto} />
         </View>
         <View style={estilos.titulos}>
           <Text style={[estilos.titulo, { color: colores.texto }]}>Iniciar sesión</Text>
