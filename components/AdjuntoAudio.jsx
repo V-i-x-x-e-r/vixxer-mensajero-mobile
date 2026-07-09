@@ -10,7 +10,7 @@ import { fuentes } from "../assets/themes/temas";
 const VELOCIDADES = [1, 1.5, 2];
 const ANCHO_ONDA = 148;
 
-export function AdjuntoAudio({ media, color })
+export function AdjuntoAudio({ media, color, compacto })
 {
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [velocidad, setVelocidad] = useState(0);
@@ -104,7 +104,7 @@ export function AdjuntoAudio({ media, color })
   }
 
   return (
-    <View style={estilos.fila}>
+    <View style={[estilos.fila, compacto && estilos.filaCompacta]}>
       <Pressable onPress={alternar} hitSlop={8} style={estilos.play}>
         {!uri ? (
           <ActivityIndicator color={color} />
@@ -113,7 +113,7 @@ export function AdjuntoAudio({ media, color })
         )}
       </Pressable>
       <View style={estilos.centro}>
-        <Pressable onPress={buscar} style={estilos.onda}>
+        <Pressable onPress={buscar} style={[estilos.onda, compacto && estilos.ondaCompacta]}>
           {barras.map((v, i) => (
             <View
               key={i}
@@ -129,7 +129,7 @@ export function AdjuntoAudio({ media, color })
         </Pressable>
         <Text style={[estilos.tiempo, { color }]}>{tiempo}</Text>
       </View>
-      {uri ? (
+      {uri && !compacto ? (
         <Pressable onPress={cambiarVelocidad} hitSlop={6} style={[estilos.velocidad, { borderColor: color }]}>
           <Text style={[estilos.velocidadTxt, { color }]}>{VELOCIDADES[velocidad]}x</Text>
         </Pressable>
@@ -140,9 +140,11 @@ export function AdjuntoAudio({ media, color })
 
 const estilos = StyleSheet.create({
   fila: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  filaCompacta: { paddingVertical: 0 },
   play: { width: 28, alignItems: "center" },
   centro: { gap: 3 },
   onda: { width: ANCHO_ONDA, height: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  ondaCompacta: { width: 136 },
   tiempo: { fontSize: 11, opacity: 0.8 },
   velocidad: { borderWidth: 1, borderRadius: 10, width: 44, alignItems: "center", paddingVertical: 3 },
   velocidadTxt: { fontSize: 11, fontFamily: fuentes.semibold },

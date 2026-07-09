@@ -16,6 +16,7 @@ import { llavePublicaDe } from "../../lib/llaves";
 import { leer, MI_ID, CLAVE_PRIVADA } from "../../lib/storage";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";
 import { leerOutbox, agregarOutbox, quitarOutbox } from "../../lib/outbox";
+import { leerBorrador, guardarBorrador, limpiarBorrador, guardarAudioBorrador } from "../../lib/borradores";
 import { leerFijados, alternarFijado, quitarFijado } from "../../lib/mensajeFijado";
 import { leerTemporizador, guardarTemporizador, envolver, leerEfimero, expiraEn, OPCIONES, etiquetaDuracion, envolverAviso, leerAviso, textoAviso } from "../../lib/efimero";
 import { aliasDe } from "../../lib/alias";
@@ -138,6 +139,7 @@ export default function Chat()
   const [alias, setAlias] = useState(null);
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
+  const [audioDraft, setAudioDraft] = useState(null);
   const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const estadoGrab = useAudioRecorderState(grabadora, 150);
   const muestras = useRef([]);
@@ -151,6 +153,7 @@ export default function Chat()
   const cargandoMas = useRef(false);
   const purgados = useRef(new Set());
   const mediaPendiente = useRef({});
+  const claveBorrador = `chat-${otroId}`;
 
   const invertidos = useMemo(() =>
   {
@@ -163,6 +166,37 @@ export default function Chat()
 
   const datosWeb = useMemo(() => invertidos.slice().reverse(), [invertidos]);
   const datosLista = esWeb ? datosWeb : invertidos;
+
+  useEffect(() =>
+  {
+    let activo = true;
+    leerBorrador(claveBorrador).then((b) =>
+    {
+      if (!activo)
+      {
+        return;
+      }
+      if (b.texto)
+      {
+        setTexto(b.texto);
+      }
+      if (b.audio)
+      {
+        setAudioDraft(b.audio);
+      }
+    });
+    return () => { activo = false; };
+  }, [claveBorrador]);
+
+  useEffect(() =>
+  {
+    if (editando)
+    {
+      return;
+    }
+    const t = setTimeout(() => guardarBorrador(claveBorrador, { texto, audio: audioDraft }), 250);
+    return () => clearTimeout(t);
+  }, [claveBorrador, texto, audioDraft, editando]);
 
   function marcarLeidos(filas)
   {
@@ -975,18 +1009,54 @@ export default function Chat()
       setTimeout(() => setToast(""), 1500);
       return;
     }
-    setSubiendo(true);
     try
     {
       const uri = grabadora.uri;
       if (uri)
       {
-        const wf = normalizarMuestras(muestras.current);
-        const base64 = await leerBase64(uri);
-        const cif = cifrarArchivo(base64);
-        const { path } = await api.subirMedia(cif.datos);
-        await mandar(JSON.stringify({ t: "audio", path, mime: "audio/mp4", k: cif.clave, n: cif.nonce, dur: Math.max(1, Math.round(ms / 1000)), wf: wf || undefined }));
+        const estable = await guardarAudioBorrador(claveBorrador, uri);
+        setAudioDraft({
+          uri: estable,
+          t: "audio",
+          mime: "audio/mp4",
+          dur: Math.max(1, Math.round(ms / 1000)),
+          wf: normalizarMuestras(muestras.current) || undefined,
+        });
       }
+    }
+    catch (e)
+    {
+    }
+  }
+
+  function cancelarAudioDraft()
+  {
+    setAudioDraft(null);
+  }
+
+  async function enviarAudioDraft()
+  {
+    if (!audioDraft || subiendo)
+    {
+      return;
+    }
+    setSubiendo(true);
+    try
+    {
+      const base64 = await leerBase64(audioDraft.uri);
+      const cif = cifrarArchivo(base64);
+      const { path } = await api.subirMediaConProgreso(cif.datos);
+      await mandar(JSON.stringify({
+        t: "audio",
+        path,
+        mime: audioDraft.mime || "audio/mp4",
+        k: cif.clave,
+        n: cif.nonce,
+        dur: audioDraft.dur,
+        wf: audioDraft.wf,
+      }));
+      setAudioDraft(null);
+      await limpiarBorrador(claveBorrador);
     }
     catch (e)
     {
@@ -1575,6 +1645,9 @@ export default function Chat()
           onEnviar={enviar}
           onAdjuntar={() => setAdjuntando(true)}
           onSticker={() => setStickers(true)}
+          audioDraft={audioDraft}
+          onCancelarAudioDraft={cancelarAudioDraft}
+          onEnviarAudioDraft={enviarAudioDraft}
           grabando={grabando}
           grabPausado={grabPausado}
           onPausarGrabacion={alternarPausaGrabacion}
