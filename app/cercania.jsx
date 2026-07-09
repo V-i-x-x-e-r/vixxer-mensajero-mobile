@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, ScrollView, Animated, Easing, Alert, Linking, Dimensions, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
-import Svg, { Circle, Defs, Line, RadialGradient, Stop } from "react-native-svg";
+import Svg, { Circle, Line } from "react-native-svg";
 import { estadoCercania, alCambio, listaPeers, cercaniaSoportada, activarModo } from "../lib/cercania";
 import { estadisticasMesh } from "../lib/bleMensajeria";
 import { obtenerSocket } from "../lib/socket";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
 import { LogoPendulo } from "../components/LogoPendulo";
-import { LiquidGlass } from "../components/LiquidGlass";
 
 const AZUL = "#38BDF8";
 const VERDE = "#22C55E";
@@ -120,28 +119,20 @@ export default function Cercania()
       <Stack.Screen options={{ title: "Radar de cercanía" }} />
 
       <View style={estilos.zonaRadar}>
-        <View style={[estilos.radarMarco, { width: lado, height: lado, borderColor: colores.borde }]}>
+        <View style={{ width: lado, height: lado }}>
           <Svg width={lado} height={lado}>
-            <Defs>
-              <RadialGradient id="radarFondo" cx="50%" cy="50%" r="58%">
-                <Stop offset="0%" stopColor={salida.color} stopOpacity="0.20" />
-                <Stop offset="42%" stopColor={salida.color} stopOpacity="0.06" />
-                <Stop offset="100%" stopColor={salida.color} stopOpacity="0" />
-              </RadialGradient>
-            </Defs>
-            <Circle cx={centro} cy={centro} r={centro - 4} fill="url(#radarFondo)" />
             {[0.32, 0.62, 0.94].map((f) => (
-              <Circle key={f} cx={centro} cy={centro} r={(lado / 2) * f} stroke={colores.borde} strokeWidth="1" fill="none" opacity="0.72" />
+              <Circle key={f} cx={centro} cy={centro} r={(lado / 2) * f} stroke={colores.borde} strokeWidth="1" fill="none" />
             ))}
-            <Line x1={centro} y1={10} x2={centro} y2={lado - 10} stroke={colores.borde} strokeWidth="0.5" opacity="0.46" />
-            <Line x1={10} y1={centro} x2={lado - 10} y2={centro} stroke={colores.borde} strokeWidth="0.5" opacity="0.46" />
+            <Line x1={centro} y1={6} x2={centro} y2={lado - 6} stroke={colores.borde} strokeWidth="0.5" />
+            <Line x1={6} y1={centro} x2={lado - 6} y2={centro} stroke={colores.borde} strokeWidth="0.5" />
           </Svg>
 
           {cerca.activo ? (
             <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: rotacion }] }]} pointerEvents="none">
-              <View style={[estilos.barrido, { left: centro - 1, height: centro - 12, backgroundColor: salida.color }]} />
-              <View style={[estilos.estela, { left: centro - 8, height: centro - 12, backgroundColor: salida.color }]} />
-              <View style={[estilos.estela, { left: centro - 20, width: 40, height: centro - 12, opacity: 0.05, backgroundColor: salida.color }]} />
+              <View style={[estilos.barrido, { left: centro - 1, height: centro - 8, backgroundColor: salida.color }]} />
+              <View style={[estilos.estela, { left: centro - 5, height: centro - 8, backgroundColor: salida.color }]} />
+              <View style={[estilos.estela, { left: centro - 12, width: 24, height: centro - 8, opacity: 0.05, backgroundColor: salida.color }]} />
             </Animated.View>
           ) : null}
 
@@ -178,7 +169,7 @@ export default function Cercania()
                     },
                   ]}
                 />
-                <View style={[estilos.peer, { backgroundColor: p.rssi > -70 ? VERDE : AZUL }]}>
+                <View style={[estilos.peer, { backgroundColor: AZUL }]}>
                   <View style={estilos.peerPulso} />
                 </View>
                 <Text style={[estilos.peerEtiqueta, { color: colores.muted }]}>
@@ -188,11 +179,9 @@ export default function Cercania()
             );
           })}
 
-          <LiquidGlass style={[estilos.centro, { left: centro - 31, top: centro - 31, borderColor: salida.color }]} fondo="rgba(255,255,255,0.08)" borde={salida.color}>
-            <Pressable onPress={alternarRadar} style={estilos.centroBtn}>
-              <LogoPendulo alto={28} velocidad={1300} quieto={!cerca.activo} colorBarra={colores.texto} />
-            </Pressable>
-          </LiquidGlass>
+          <Pressable onPress={alternarRadar} style={[estilos.centro, { left: centro - 24, top: centro - 24, backgroundColor: colores.fondo, borderColor: salida.color }]}>
+            <LogoPendulo alto={22} velocidad={1300} quieto={!cerca.activo} colorBarra={colores.texto} />
+          </Pressable>
         </View>
 
         <Text style={[estilos.conteo, { color: colores.texto }]}>
@@ -211,7 +200,7 @@ export default function Cercania()
         ) : null}
       </View>
 
-      <LiquidGlass style={estilos.panel} borde={colores.borde} fondo={`${colores.surface}D8`}>
+      <View style={[estilos.panel, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
         <Text style={[estilos.panelTitulo, { color: colores.muted }]}>TU SALIDA A INTERNET</Text>
         <View style={estilos.salidaFila}>
           <View style={[estilos.punto, { backgroundColor: salida.color }]} />
@@ -223,7 +212,7 @@ export default function Cercania()
             Último salto: dispositivo {String(stats.ultimaRuta).slice(0, 8)}…
           </Text>
         ) : null}
-      </LiquidGlass>
+      </View>
 
       <View style={estilos.statsFila}>
         {[
@@ -232,10 +221,10 @@ export default function Cercania()
           { n: stats.reenviados, t: "reenviados\npara otros" },
           { n: stats.puente, t: "subidos como\npuente" },
         ].map((s) => (
-          <LiquidGlass key={s.t} style={estilos.stat} borde={colores.borde} fondo={`${colores.surface}D0`}>
+          <View key={s.t} style={[estilos.stat, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
             <Text style={[estilos.statN, { color: colores.texto }]}>{s.n}</Text>
             <Text style={[estilos.statT, { color: colores.muted }]}>{s.t}</Text>
-          </LiquidGlass>
+          </View>
         ))}
       </View>
 
@@ -266,37 +255,24 @@ export default function Cercania()
 
 const estilos = StyleSheet.create({
   zonaRadar: { alignItems: "center", paddingTop: 24 },
-  radarMarco:
-  {
-    borderWidth: 1,
-    borderRadius: 180,
-    overflow: "hidden",
-    backgroundColor: "rgba(15,23,42,0.36)",
-    shadowColor: "#000",
-    shadowOpacity: 0.26,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 14 },
-    elevation: 6,
-  },
-  barrido: { position: "absolute", top: 12, width: 2, borderRadius: 1, opacity: 0.95 },
-  estela: { position: "absolute", top: 12, width: 16, borderRadius: 8, opacity: 0.14 },
+  barrido: { position: "absolute", top: 8, width: 2, borderRadius: 1, opacity: 0.8 },
+  estela: { position: "absolute", top: 8, width: 10, borderRadius: 5, opacity: 0.12 },
   onda: { position: "absolute", width: 48, height: 48, borderRadius: 24, borderWidth: 2 },
   peerOnda: { position: "absolute", left: -3, top: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: "#38BDF8" },
   peerEtiqueta: { position: "absolute", top: 16, left: -12, width: 40, textAlign: "center", fontSize: 9 },
   botonRadar: { marginTop: 10, borderWidth: 1, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8 },
-  peer: { position: "absolute", width: 15, height: 15, borderRadius: 8, alignItems: "center", justifyContent: "center", shadowColor: "#38BDF8", shadowOpacity: 0.65, shadowRadius: 10, elevation: 4 },
+  peer: { position: "absolute", width: 14, height: 14, borderRadius: 7, alignItems: "center", justifyContent: "center" },
   peerPulso: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#FFF" },
-  centro: { position: "absolute", width: 62, height: 62, borderRadius: 31, alignItems: "center", justifyContent: "center" },
-  centroBtn: { width: 62, height: 62, alignItems: "center", justifyContent: "center" },
+  centro: { position: "absolute", width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   conteo: { fontSize: 15, fontFamily: fuentes.semibold, marginTop: 10 },
-  panel: { borderRadius: 20, marginHorizontal: 20, marginTop: 18, padding: 16, gap: 6 },
+  panel: { borderWidth: 1, borderRadius: 14, marginHorizontal: 20, marginTop: 18, padding: 16, gap: 6 },
   panelTitulo: { fontSize: 11, fontFamily: fuentes.semibold, letterSpacing: 1 },
   salidaFila: { flexDirection: "row", alignItems: "center", gap: 8 },
   punto: { width: 10, height: 10, borderRadius: 5 },
   salidaTxt: { fontSize: 16, fontFamily: fuentes.semibold },
   salidaDetalle: { fontSize: 12, lineHeight: 17 },
   statsFila: { flexDirection: "row", gap: 8, paddingHorizontal: 20, marginTop: 12 },
-  stat: { flex: 1, borderRadius: 16, alignItems: "center", paddingVertical: 10, gap: 2 },
+  stat: { flex: 1, borderWidth: 1, borderRadius: 12, alignItems: "center", paddingVertical: 10, gap: 2 },
   statN: { fontSize: 18, fontFamily: fuentes.bold },
   statT: { fontSize: 9, textAlign: "center", lineHeight: 12 },
   listaPeers: { marginTop: 14, paddingHorizontal: 24, gap: 8 },
