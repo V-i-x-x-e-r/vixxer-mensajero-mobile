@@ -8,7 +8,7 @@ import { publicarLlaveFirma } from "../lib/firma";
 import { guardar, leer, TOKEN, MI_ID, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
-import { Logo } from "../components/Logo";
+import { LogoPendulo } from "../components/LogoPendulo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
@@ -84,10 +84,6 @@ export default function Login()
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <View style={[estilos.cabecera, { paddingTop: insets.top + 16 }]}>
-        <View style={estilos.marca}>
-          <Logo alto={26} />
-          <Text style={[estilos.nombre, { color: colores.texto }]}>Vixxer</Text>
-        </View>
         <BotonTema />
       </View>
 
@@ -95,6 +91,9 @@ export default function Login()
         style={estilos.zona}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
+        <View style={estilos.logoHero}>
+          <LogoPendulo alto={128} titulo colorBarra="#5A6880" colorTexto={colores.texto} />
+        </View>
         <View style={estilos.titulos}>
           <Text style={[estilos.titulo, { color: colores.texto }]}>Iniciar sesión</Text>
           <Text style={[estilos.subtitulo, { color: colores.muted }]}>Bienvenido de vuelta</Text>
@@ -152,12 +151,11 @@ const estilos = StyleSheet.create({
   {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
   },
-  marca: { flexDirection: "row", alignItems: "center", gap: 10 },
-  nombre: { fontSize: 18, fontFamily: fuentes.semibold },
   zona: { flex: 1, justifyContent: "center" },
-  titulos: { marginBottom: 36 },
+  logoHero: { alignItems: "center", marginBottom: 22 },
+  titulos: { marginBottom: 28 },
   titulo: { fontSize: 24, fontFamily: fuentes.semibold, letterSpacing: -0.5 },
   subtitulo: { marginTop: 4, fontSize: 14 },
   form: { gap: 12 },
