@@ -23,7 +23,7 @@
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#14110F",
+        "backgroundColor": "#0C1015",
         "foregroundImage": "./assets/adaptive-foreground.png"
       }
     },

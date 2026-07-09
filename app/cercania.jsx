@@ -179,8 +179,8 @@ export default function Cercania()
             );
           })}
 
-          <Pressable onPress={alternarRadar} style={[estilos.centro, { left: centro - 24, top: centro - 24, backgroundColor: colores.fondo, borderColor: salida.color }]}>
-            <LogoPendulo alto={22} velocidad={1300} quieto={!cerca.activo} colorBarra={colores.texto} />
+          <Pressable onPress={alternarRadar} style={[estilos.centro, { left: centro - 26, top: centro - 26, backgroundColor: colores.fondo, borderWidth: 0 }]}>
+            <LogoPendulo variante="radar" alto={52} colorBarra={salida.color} />
           </Pressable>
         </View>
 
@@ -263,7 +263,7 @@ const estilos = StyleSheet.create({
   botonRadar: { marginTop: 10, borderWidth: 1, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8 },
   peer: { position: "absolute", width: 14, height: 14, borderRadius: 7, alignItems: "center", justifyContent: "center" },
   peerPulso: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#FFF" },
-  centro: { position: "absolute", width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  centro: { position: "absolute", width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
   conteo: { fontSize: 15, fontFamily: fuentes.semibold, marginTop: 10 },
   panel: { borderWidth: 1, borderRadius: 14, marginHorizontal: 20, marginTop: 18, padding: 16, gap: 6 },
   panelTitulo: { fontSize: 11, fontFamily: fuentes.semibold, letterSpacing: 1 },
