@@ -1,9 +1,9 @@
-import { View } from "react-native";
+import { View, Platform } from "react-native";
 import { requireOptionalNativeModule } from "expo-modules-core";
 
 const nativo = requireOptionalNativeModule("ExpoBlur");
 let BlurView = null;
-if (nativo)
+if (nativo && Platform.OS === "ios")
 {
   try
   {
@@ -20,7 +20,7 @@ export function Vidrio({ intensidad = 45, tinte = "dark", style, children, ...re
   if (BlurView)
   {
     return (
-      <BlurView intensity={intensidad} tint={tinte} experimentalBlurMethod="dimezisBlurView" style={style} {...resto}>
+      <BlurView intensity={intensidad} tint={tinte} style={style} {...resto}>
         {children}
       </BlurView>
     );

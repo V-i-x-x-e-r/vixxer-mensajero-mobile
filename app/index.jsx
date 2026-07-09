@@ -8,12 +8,11 @@ import { publicarLlaveFirma } from "../lib/firma";
 import { guardar, leer, TOKEN, MI_ID, CLAVE_PRIVADA, CLAVE_PUBLICA } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
-import { LogoPendulo } from "../components/LogoPendulo";
+import { Logo } from "../components/Logo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
 import { Confirmacion } from "../components/Confirmacion";
-import { LiquidGlass } from "../components/LiquidGlass";
 
 export default function Login()
 {
@@ -84,9 +83,9 @@ export default function Login()
 
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
-      <View style={estilos.aura} />
       <View style={[estilos.cabecera, { paddingTop: insets.top + 16 }]}>
         <View style={estilos.marca}>
+          <Logo alto={26} />
           <Text style={[estilos.nombre, { color: colores.texto }]}>Vixxer</Text>
         </View>
         <BotonTema />
@@ -96,15 +95,12 @@ export default function Login()
         style={estilos.zona}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View style={estilos.logoHero}>
-          <LogoPendulo alto={225} titulo colorBarra="#8A96A8" />
-        </View>
         <View style={estilos.titulos}>
           <Text style={[estilos.titulo, { color: colores.texto }]}>Iniciar sesión</Text>
           <Text style={[estilos.subtitulo, { color: colores.muted }]}>Bienvenido de vuelta</Text>
         </View>
 
-        <LiquidGlass style={estilos.form} borde="rgba(255,255,255,0.14)" fondo="rgba(255,255,255,0.055)" intenso>
+        <View style={estilos.form}>
           <Campo
             valor={usuario}
             setValor={setUsuario}
@@ -124,7 +120,7 @@ export default function Login()
           {error ? <Text style={[estilos.error, { color: colores.error }]}>{error}</Text> : null}
 
           <Boton titulo="Entrar" onPress={entrar} cargando={cargando} />
-        </LiquidGlass>
+        </View>
 
         <Text style={[estilos.pie, { color: colores.muted }]}>
           ¿No tienes cuenta?{" "}
@@ -151,17 +147,7 @@ export default function Login()
 }
 
 const estilos = StyleSheet.create({
-  pantalla: { flex: 1, paddingHorizontal: 28, overflow: "hidden" },
-  aura:
-  {
-    position: "absolute",
-    left: -80,
-    right: -80,
-    top: -180,
-    height: 420,
-    borderRadius: 210,
-    backgroundColor: "rgba(100,116,139,0.20)",
-  },
+  pantalla: { flex: 1, paddingHorizontal: 28 },
   cabecera:
   {
     flexDirection: "row",
@@ -171,11 +157,10 @@ const estilos = StyleSheet.create({
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   nombre: { fontSize: 18, fontFamily: fuentes.semibold },
   zona: { flex: 1, justifyContent: "center" },
-  logoHero: { alignItems: "center", marginTop: -18, marginBottom: 10 },
-  titulos: { marginBottom: 20 },
+  titulos: { marginBottom: 36 },
   titulo: { fontSize: 24, fontFamily: fuentes.semibold, letterSpacing: -0.5 },
   subtitulo: { marginTop: 4, fontSize: 14 },
-  form: { gap: 12, borderRadius: 26, padding: 18 },
+  form: { gap: 12 },
   olvido: { alignSelf: "flex-end", fontSize: 12, marginTop: -2 },
   error: { fontSize: 13 },
   pie: { marginTop: 28, textAlign: "center", fontSize: 14 },
