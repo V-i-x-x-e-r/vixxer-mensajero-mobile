@@ -32,6 +32,7 @@ import { EstadoLista } from "../../components/EstadoLista";
 import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 import { Lupa } from "../../components/Lupa";
 import { Superficie } from "../../components/Superficie";
+import { Vidrio } from "../../components/Vidrio";
 
 const DORADO = "#F5B301";
 
@@ -71,7 +72,7 @@ function cuando(iso)
 
 export default function Chats()
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const insets = useSafeAreaInsets();
   const [amigos, setAmigos] = useState([]);
   const [convs, setConvs] = useState({});
@@ -488,7 +489,8 @@ export default function Chats()
 
       <Modal transparent visible={borrando} animationType="fade" onRequestClose={() => setBorrando(false)}>
         <Pressable style={estilos.fondoModal} onPress={() => setBorrando(false)}>
-          <Pressable style={[estilos.hoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pressable style={[estilos.hoja, { borderColor: colores.borde, overflow: "hidden" }]}>
+            <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E8` }]} />
             <Pressable onPress={quitarDeLista} style={({ pressed }) => [estilos.opcion, pressed && estilos.presionado]}>
               <Text style={[estilos.opcionTxt, { color: colores.texto }]}>Quitar de la lista</Text>
               <Text style={[estilos.opcionSub, { color: colores.muted }]}>La conversación se conserva</Text>

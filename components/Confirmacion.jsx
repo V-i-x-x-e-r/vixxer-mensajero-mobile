@@ -1,11 +1,12 @@
 import { useEffect, useRef } from "react";
 import { Modal, View, Text, Pressable, Animated, StyleSheet } from "react-native";
+import { Vidrio } from "./Vidrio";
 import { useTema } from "./tema";
 import { fuentes } from "../assets/themes/temas";
 
 export function Confirmacion({ visible, titulo, mensaje, textoConfirmar = "Aceptar", textoCancelar = "Cancelar", destructivo = false, onConfirmar, onCancelar })
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const escala = useRef(new Animated.Value(0.95)).current;
   const opacidad = useRef(new Animated.Value(0)).current;
 
@@ -31,7 +32,8 @@ export function Confirmacion({ visible, titulo, mensaje, textoConfirmar = "Acept
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancelar}>
       <Pressable style={estilos.fondo} onPress={onCancelar}>
         <Animated.View style={{ opacity: opacidad, transform: [{ scale: escala }], width: "100%", maxWidth: 360 }}>
-          <Pressable style={[estilos.tarjeta, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pressable style={[estilos.tarjeta, { borderColor: colores.borde }]}>
+            <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E6` }]} />
             <Text style={[estilos.titulo, { color: colores.texto }]}>{titulo}</Text>
             {mensaje ? <Text style={[estilos.mensaje, { color: colores.muted }]}>{mensaje}</Text> : null}
             <View style={estilos.acciones}>
@@ -51,7 +53,7 @@ export function Confirmacion({ visible, titulo, mensaje, textoConfirmar = "Acept
 
 const estilos = StyleSheet.create({
   fondo: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: 24 },
-  tarjeta: { borderWidth: 1, borderRadius: 16, padding: 20, gap: 6 },
+  tarjeta: { borderWidth: 1, borderRadius: 16, padding: 20, gap: 6, overflow: "hidden" },
   titulo: { fontSize: 17, fontFamily: fuentes.semibold },
   mensaje: { fontSize: 14, lineHeight: 20 },
   acciones: { flexDirection: "row", gap: 10, marginTop: 16 },
