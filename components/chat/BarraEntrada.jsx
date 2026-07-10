@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, Platform, Animated, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Vidrio } from "../Vidrio";
+import { BrilloVidrio } from "../Superficie";
 import { useTema } from "../tema";
 import { useTeclado } from "../useTeclado";
 import { fuentes } from "../../assets/themes/temas";
@@ -56,6 +57,7 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
   return (
     <View style={{ marginBottom: tecladoAlto }}>
       <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E6` }]} pointerEvents="none" />
+      <BrilloVidrio oscuro={oscuro} />
       {children}
       {pista ? (
         <View style={[estilos.pista, { backgroundColor: colores.surface, borderColor: colores.borde }]}>

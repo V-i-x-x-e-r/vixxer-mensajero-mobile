@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Modal, View, Text, Pressable, Animated, StyleSheet } from "react-native";
 import { Vidrio } from "./Vidrio";
+import { BrilloVidrio } from "./Superficie";
 import { useTema } from "./tema";
 import { fuentes } from "../assets/themes/temas";
 
@@ -34,6 +35,7 @@ export function Confirmacion({ visible, titulo, mensaje, textoConfirmar = "Acept
         <Animated.View style={{ opacity: opacidad, transform: [{ scale: escala }], width: "100%", maxWidth: 360 }}>
           <Pressable style={[estilos.tarjeta, { borderColor: colores.borde }]}>
             <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E6` }]} />
+            <BrilloVidrio oscuro={oscuro} />
             <Text style={[estilos.titulo, { color: colores.texto }]}>{titulo}</Text>
             {mensaje ? <Text style={[estilos.mensaje, { color: colores.muted }]}>{mensaje}</Text> : null}
             <View style={estilos.acciones}>

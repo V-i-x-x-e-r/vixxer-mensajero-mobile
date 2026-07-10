@@ -31,7 +31,7 @@ import { Estrella } from "../../components/Estrella";
 import { EstadoLista } from "../../components/EstadoLista";
 import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 import { Lupa } from "../../components/Lupa";
-import { Superficie } from "../../components/Superficie";
+import { Superficie, BrilloVidrio } from "../../components/Superficie";
 import { Vidrio } from "../../components/Vidrio";
 
 const DORADO = "#F5B301";
@@ -367,7 +367,7 @@ export default function Chats()
       ) : (
         <View style={estilos.cabecera}>
           <View style={estilos.marca}>
-            <LogoPendulo alto={34} />
+            <LogoPendulo alto={26} />
           </View>
           <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
             <Engrane color={colores.texto} />
@@ -491,6 +491,7 @@ export default function Chats()
         <Pressable style={estilos.fondoModal} onPress={() => setBorrando(false)}>
           <Pressable style={[estilos.hoja, { borderColor: colores.borde, overflow: "hidden" }]}>
             <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E8` }]} />
+            <BrilloVidrio oscuro={oscuro} />
             <Pressable onPress={quitarDeLista} style={({ pressed }) => [estilos.opcion, pressed && estilos.presionado]}>
               <Text style={[estilos.opcionTxt, { color: colores.texto }]}>Quitar de la lista</Text>
               <Text style={[estilos.opcionSub, { color: colores.muted }]}>La conversación se conserva</Text>
@@ -511,7 +512,7 @@ export default function Chats()
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
   cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 34 },
-  marca: { flexDirection: "row", alignItems: "center", gap: 10 },
+  marca: { flexDirection: "row", alignItems: "center", gap: 10, marginLeft: 48 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   herramientas: { flexDirection: "row", alignItems: "center", gap: 20 },
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },

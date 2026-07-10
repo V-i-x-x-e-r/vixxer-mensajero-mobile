@@ -59,10 +59,10 @@ function Gradientes()
         <Stop offset="68%" stopColor="#1E232A" />
         <Stop offset="100%" stopColor="#07090C" />
       </RadialGradient>
-      <LinearGradient id="vxVluz" x1="0" y1="0" x2="1" y2="0.5">
-        <Stop offset="0%" stopColor="#F4F7FB" />
-        <Stop offset="55%" stopColor="#C2CAD5" />
-        <Stop offset="100%" stopColor="#828B98" />
+      <LinearGradient id="vxVluz" x1="0.15" y1="0" x2="0.85" y2="1">
+        <Stop offset="0%" stopColor="#DCE3ED" />
+        <Stop offset="45%" stopColor="#8E97A4" />
+        <Stop offset="100%" stopColor="#333A45" />
       </LinearGradient>
       <LinearGradient id="vxMarco" x1="0" y1="0" x2="0.3" y2="1">
         <Stop offset="0%" stopColor="#9AA3B2" />

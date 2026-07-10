@@ -12,6 +12,7 @@ import { leerBorrador } from "../../lib/borradores";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
 import { Vidrio } from "../../components/Vidrio";
+import { BrilloVidrio } from "../../components/Superficie";
 import { DeslizarPestanas } from "../../components/DeslizarPestanas";
 import { fuentes } from "../../assets/themes/temas";
 import { Presionable } from "../../components/Presionable";
@@ -274,6 +275,7 @@ export default function Grupos()
         <Pressable style={estilos.menuFondo} onPress={() => setSel(null)}>
           <Pressable style={[estilos.menuHoja, { borderColor: colores.borde, overflow: "hidden" }]}>
             <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E8` }]} />
+            <BrilloVidrio oscuro={oscuro} />
             <Text style={[estilos.menuTitulo, { color: colores.muted }]}>{sel?.nombre}</Text>
             <Pressable
               onPress={() => { const g = sel; setSel(null); router.push({ pathname: "/grupo/info/[id]", params: { id: g.id, nombre: g.nombre } }); }}
