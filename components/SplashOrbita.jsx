@@ -33,18 +33,18 @@ export function SplashOrbita({ onDone, fondo = "#0C1015" })
 
   useEffect(() =>
   {
-    t.value = withTiming(1, { duration: 1500, easing: Easing.inOut(Easing.cubic) });
-    vopa.value = withDelay(1050, withTiming(1, { duration: 380 }));
+    t.value = withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.cubic) });
+    vopa.value = withDelay(1700, withTiming(1, { duration: 520 }));
     const id = setTimeout(() =>
     {
-      vis.value = withTiming(0, { duration: 420 }, (fin) =>
+      vis.value = withTiming(0, { duration: 520 }, (fin) =>
       {
         if (fin)
         {
           runOnJS(onDone)();
         }
       });
-    }, 1950);
+    }, 2900);
     return () => clearTimeout(id);
   }, []);
 

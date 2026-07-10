@@ -269,6 +269,10 @@ export default function Ajustes()
   async function cerrar()
   {
     setConfirmar(false);
+    if (nombreTema === "colorido")
+    {
+      elegirTema("claro");
+    }
     desconectarSocket();
     await cerrarSesion();
     router.replace("/");
