@@ -11,6 +11,7 @@ import { leerCacheGrupos, guardarCacheGrupos } from "../../lib/chatCache";
 import { leerBorrador } from "../../lib/borradores";
 import { obtenerSocket } from "../../lib/socket";
 import { useTema } from "../../components/tema";
+import { Vidrio } from "../../components/Vidrio";
 import { DeslizarPestanas } from "../../components/DeslizarPestanas";
 import { fuentes } from "../../assets/themes/temas";
 import { Presionable } from "../../components/Presionable";
@@ -72,7 +73,7 @@ async function aplicarBorradores(lista)
 
 export default function Grupos()
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const insets = useSafeAreaInsets();
   const [grupos, setGrupos] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -271,7 +272,8 @@ export default function Grupos()
 
       <Modal transparent visible={!!sel && !confirmarSalir} animationType="fade" onRequestClose={() => setSel(null)}>
         <Pressable style={estilos.menuFondo} onPress={() => setSel(null)}>
-          <Pressable style={[estilos.menuHoja, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+          <Pressable style={[estilos.menuHoja, { borderColor: colores.borde, overflow: "hidden" }]}>
+            <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E8` }]} />
             <Text style={[estilos.menuTitulo, { color: colores.muted }]}>{sel?.nombre}</Text>
             <Pressable
               onPress={() => { const g = sel; setSel(null); router.push({ pathname: "/grupo/info/[id]", params: { id: g.id, nombre: g.nombre } }); }}
