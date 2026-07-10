@@ -1,30 +1,40 @@
 import { useEffect } from "react";
 import { Pressable, View, Text } from "react-native";
-import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
+import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import Animated, { Easing, useAnimatedProps, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
 
 const AnimatedG = Animated.createAnimatedComponent(G);
 
-function VCincelada({ cx, cy, r })
+export function VCincelada({ cx, cy, r })
 {
-  const w = r * 0.7;
-  const top = cy - r * 0.67;
-  const bot = cy + r * 0.82;
-  const iw = r * 0.37;
-  const ib = cy + r * 0.19;
-  const banda = `M ${cx - w} ${top} L ${cx} ${bot} L ${cx + w} ${top} L ${cx + iw} ${top} L ${cx} ${ib} L ${cx - iw} ${top} Z`;
+  const w = r * 1.02;
+  const top = cy - r * 0.72;
+  const bot = cy + r * 0.98;
+  const iw = r * 0.5;
+  const ib = cy + r * 0.2;
+  const cid = `vxClip${Math.round(cx)}_${Math.round(cy)}`;
+  const grosor = Math.max(1, r * 0.07);
   return (
-    <Path d={banda} fill="url(#vxVluz)" stroke="#060709" strokeWidth={Math.max(1, r * 0.09)} strokeLinejoin="round" strokeLinecap="round" />
+    <>
+      <ClipPath id={cid}>
+        <Circle cx={cx} cy={cy} r={r * 0.985} />
+      </ClipPath>
+      <G clipPath={`url(#${cid})`}>
+        <Path d={`M ${cx - w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx - iw} ${top} Z`} fill="url(#vxVizq)" stroke="#05070A" strokeWidth={grosor} strokeLinejoin="round" />
+        <Path d={`M ${cx + w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx + iw} ${top} Z`} fill="url(#vxVder)" stroke="#05070A" strokeWidth={grosor} strokeLinejoin="round" />
+      </G>
+    </>
   );
 }
 
-function Bola({ x, y, r, central })
+function Bola({ x, y, r, central, mini })
 {
   const s = r / 24;
+  const grad = mini ? (central ? "vxIronSC" : "vxIronS") : (central ? "vxIronC" : "vxIron");
   return (
     <G>
-      <Circle cx={x} cy={y} r={r} fill={central ? "url(#vxIronC)" : "url(#vxIron)"} />
-      <Ellipse cx={x - 8 * s} cy={y - 10 * s} rx={8 * s} ry={5 * s} fill="#FFFFFF" opacity={central ? 0.3 : 0.26} />
+      <Circle cx={x} cy={y} r={r} fill={`url(#${grad})`} />
+      <Ellipse cx={x - 8 * s} cy={y - 10 * s} rx={(mini ? 9 : 8) * s} ry={(mini ? 5.5 : 5) * s} fill="#FFFFFF" opacity={mini ? 0.45 : central ? 0.3 : 0.26} />
       {central ? <VCincelada cx={x} cy={y} r={r} /> : null}
     </G>
   );
@@ -41,7 +51,7 @@ function Colgante({ x, pivoteY, ballY, r, angulo, colorHilo })
   );
 }
 
-function Gradientes()
+export function Gradientes()
 {
   return (
     <Defs>
@@ -59,10 +69,29 @@ function Gradientes()
         <Stop offset="68%" stopColor="#1E232A" />
         <Stop offset="100%" stopColor="#07090C" />
       </RadialGradient>
-      <LinearGradient id="vxVluz" x1="0.15" y1="0" x2="0.85" y2="1">
-        <Stop offset="0%" stopColor="#DCE3ED" />
-        <Stop offset="45%" stopColor="#8E97A4" />
-        <Stop offset="100%" stopColor="#333A45" />
+      <RadialGradient id="vxIronS" cx="36%" cy="28%" r="80%">
+        <Stop offset="0%" stopColor="#F2F6FA" />
+        <Stop offset="20%" stopColor="#B8C1CC" />
+        <Stop offset="48%" stopColor="#6F7A88" />
+        <Stop offset="78%" stopColor="#333B46" />
+        <Stop offset="100%" stopColor="#12161C" />
+      </RadialGradient>
+      <RadialGradient id="vxIronSC" cx="38%" cy="26%" r="82%">
+        <Stop offset="0%" stopColor="#F7FAFD" />
+        <Stop offset="22%" stopColor="#C2CAD5" />
+        <Stop offset="50%" stopColor="#7B8594" />
+        <Stop offset="80%" stopColor="#39414D" />
+        <Stop offset="100%" stopColor="#11161C" />
+      </RadialGradient>
+      <LinearGradient id="vxVizq" x1="0" y1="0" x2="0.9" y2="1">
+        <Stop offset="0%" stopColor="#E8EDF4" />
+        <Stop offset="55%" stopColor="#AAB3BF" />
+        <Stop offset="100%" stopColor="#69727E" />
+      </LinearGradient>
+      <LinearGradient id="vxVder" x1="0.1" y1="0" x2="1" y2="1">
+        <Stop offset="0%" stopColor="#8B94A1" />
+        <Stop offset="55%" stopColor="#4A525D" />
+        <Stop offset="100%" stopColor="#1C2129" />
       </LinearGradient>
       <LinearGradient id="vxMarco" x1="0" y1="0" x2="0.3" y2="1">
         <Stop offset="0%" stopColor="#9AA3B2" />
@@ -75,7 +104,7 @@ function Gradientes()
 }
 
 const LOGIN_CX = [58, 104, 150, 196, 242];
-const LOGIN_PIV = 21;
+const LOGIN_PIV = 14;
 const LOGIN_BY = 130;
 
 export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velocidad = 1500, colorBarra = "#9AA2AD", colorTexto = "#EEF2F7" })
@@ -137,10 +166,8 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
         <View style={{ width: ancho, height: alto }}>
           <Svg width={ancho} height={alto} viewBox="0 0 300 264">
             <Gradientes />
-            <Path d="M76 236 q-11 13 -20 12" stroke="#5E6774" strokeWidth="8" fill="none" strokeLinecap="round" />
-            <Path d="M224 236 q11 13 20 12" stroke="#5E6774" strokeWidth="8" fill="none" strokeLinecap="round" />
-            <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
-            <Rect x="30.5" y="20.5" width="239" height="213" rx="46" fill="none" stroke="#B4BEC9" strokeWidth="1.3" opacity="0.5" />
+            <Path d="M 84 240 L 66 256" stroke="#4A525E" strokeWidth="11" strokeLinecap="round" />
+            <Path d="M 216 240 L 234 256" stroke="#4A525E" strokeWidth="11" strokeLinecap="round" />
             <G stroke={colorBarra} strokeWidth="1.4" opacity="0.8">
               <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY} />
               <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY} />
@@ -151,6 +178,8 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
             <Bola x={LOGIN_CX[3]} y={LOGIN_BY} r={19} />
             <Colgante x={LOGIN_CX[0]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={izq} colorHilo={colorBarra} />
             <Colgante x={LOGIN_CX[4]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={der} colorHilo={colorBarra} />
+            <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
+            <Rect x="30.5" y="20.5" width="239" height="213" rx="46" fill="none" stroke="#B4BEC9" strokeWidth="1.3" opacity="0.5" />
           </Svg>
           <Text
             pointerEvents="none"
@@ -175,31 +204,31 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
 
   if (variante === "radar")
   {
-    const cx = [20, 40, 60, 80, 100];
+    const cx = [16.5, 36.5, 60, 83.5, 103.5];
     return (
       <Svg width={alto} height={alto} viewBox="0 0 120 120">
         <Gradientes />
-        <Circle cx="60" cy="60" r="55" fill="none" stroke={colorBarra} strokeWidth="2.4" opacity="0.55" />
-        <Circle cx="60" cy="60" r="55" fill="none" stroke="#AEB7C3" strokeWidth="1" opacity="0.22" />
-        <Bola x={cx[0]} y={60} r={10.5} />
-        <Bola x={cx[1]} y={60} r={10.5} />
-        <Bola x={cx[2]} y={60} r={11} central />
-        <Bola x={cx[3]} y={60} r={10.5} />
-        <Bola x={cx[4]} y={60} r={10.5} />
+        <Circle cx="60" cy="60" r="56" fill="none" stroke={colorBarra} strokeWidth="2.4" opacity="0.55" />
+        <Circle cx="60" cy="60" r="56" fill="none" stroke="#AEB7C3" strokeWidth="1" opacity="0.22" />
+        <Bola x={cx[0]} y={60} r={10} mini />
+        <Bola x={cx[1]} y={60} r={10} mini />
+        <Bola x={cx[3]} y={60} r={10} mini />
+        <Bola x={cx[4]} y={60} r={10} mini />
+        <Bola x={cx[2]} y={60} r={13.5} central mini />
       </Svg>
     );
   }
 
-  const cx = [46, 98, 150, 202, 254];
-  const ancho = 300 * (alto / 58);
+  const cx = [30, 72, 120, 168, 210];
+  const ancho = 240 * (alto / 56);
   return (
-    <Svg width={ancho} height={alto} viewBox="0 0 300 58">
+    <Svg width={ancho} height={alto} viewBox="0 0 240 56">
       <Gradientes />
-      <Bola x={cx[0]} y={29} r={22} />
-      <Bola x={cx[1]} y={29} r={22} />
-      <Bola x={cx[3]} y={29} r={22} />
-      <Bola x={cx[4]} y={29} r={22} />
-      <Bola x={cx[2]} y={29} r={27} central />
+      <Bola x={cx[0]} y={28} r={21} mini />
+      <Bola x={cx[1]} y={28} r={21} mini />
+      <Bola x={cx[3]} y={28} r={21} mini />
+      <Bola x={cx[4]} y={28} r={21} mini />
+      <Bola x={cx[2]} y={28} r={27} central mini />
     </Svg>
   );
 }

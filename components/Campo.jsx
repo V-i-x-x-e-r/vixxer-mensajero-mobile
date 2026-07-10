@@ -18,7 +18,7 @@ export function Campo({ valor, setValor, placeholder, secureTextEntry = false, .
           backgroundColor: colores.surface,
           borderWidth: 1,
           borderColor: enfocado ? colores.bordeFoco : colores.borde,
-          borderRadius: 8,
+          borderRadius: 10,
           paddingHorizontal: 16,
           paddingVertical: 10,
           paddingRight: secureTextEntry ? 44 : 16,

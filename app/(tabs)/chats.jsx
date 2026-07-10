@@ -18,7 +18,6 @@ import { useTema } from "../../components/tema";
 import { DeslizarPestanas } from "../../components/DeslizarPestanas";
 import { LogoPendulo } from "../../components/LogoPendulo";
 import { fuentes } from "../../assets/themes/temas";
-import { Logo } from "../../components/Logo";
 import { Engrane } from "../../components/Engrane";
 import { Avatar } from "../../components/Avatar";
 import { Visto } from "../../components/Visto";

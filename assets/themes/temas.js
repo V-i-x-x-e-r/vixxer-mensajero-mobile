@@ -45,7 +45,6 @@ export const colorido =
   exito: "#1FB874",
 };
 
-export const barras = ["#35D487", "#65A7FF", "#FFD166"];
 
 export const fuentes =
 {

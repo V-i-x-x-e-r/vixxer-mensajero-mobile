@@ -8,7 +8,7 @@ import { asegurarLlaveFirma } from "../lib/firma";
 import { guardar, TOKEN, MI_ID } from "../lib/storage";
 import { useTema } from "../components/tema";
 import { fuentes } from "../assets/themes/temas";
-import { Logo } from "../components/Logo";
+import { LogoPendulo } from "../components/LogoPendulo";
 import { Boton } from "../components/Boton";
 import { Campo } from "../components/Campo";
 import { BotonTema } from "../components/BotonTema";
@@ -76,7 +76,7 @@ export default function Registro()
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo }]}>
       <View style={[estilos.cabecera, { paddingTop: insets.top + 16 }]}>
         <View style={estilos.marca}>
-          <Logo alto={26} />
+          <LogoPendulo alto={22} />
           <Text style={[estilos.nombre, { color: colores.texto }]}>Vixxer</Text>
         </View>
         <BotonTema />
