@@ -15,6 +15,7 @@ export function AdjuntoAudio({ media, color, compacto })
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [velocidad, setVelocidad] = useState(0);
   const [posSuave, setPosSuave] = useState(0);
+  const [ondaW, setOndaW] = useState(ANCHO_ONDA);
   const player = useAudioPlayer(null);
   const estado = useAudioPlayerStatus(player);
   const barras = Array.isArray(media.wf) && media.wf.length > 0 ? media.wf : barrasDeterministas(media.path || media.local);
@@ -86,7 +87,7 @@ export function AdjuntoAudio({ media, color, compacto })
     {
       return;
     }
-    const x = Math.min(1, Math.max(0, e.nativeEvent.locationX / ANCHO_ONDA));
+    const x = Math.min(1, Math.max(0, e.nativeEvent.locationX / ondaW));
     player.seekTo(x * duracion);
   }
 
@@ -103,33 +104,48 @@ export function AdjuntoAudio({ media, color, compacto })
     }
   }
 
-  return (
-    <View style={estilos.fila}>
-      <Pressable onPress={alternar} hitSlop={8} style={estilos.play}>
-        {!uri ? (
-          <ActivityIndicator color={color} />
-        ) : (
-          <Text style={{ color, fontSize: 20 }}>{reproduciendo ? "❚❚" : "▶"}</Text>
-        )}
-      </Pressable>
-      <View style={estilos.centro}>
-        <Pressable onPress={buscar} style={estilos.onda}>
-          {barras.map((v, i) => (
-            <View
-              key={i}
-              style={{
-                width: 3,
-                height: 4 + v * 18,
-                borderRadius: 3,
-                backgroundColor: color,
-                opacity: (i + 0.5) / barras.length <= progreso ? 1 : 0.35,
-              }}
-            />
-          ))}
-        </Pressable>
+  const ondaBarras = (
+    <Pressable onPress={buscar} onLayout={(e) => setOndaW(e.nativeEvent.layout.width)} style={[estilos.onda, compacto && estilos.ondaFlex]}>
+      {barras.map((v, i) => (
+        <View
+          key={i}
+          style={{
+            width: 3,
+            height: 4 + v * 18,
+            borderRadius: 3,
+            backgroundColor: color,
+            opacity: (i + 0.5) / barras.length <= progreso ? 1 : 0.35,
+          }}
+        />
+      ))}
+    </Pressable>
+  );
+
+  const play = (
+    <Pressable onPress={alternar} hitSlop={8} style={estilos.play}>
+      {!uri ? <ActivityIndicator color={color} /> : <Text style={{ color, fontSize: 20 }}>{reproduciendo ? "❚❚" : "▶"}</Text>}
+    </Pressable>
+  );
+
+  if (compacto)
+  {
+    return (
+      <View style={estilos.filaC}>
+        {play}
+        {ondaBarras}
         <Text style={[estilos.tiempo, { color }]}>{tiempo}</Text>
       </View>
-      {uri && !compacto ? (
+    );
+  }
+
+  return (
+    <View style={estilos.fila}>
+      {play}
+      <View style={estilos.centro}>
+        {ondaBarras}
+        <Text style={[estilos.tiempo, { color }]}>{tiempo}</Text>
+      </View>
+      {uri ? (
         <Pressable onPress={cambiarVelocidad} hitSlop={6} style={[estilos.velocidad, { borderColor: color }]}>
           <Text style={[estilos.velocidadTxt, { color }]}>{VELOCIDADES[velocidad]}x</Text>
         </Pressable>
@@ -140,9 +156,11 @@ export function AdjuntoAudio({ media, color, compacto })
 
 const estilos = StyleSheet.create({
   fila: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 4 },
+  filaC: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 2 },
   play: { width: 28, alignItems: "center" },
   centro: { gap: 3 },
   onda: { width: ANCHO_ONDA, height: 24, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  ondaFlex: { flex: 1, width: undefined },
   tiempo: { fontSize: 11, opacity: 0.8 },
   velocidad: { borderWidth: 1, borderRadius: 10, width: 44, alignItems: "center", paddingVertical: 3 },
   velocidadTxt: { fontSize: 11, fontFamily: fuentes.semibold },

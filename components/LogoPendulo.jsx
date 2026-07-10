@@ -190,16 +190,16 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
     );
   }
 
-  const cx = [54, 102, 150, 198, 246];
+  const cx = [46, 98, 150, 202, 254];
   const ancho = 300 * (alto / 58);
   return (
     <Svg width={ancho} height={alto} viewBox="0 0 300 58">
       <Gradientes />
-      <Bola x={cx[0]} y={29} r={24} />
-      <Bola x={cx[1]} y={29} r={24} />
-      <Bola x={cx[2]} y={29} r={25} central />
-      <Bola x={cx[3]} y={29} r={24} />
-      <Bola x={cx[4]} y={29} r={24} />
+      <Bola x={cx[0]} y={29} r={22} />
+      <Bola x={cx[1]} y={29} r={22} />
+      <Bola x={cx[3]} y={29} r={22} />
+      <Bola x={cx[4]} y={29} r={22} />
+      <Bola x={cx[2]} y={29} r={27} central />
     </Svg>
   );
 }
