@@ -175,31 +175,31 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
 
   if (variante === "radar")
   {
-    const cx = [30, 45, 60, 75, 90];
+    const cx = [20, 40, 60, 80, 100];
     return (
       <Svg width={alto} height={alto} viewBox="0 0 120 120">
         <Gradientes />
-        <Circle cx="60" cy="60" r="54" fill="none" stroke={colorBarra} strokeWidth="2" opacity="0.5" />
-        <Circle cx="60" cy="60" r="54" fill="none" stroke="#AEB7C3" strokeWidth="1" opacity="0.22" />
-        <Bola x={cx[0]} y={60} r={9} />
-        <Bola x={cx[1]} y={60} r={9} />
-        <Bola x={cx[2]} y={60} r={9.5} central />
-        <Bola x={cx[3]} y={60} r={9} />
-        <Bola x={cx[4]} y={60} r={9} />
+        <Circle cx="60" cy="60" r="55" fill="none" stroke={colorBarra} strokeWidth="2.4" opacity="0.55" />
+        <Circle cx="60" cy="60" r="55" fill="none" stroke="#AEB7C3" strokeWidth="1" opacity="0.22" />
+        <Bola x={cx[0]} y={60} r={10.5} />
+        <Bola x={cx[1]} y={60} r={10.5} />
+        <Bola x={cx[2]} y={60} r={11} central />
+        <Bola x={cx[3]} y={60} r={10.5} />
+        <Bola x={cx[4]} y={60} r={10.5} />
       </Svg>
     );
   }
 
-  const cx = [42, 96, 150, 204, 258];
-  const ancho = 300 * (alto / 76);
+  const cx = [54, 102, 150, 198, 246];
+  const ancho = 300 * (alto / 58);
   return (
-    <Svg width={ancho} height={alto} viewBox="0 0 300 76">
+    <Svg width={ancho} height={alto} viewBox="0 0 300 58">
       <Gradientes />
-      <Bola x={cx[0]} y={38} r={24} />
-      <Bola x={cx[1]} y={38} r={24} />
-      <Bola x={cx[2]} y={38} r={25} central />
-      <Bola x={cx[3]} y={38} r={24} />
-      <Bola x={cx[4]} y={38} r={24} />
+      <Bola x={cx[0]} y={29} r={24} />
+      <Bola x={cx[1]} y={29} r={24} />
+      <Bola x={cx[2]} y={29} r={25} central />
+      <Bola x={cx[3]} y={29} r={24} />
+      <Bola x={cx[4]} y={29} r={24} />
     </Svg>
   );
 }
