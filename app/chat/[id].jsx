@@ -1438,7 +1438,7 @@ export default function Chat()
         initialNumToRender={14}
         inverted={!esWeb}
         style={estilos.flex}
-        contentContainerStyle={[estilos.lista, !esWeb && { paddingTop: barraAlto }]}
+        contentContainerStyle={[estilos.lista, !esWeb && { paddingTop: barraAlto + 10 }]}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.texto} colors={[colores.texto]} progressBackgroundColor={colores.surface} />}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
@@ -1638,7 +1638,7 @@ export default function Chat()
         </View>
       ) : null}
 
-      {!seleccionando ? (
+      {!seleccionando && !buscando ? (
         <View style={esWeb ? undefined : estilos.barraFlot} onLayout={(e) => setBarraAlto(e.nativeEvent.layout.height)}>
         <BarraEntrada
           valor={texto}

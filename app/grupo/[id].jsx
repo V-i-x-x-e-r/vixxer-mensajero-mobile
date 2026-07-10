@@ -843,7 +843,7 @@ export default function GrupoChat()
         maxToRenderPerBatch={8}
         initialNumToRender={14}
         inverted={!esWeb}
-        contentContainerStyle={[estilos.lista, !esWeb && { paddingTop: barraAlto }]}
+        contentContainerStyle={[estilos.lista, !esWeb && { paddingTop: barraAlto + 10 }]}
         onEndReached={cargarMas}
         onEndReachedThreshold={0.9}
         ListFooterComponent={masCargando ? <ActivityIndicator color={colores.muted} style={estilos.masSpinner} /> : null}
