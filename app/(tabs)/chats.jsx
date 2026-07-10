@@ -31,6 +31,7 @@ import { Estrella } from "../../components/Estrella";
 import { EstadoLista } from "../../components/EstadoLista";
 import { ListaChatsEsqueleto } from "../../components/Esqueleto";
 import { Lupa } from "../../components/Lupa";
+import { Superficie } from "../../components/Superficie";
 
 const DORADO = "#F5B301";
 
@@ -387,7 +388,7 @@ export default function Chats()
       </Pressable>
 
       {amigos.length > 0 && !sel ? (
-        <View style={[estilos.buscar, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+        <Superficie radio={12} style={estilos.buscar}>
           <Lupa color={colores.muted} tamano={16} />
           <TextInput
             value={busqueda}
@@ -401,7 +402,7 @@ export default function Chats()
               <Text style={{ color: colores.muted, fontSize: 15 }}>{"✕"}</Text>
             </Pressable>
           ) : null}
-        </View>
+        </Superficie>
       ) : null}
 
       <Animated.FlatList
