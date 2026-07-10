@@ -137,11 +137,10 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
         <View style={{ width: ancho, height: alto }}>
           <Svg width={ancho} height={alto} viewBox="0 0 300 264">
             <Gradientes />
-            <Path d="M76 236 q-11 13 -20 12" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
-            <Path d="M224 236 q11 13 20 12" stroke="url(#vxMarco)" strokeWidth="8" fill="none" strokeLinecap="round" />
+            <Path d="M76 236 q-11 13 -20 12" stroke="#5E6774" strokeWidth="8" fill="none" strokeLinecap="round" />
+            <Path d="M224 236 q11 13 20 12" stroke="#5E6774" strokeWidth="8" fill="none" strokeLinecap="round" />
             <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
-            <Rect x="32" y="22" width="236" height="210" rx="45" fill="none" stroke="#98A2B0" strokeWidth="1.6" opacity="0.45" />
-            <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="#B9C1CC" strokeWidth="1" opacity="0.3" />
+            <Rect x="30.5" y="20.5" width="239" height="213" rx="46" fill="none" stroke="#B4BEC9" strokeWidth="1.3" opacity="0.5" />
             <G stroke={colorBarra} strokeWidth="1.4" opacity="0.8">
               <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY} />
               <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY} />
