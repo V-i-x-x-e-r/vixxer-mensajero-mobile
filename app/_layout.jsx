@@ -3,6 +3,7 @@ import { AppState, View, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
+import * as SplashScreen from "expo-splash-screen";
 import { useFonts, Outfit_500Medium, Outfit_600SemiBold, Outfit_700Bold } from "@expo-google-fonts/outfit";
 import { ProveedorTema, useTema } from "../components/tema";
 import { ProveedorSolicitudes } from "../components/Solicitudes";
@@ -18,6 +19,8 @@ import { cargarLlavero } from "../lib/llavero";
 import { leer, TOKEN } from "../lib/storage";
 import { capturasBloqueadas, aplicarBloqueoCapturas } from "../lib/privacidad";
 import { fuentes } from "../assets/themes/temas";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function Navegacion()
 {

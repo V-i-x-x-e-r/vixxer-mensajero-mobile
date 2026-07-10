@@ -5,7 +5,7 @@ import { verificarPin } from "../lib/pin";
 import { biometricoActivo, biometricoDisponible, autenticar } from "../lib/biometrico";
 import { useTema } from "./tema";
 import { fuentes } from "../assets/themes/temas";
-import { Logo } from "./Logo";
+import { LogoPendulo } from "./LogoPendulo";
 import { Huella } from "./Huella";
 
 const TECLAS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "←"];
@@ -75,7 +75,7 @@ export function BloqueoPin({ onDesbloquear })
   return (
     <View style={[estilos.pantalla, { backgroundColor: colores.fondo, paddingTop: insets.top + 60, paddingBottom: insets.bottom + 24 }]}>
       <View style={estilos.cabecera}>
-        <Logo alto={30} />
+        <LogoPendulo alto={26} />
         <Text style={[estilos.titulo, { color: colores.texto }]}>Introduce tu PIN</Text>
         {error ? <Text style={[estilos.error, { color: colores.error }]}>PIN incorrecto</Text> : null}
       </View>

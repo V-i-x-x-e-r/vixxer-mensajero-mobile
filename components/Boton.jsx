@@ -38,11 +38,11 @@ export function Boton({ titulo, onPress, cargando = false, disabled = false, gla
 }
 
 const estilos = StyleSheet.create({
-  plano: { borderRadius: 8, paddingVertical: 11, alignItems: "center" },
+  plano: { borderRadius: 10, paddingVertical: 11, alignItems: "center" },
   premium:
   {
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: "center",
     borderWidth: 1,
     shadowColor: "#000",

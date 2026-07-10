@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { StyleSheet } from "react-native";
-import Svg, { Circle, Defs, G, Path, RadialGradient, Stop } from "react-native-svg";
+import * as SplashScreen from "expo-splash-screen";
+import Svg, { Circle, G } from "react-native-svg";
 import Animated, { Easing, runOnJS, useAnimatedProps, useAnimatedStyle, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import { Gradientes, VCincelada } from "./LogoPendulo";
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedG = Animated.createAnimatedComponent(G);
@@ -22,7 +24,7 @@ function Orbe({ i, t, r })
     const lx = CX + (i - 2) * SP;
     return { cx: ox + (lx - ox) * conv, cy: oy + (CY - oy) * conv };
   });
-  return <AnimatedCircle animatedProps={props} r={r} fill={i === 2 ? "url(#spC)" : "url(#sp)"} />;
+  return <AnimatedCircle animatedProps={props} r={r} fill={i === 2 ? "url(#vxIronC)" : "url(#vxIron)"} />;
 }
 
 export function SplashOrbita({ onDone, fondo = "#0C1015" })
@@ -33,6 +35,7 @@ export function SplashOrbita({ onDone, fondo = "#0C1015" })
 
   useEffect(() =>
   {
+    SplashScreen.hideAsync().catch(() => {});
     t.value = withTiming(1, { duration: 2200, easing: Easing.inOut(Easing.cubic) });
     vopa.value = withDelay(1700, withTiming(1, { duration: 520 }));
     const id = setTimeout(() =>
@@ -54,36 +57,14 @@ export function SplashOrbita({ onDone, fondo = "#0C1015" })
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: fondo }, estilos.centro, estiloCont]} pointerEvents="none">
       <Svg width={220} height={220} viewBox="0 0 300 300">
-        <Defs>
-          <RadialGradient id="sp" cx="36%" cy="28%" r="74%">
-            <Stop offset="0%" stopColor="#DBE0E7" />
-            <Stop offset="12%" stopColor="#8C929B" />
-            <Stop offset="34%" stopColor="#474D55" />
-            <Stop offset="63%" stopColor="#22262B" />
-            <Stop offset="100%" stopColor="#080A0D" />
-          </RadialGradient>
-          <RadialGradient id="spC" cx="38%" cy="26%" r="76%">
-            <Stop offset="0%" stopColor="#E7ECF2" />
-            <Stop offset="13%" stopColor="#969CA5" />
-            <Stop offset="36%" stopColor="#3E444C" />
-            <Stop offset="66%" stopColor="#1B1F24" />
-            <Stop offset="100%" stopColor="#06080A" />
-          </RadialGradient>
-        </Defs>
+        <Gradientes />
         <Orbe i={0} t={t} r={19} />
         <Orbe i={1} t={t} r={19} />
         <Orbe i={3} t={t} r={19} />
         <Orbe i={4} t={t} r={19} />
         <Orbe i={2} t={t} r={20} />
         <AnimatedG animatedProps={propsV}>
-          <Path
-            d={`M ${CX - 14} ${CY - 13.4} L ${CX} ${CY + 16.4} L ${CX + 14} ${CY - 13.4} L ${CX + 7.4} ${CY - 13.4} L ${CX} ${CY + 3.8} L ${CX - 7.4} ${CY - 13.4} Z`}
-            fill="#CFD6E0"
-            stroke="#060709"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-          />
+          <VCincelada cx={CX} cy={CY} r={20} />
         </AnimatedG>
       </Svg>
     </Animated.View>

@@ -14,7 +14,7 @@ import { Descargar } from "./Descargar";
 import { Ojo } from "./Ojo";
 
 const REACCIONES = ["\u{1F44D}", "❤️", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
-const ANCHO = 300;
+const ANCHO = 260;
 
 function Accion({ icono, etiqueta, onPress, color })
 {
@@ -57,8 +57,8 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
     esMio && onBorrar,
     onBorrarLocal,
   ].filter(Boolean).length;
-  const porFila = Math.floor((ancho - 16) / 68);
-  const alto = (onReaccionar ? 52 : 8) + Math.max(1, Math.ceil(visibles / porFila)) * 56;
+  const porFila = Math.floor((ancho - 12) / 60);
+  const alto = (onReaccionar ? 44 : 6) + Math.max(1, Math.ceil(visibles / porFila)) * 48;
   const arriba = sel.y - alto - 8 > 70;
   const top = arriba ? sel.y - alto - 8 : sel.y + sel.h + 8;
   const left = Math.max(12, Math.min(esMio ? sel.x + sel.w - ancho : sel.x, W - ancho - 12));
@@ -90,7 +90,7 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
                   </Pressable>
                 ))}
                 <Pressable onPress={abrirEmoji} hitSlop={6} style={[estilos.mas, { borderColor: colores.borde }]}>
-                  <Text style={{ color: colores.texto, fontSize: 18 }}>+</Text>
+                  <Text style={{ color: colores.texto, fontSize: 16 }}>+</Text>
                 </Pressable>
               </View>
               <View style={[estilos.separador, { backgroundColor: colores.borde }]} />
@@ -98,16 +98,16 @@ export function AccionesMensaje({ sel, esMio, esMedia, fijado, onReaccionar, onR
           ) : null}
 
           <View style={estilos.acciones}>
-            {onResponder ? <Accion icono={<Responder color={colores.texto} tamano={20} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} /> : null}
-            {onReenviar ? <Accion icono={<Reenviar color={colores.texto} tamano={20} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} /> : null}
-            {onSeleccionar ? <Accion icono={<Check color={colores.texto} tamano={20} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} /> : null}
-            {onFijar ? <Accion icono={<Pin color={colores.texto} tamano={20} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} /> : null}
-            {esMedia && onDescargar ? <Accion icono={<Descargar color={colores.texto} tamano={20} />} etiqueta="Descargar" onPress={() => onDescargar(mensaje)} color={colores.texto} /> : null}
-            {!esMedia && onCopiar ? <Accion icono={<Copiar color={colores.texto} tamano={20} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} /> : null}
-            {esMio && onInfo ? <Accion icono={<Ojo color={colores.texto} tamano={20} />} etiqueta="Info" onPress={() => onInfo(mensaje)} color={colores.texto} /> : null}
-            {esMio && !esMedia && onEditar ? <Accion icono={<Lapiz color={colores.texto} tamano={20} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
-            {onBorrarLocal ? <Accion icono={<Bote color={colores.texto} tamano={20} />} etiqueta="Para mí" onPress={() => onBorrarLocal(mensaje)} color={colores.texto} /> : null}
-            {esMio && onBorrar ? <Accion icono={<Bote color={colores.error} tamano={20} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
+            {onResponder ? <Accion icono={<Responder color={colores.texto} tamano={18} />} etiqueta="Responder" onPress={() => onResponder(mensaje)} color={colores.texto} /> : null}
+            {onReenviar ? <Accion icono={<Reenviar color={colores.texto} tamano={18} />} etiqueta="Reenviar" onPress={() => onReenviar(mensaje)} color={colores.texto} /> : null}
+            {onSeleccionar ? <Accion icono={<Check color={colores.texto} tamano={18} />} etiqueta="Seleccionar" onPress={() => onSeleccionar(mensaje)} color={colores.texto} /> : null}
+            {onFijar ? <Accion icono={<Pin color={colores.texto} tamano={18} />} etiqueta={fijado ? "Quitar" : "Fijar"} onPress={() => onFijar(mensaje)} color={colores.texto} /> : null}
+            {esMedia && onDescargar ? <Accion icono={<Descargar color={colores.texto} tamano={18} />} etiqueta="Descargar" onPress={() => onDescargar(mensaje)} color={colores.texto} /> : null}
+            {!esMedia && onCopiar ? <Accion icono={<Copiar color={colores.texto} tamano={18} />} etiqueta="Copiar" onPress={() => onCopiar(mensaje)} color={colores.texto} /> : null}
+            {esMio && onInfo ? <Accion icono={<Ojo color={colores.texto} tamano={18} />} etiqueta="Info" onPress={() => onInfo(mensaje)} color={colores.texto} /> : null}
+            {esMio && !esMedia && onEditar ? <Accion icono={<Lapiz color={colores.texto} tamano={18} />} etiqueta="Editar" onPress={() => onEditar(mensaje)} color={colores.texto} /> : null}
+            {onBorrarLocal ? <Accion icono={<Bote color={colores.texto} tamano={18} />} etiqueta="Para mí" onPress={() => onBorrarLocal(mensaje)} color={colores.texto} /> : null}
+            {esMio && onBorrar ? <Accion icono={<Bote color={colores.error} tamano={18} />} etiqueta="Borrar" onPress={() => onBorrar(mensaje)} color={colores.error} /> : null}
           </View>
         </Vidrio>
 
@@ -129,10 +129,10 @@ const estilos = StyleSheet.create({
   {
     position: "absolute",
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: "hidden",
-    padding: 8,
-    gap: 6,
+    padding: 6,
+    gap: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
@@ -140,12 +140,12 @@ const estilos = StyleSheet.create({
     elevation: 6,
   },
   reacciones: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 },
-  emoji: { fontSize: 24 },
-  mas: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  emoji: { fontSize: 21 },
+  mas: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   separador: { height: 1, marginVertical: 2 },
-  acciones: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", rowGap: 6 },
-  accion: { width: 68, alignItems: "center", gap: 3, paddingVertical: 4 },
-  accionTxt: { fontSize: 11, fontFamily: fuentes.media },
+  acciones: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", rowGap: 4 },
+  accion: { width: 60, alignItems: "center", gap: 2, paddingVertical: 3 },
+  accionTxt: { fontSize: 10, fontFamily: fuentes.media },
   presionado: { opacity: 0.6 },
   oculto: { position: "absolute", width: 1, height: 1, opacity: 0 },
 });
