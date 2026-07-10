@@ -306,11 +306,11 @@ export default function Grupos()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
-  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 34 },
+  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   crear: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   crearTxt: { fontSize: 13, fontFamily: fuentes.semibold },
-  lista: { flex: 1 },
+  lista: { flex: 1, marginHorizontal: -10 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
   icono: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   centro: { flex: 1, gap: 2 },
