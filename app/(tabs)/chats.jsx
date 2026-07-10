@@ -366,7 +366,7 @@ export default function Chats()
       ) : (
         <View style={estilos.cabecera}>
           <View style={estilos.marca}>
-            <LogoPendulo alto={26} />
+            <LogoPendulo alto={22} />
           </View>
           <Pressable onPress={() => router.push("/ajustes")} hitSlop={8} style={({ pressed }) => pressed && estilos.presionado}>
             <Engrane color={colores.texto} />
@@ -510,16 +510,16 @@ export default function Chats()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
-  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 34 },
-  marca: { flexDirection: "row", alignItems: "center", gap: 10, marginLeft: 48 },
+  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
+  marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   herramientas: { flexDirection: "row", alignItems: "center", gap: 20 },
   estado: { flexDirection: "row", alignItems: "center", gap: 6 },
   punto: { width: 8, height: 8, borderRadius: 4 },
-  estadoTxt: { fontSize: 13 },
-  buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 42, marginTop: 12 },
+  estadoTxt: { fontSize: 12 },
+  buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 38, marginTop: 8 },
   buscarCampo: { flex: 1, fontSize: 15, paddingVertical: 0 },
-  lista: { flex: 1 },
+  lista: { flex: 1, marginHorizontal: -10 },
   fila: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 12, paddingHorizontal: 10, borderRadius: 12 },
   iconoArchivo: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   separadorFila: { height: 1, marginLeft: 66 },

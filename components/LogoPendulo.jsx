@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, View, Text } from "react-native";
 import Svg, { Circle, ClipPath, Defs, Ellipse, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop } from "react-native-svg";
 import Animated, { Easing, useAnimatedProps, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from "react-native-reanimated";
@@ -12,16 +12,27 @@ export function VCincelada({ cx, cy, r })
   const bot = cy + r * 0.98;
   const iw = r * 0.5;
   const ib = cy + r * 0.2;
+  const izq = `M ${cx - w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx - iw} ${top} Z`;
+  const der = `M ${cx + w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx + iw} ${top} Z`;
+  const dx = r * 0.045;
+  const dy = r * 0.055;
   const cid = `vxClip${Math.round(cx)}_${Math.round(cy)}`;
-  const grosor = Math.max(1, r * 0.07);
   return (
     <>
       <ClipPath id={cid}>
         <Circle cx={cx} cy={cy} r={r * 0.985} />
       </ClipPath>
       <G clipPath={`url(#${cid})`}>
-        <Path d={`M ${cx - w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx - iw} ${top} Z`} fill="url(#vxVizq)" stroke="#05070A" strokeWidth={grosor} strokeLinejoin="round" />
-        <Path d={`M ${cx + w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx + iw} ${top} Z`} fill="url(#vxVder)" stroke="#05070A" strokeWidth={grosor} strokeLinejoin="round" />
+        <G transform={`translate(${-dx}, ${-dy})`} opacity="0.55">
+          <Path d={izq} fill="#05080C" />
+          <Path d={der} fill="#05080C" />
+        </G>
+        <G transform={`translate(${dx}, ${dy})`} opacity="0.5">
+          <Path d={izq} fill="#DCE3EC" />
+          <Path d={der} fill="#DCE3EC" />
+        </G>
+        <Path d={izq} fill="url(#vxVizq)" />
+        <Path d={der} fill="url(#vxVder)" />
       </G>
     </>
   );
@@ -40,13 +51,28 @@ function Bola({ x, y, r, central, mini })
   );
 }
 
-function Colgante({ x, pivoteY, ballY, r, angulo, colorHilo })
+const BARRA_TRAS = 7;
+const BARRA_FRENTE = 19;
+const LOGIN_BY = 130;
+const PIVOTE = 13;
+
+function HilosLambda({ x, colorHilo })
+{
+  return (
+    <>
+      <Line x1={x} y1={LOGIN_BY} x2={x - 11} y2={BARRA_TRAS} stroke={colorHilo} strokeWidth="1.4" opacity="0.75" />
+      <Line x1={x} y1={LOGIN_BY} x2={x + 11} y2={BARRA_FRENTE} stroke={colorHilo} strokeWidth="1.4" opacity="0.9" />
+    </>
+  );
+}
+
+function Colgante({ x, r, angulo, colorHilo })
 {
   const props = useAnimatedProps(() => ({ rotation: angulo.value }));
   return (
-    <AnimatedG animatedProps={props} originX={x} originY={pivoteY}>
-      <Line x1={x} y1={pivoteY} x2={x} y2={ballY} stroke={colorHilo} strokeWidth="1.5" opacity="0.8" />
-      <Bola x={x} y={ballY} r={r} />
+    <AnimatedG animatedProps={props} originX={x} originY={PIVOTE}>
+      <HilosLambda x={x} colorHilo={colorHilo} />
+      <Bola x={x} y={LOGIN_BY} r={r} />
     </AnimatedG>
   );
 }
@@ -83,15 +109,13 @@ export function Gradientes()
         <Stop offset="80%" stopColor="#39414D" />
         <Stop offset="100%" stopColor="#11161C" />
       </RadialGradient>
-      <LinearGradient id="vxVizq" x1="0" y1="0" x2="0.9" y2="1">
-        <Stop offset="0%" stopColor="#E8EDF4" />
-        <Stop offset="55%" stopColor="#AAB3BF" />
-        <Stop offset="100%" stopColor="#69727E" />
+      <LinearGradient id="vxVizq" x1="0" y1="0" x2="0.25" y2="1">
+        <Stop offset="0%" stopColor="#9AA3B0" />
+        <Stop offset="100%" stopColor="#4E5661" />
       </LinearGradient>
-      <LinearGradient id="vxVder" x1="0.1" y1="0" x2="1" y2="1">
-        <Stop offset="0%" stopColor="#8B94A1" />
-        <Stop offset="55%" stopColor="#4A525D" />
-        <Stop offset="100%" stopColor="#1C2129" />
+      <LinearGradient id="vxVder" x1="0" y1="0" x2="0.25" y2="1">
+        <Stop offset="0%" stopColor="#8C95A2" />
+        <Stop offset="100%" stopColor="#454D58" />
       </LinearGradient>
       <LinearGradient id="vxMarco" x1="0" y1="0" x2="0.3" y2="1">
         <Stop offset="0%" stopColor="#9AA3B2" />
@@ -104,13 +128,13 @@ export function Gradientes()
 }
 
 const LOGIN_CX = [58, 104, 150, 196, 242];
-const LOGIN_PIV = 14;
-const LOGIN_BY = 130;
 
 export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velocidad = 1500, colorBarra = "#9AA2AD", colorTexto = "#EEF2F7" })
 {
   const izq = useSharedValue(0);
   const der = useSharedValue(0);
+  const giro = useSharedValue(0);
+  const taps = useRef({ n: 0, t: 0 });
   const esLogin = variante === "login";
 
   function ciclo()
@@ -142,10 +166,6 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
 
   function golpear()
   {
-    if (!esLogin)
-    {
-      return;
-    }
     izq.value = withSequence(
       withTiming(-19, { duration: 300, easing: Easing.out(Easing.cubic) }),
       withTiming(0, { duration: 240, easing: Easing.in(Easing.cubic) }),
@@ -158,28 +178,68 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
     setTimeout(ciclo, 1400);
   }
 
+  function caos()
+  {
+    izq.value = withSequence(
+      withTiming(-30, { duration: 280, easing: Easing.out(Easing.cubic) }),
+      withTiming(7, { duration: 220, easing: Easing.in(Easing.cubic) }),
+      withTiming(-11, { duration: 200, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
+    );
+    der.value = withSequence(
+      withTiming(30, { duration: 280, easing: Easing.out(Easing.cubic) }),
+      withTiming(-7, { duration: 220, easing: Easing.in(Easing.cubic) }),
+      withTiming(11, { duration: 200, easing: Easing.out(Easing.quad) }),
+      withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }),
+    );
+    giro.value = 0;
+    giro.value = withDelay(140, withTiming(360, { duration: 950, easing: Easing.out(Easing.cubic) }));
+    setTimeout(ciclo, 2000);
+  }
+
+  function tocar()
+  {
+    if (!esLogin)
+    {
+      return;
+    }
+    const ahora = Date.now();
+    taps.current.n = ahora - taps.current.t < 450 ? taps.current.n + 1 : 1;
+    taps.current.t = ahora;
+    if (taps.current.n >= 3)
+    {
+      taps.current.n = 0;
+      caos();
+      return;
+    }
+    golpear();
+  }
+
+  const propsGiro = useAnimatedProps(() => ({ rotation: giro.value }));
+
   if (esLogin)
   {
     const ancho = 300 * (alto / 264);
     return (
-      <Pressable onPress={golpear} hitSlop={8}>
+      <Pressable onPress={tocar} hitSlop={8}>
         <View style={{ width: ancho, height: alto }}>
           <Svg width={ancho} height={alto} viewBox="0 0 300 264">
             <Gradientes />
             <Path d="M 84 240 L 66 256" stroke="#4A525E" strokeWidth="11" strokeLinecap="round" />
             <Path d="M 216 240 L 234 256" stroke="#4A525E" strokeWidth="11" strokeLinecap="round" />
-            <G stroke={colorBarra} strokeWidth="1.4" opacity="0.8">
-              <Line x1={LOGIN_CX[1]} y1={LOGIN_PIV} x2={LOGIN_CX[1]} y2={LOGIN_BY} />
-              <Line x1={LOGIN_CX[2]} y1={LOGIN_PIV} x2={LOGIN_CX[2]} y2={LOGIN_BY} />
-              <Line x1={LOGIN_CX[3]} y1={LOGIN_PIV} x2={LOGIN_CX[3]} y2={LOGIN_BY} />
-            </G>
+            <Path d={`M 62 ${BARRA_TRAS} H 238`} stroke="url(#vxMarco)" strokeWidth="8" strokeLinecap="round" opacity="0.85" />
+            <HilosLambda x={LOGIN_CX[1]} colorHilo={colorBarra} />
+            <HilosLambda x={LOGIN_CX[2]} colorHilo={colorBarra} />
+            <HilosLambda x={LOGIN_CX[3]} colorHilo={colorBarra} />
             <Bola x={LOGIN_CX[1]} y={LOGIN_BY} r={19} />
-            <Bola x={LOGIN_CX[2]} y={LOGIN_BY} r={20} central />
+            <AnimatedG animatedProps={propsGiro} originX={LOGIN_CX[2]} originY={LOGIN_BY}>
+              <Bola x={LOGIN_CX[2]} y={LOGIN_BY} r={20} central />
+            </AnimatedG>
             <Bola x={LOGIN_CX[3]} y={LOGIN_BY} r={19} />
-            <Colgante x={LOGIN_CX[0]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={izq} colorHilo={colorBarra} />
-            <Colgante x={LOGIN_CX[4]} pivoteY={LOGIN_PIV} ballY={LOGIN_BY} r={19} angulo={der} colorHilo={colorBarra} />
-            <Rect x="24" y="14" width="252" height="226" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
-            <Rect x="30.5" y="20.5" width="239" height="213" rx="46" fill="none" stroke="#B4BEC9" strokeWidth="1.3" opacity="0.5" />
+            <Colgante x={LOGIN_CX[0]} r={19} angulo={izq} colorHilo={colorBarra} />
+            <Colgante x={LOGIN_CX[4]} r={19} angulo={der} colorHilo={colorBarra} />
+            <Rect x="24" y="18" width="252" height="222" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="13" strokeLinejoin="round" />
+            <Rect x="30.5" y="24.5" width="239" height="209" rx="46" fill="none" stroke="#B4BEC9" strokeWidth="1.3" opacity="0.5" />
           </Svg>
           <Text
             pointerEvents="none"

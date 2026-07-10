@@ -193,11 +193,11 @@ export default function AmigosPantalla()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1, paddingHorizontal: 20, gap: 12 },
-  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 34 },
+  cabecera: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 28 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   borrar: { flexDirection: "row", alignItems: "center", gap: 8 },
   borrarTxt: { fontSize: 15, fontFamily: fuentes.media },
-  lista: { flex: 1 },
+  lista: { flex: 1, marginHorizontal: -10 },
   acciones: { flexDirection: "row", gap: 10, marginBottom: 4 },
   mitad: { flex: 1 },
   accion: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
