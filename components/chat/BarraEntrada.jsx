@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, TextInput, Pressable, Platform, Animated, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Vidrio } from "../Vidrio";
 import { useTema } from "../tema";
 import { useTeclado } from "../useTeclado";
 import { fuentes } from "../../assets/themes/temas";
@@ -15,7 +16,7 @@ import { AdjuntoAudio } from "../AdjuntoAudio";
 
 export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker, audioDraft, onCancelarAudioDraft, onEnviarAudioDraft, grabando, grabPausado, tiempoGrabacion, onIniciarGrabacion, onPausarGrabacion, onCancelarGrabacion, onEnviarGrabacion, subiendo, editando, children })
 {
-  const { colores } = useTema();
+  const { colores, oscuro } = useTema();
   const insets = useSafeAreaInsets();
   const tecladoAlto = useTeclado();
   const [pista, setPista] = useState(false);
@@ -54,6 +55,7 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
 
   return (
     <View style={{ marginBottom: tecladoAlto }}>
+      <Vidrio tinte={oscuro ? "dark" : "light"} style={[StyleSheet.absoluteFill, { backgroundColor: `${colores.surface}E6` }]} pointerEvents="none" />
       {children}
       {pista ? (
         <View style={[estilos.pista, { backgroundColor: colores.surface, borderColor: colores.borde }]}>

@@ -140,6 +140,7 @@ export default function Chat()
   const [hayMas, setHayMas] = useState(true);
   const [masCargando, setMasCargando] = useState(false);
   const [audioDraft, setAudioDraft] = useState(null);
+  const [barraAlto, setBarraAlto] = useState(0);
   const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const estadoGrab = useAudioRecorderState(grabadora, 150);
   const muestras = useRef([]);
@@ -1437,7 +1438,7 @@ export default function Chat()
         initialNumToRender={14}
         inverted={!esWeb}
         style={estilos.flex}
-        contentContainerStyle={estilos.lista}
+        contentContainerStyle={[estilos.lista, !esWeb && { paddingTop: barraAlto }]}
         refreshControl={<RefreshControl refreshing={refrescando} onRefresh={refrescar} tintColor={colores.texto} colors={[colores.texto]} progressBackgroundColor={colores.surface} />}
         onScroll={alDesplazar}
         scrollEventThrottle={16}
@@ -1638,6 +1639,7 @@ export default function Chat()
       ) : null}
 
       {!seleccionando ? (
+        <View style={esWeb ? undefined : estilos.barraFlot} onLayout={(e) => setBarraAlto(e.nativeEvent.layout.height)}>
         <BarraEntrada
           valor={texto}
           onCambiar={escribir}
@@ -1686,6 +1688,7 @@ export default function Chat()
             </View>
           ) : null}
         </BarraEntrada>
+        </View>
       ) : null}
 
       <AccionesMensaje
@@ -1800,6 +1803,7 @@ export default function Chat()
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
   flex: { flex: 1 },
+  barraFlot: { position: "absolute", left: 0, right: 0, bottom: 0 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerAcciones: { flexDirection: "row", alignItems: "center", gap: 18 },
   menuFondo: { flex: 1 },

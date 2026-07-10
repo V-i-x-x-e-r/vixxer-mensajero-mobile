@@ -80,6 +80,7 @@ export default function GrupoChat()
   const [ocultos, setOcultos] = useState(() => new Set());
   const [previo, setPrevio] = useState(null);
   const [audioDraft, setAudioDraft] = useState(null);
+  const [barraAlto, setBarraAlto] = useState(0);
   const [adjuntando, setAdjuntando] = useState(false);
   const [escribiendoDe, setEscribiendoDe] = useState(null);
   const [infoDe, setInfoDe] = useState(null);
@@ -842,7 +843,7 @@ export default function GrupoChat()
         maxToRenderPerBatch={8}
         initialNumToRender={14}
         inverted={!esWeb}
-        contentContainerStyle={estilos.lista}
+        contentContainerStyle={[estilos.lista, !esWeb && { paddingTop: barraAlto }]}
         onEndReached={cargarMas}
         onEndReachedThreshold={0.9}
         ListFooterComponent={masCargando ? <ActivityIndicator color={colores.muted} style={estilos.masSpinner} /> : null}
@@ -905,6 +906,7 @@ export default function GrupoChat()
         }}
       />
 
+      <View style={esWeb ? undefined : estilos.barraFlot} onLayout={(e) => setBarraAlto(e.nativeEvent.layout.height)}>
       <BarraEntrada
         valor={borrador}
         onCambiar={escribir}
@@ -953,6 +955,7 @@ export default function GrupoChat()
           </View>
         ) : null}
       </BarraEntrada>
+      </View>
 
       <AccionesMensaje
         sel={sel}
@@ -1055,6 +1058,7 @@ export default function GrupoChat()
 
 const estilos = StyleSheet.create({
   pantalla: { flex: 1 },
+  barraFlot: { position: "absolute", left: 0, right: 0, bottom: 0 },
   lista: { padding: 14, gap: 8 },
   masSpinner: { paddingVertical: 12 },
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
