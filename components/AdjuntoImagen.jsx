@@ -92,7 +92,7 @@ export function AdjuntoImagen({ media, color, onMenu, seleccionando, onToggle, c
         ref={ref}
         onPress={() => (seleccionando ? onToggle?.() : error ? reintentar() : uri ? setAbierta(true) : null)}
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
-        delayLongPress={250}
+        delayLongPress={200}
         style={[marco, estilos.recorte]}
       >
         <Image

@@ -104,7 +104,7 @@ export function AdjuntoVideo({ media, color, onMenu, seleccionando, onToggle, cu
         ref={ref}
         onPress={abrirVideo}
         onLongPress={() => ref.current?.measureInWindow((x, y, w, h) => onMenu?.({ x, y, w, h }))}
-        delayLongPress={250}
+        delayLongPress={200}
         style={[estilos.miniatura, marco]}
       >
         <Image

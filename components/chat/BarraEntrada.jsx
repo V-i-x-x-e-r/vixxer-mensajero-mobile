@@ -60,8 +60,10 @@ export function BarraEntrada({ valor, onCambiar, onEnviar, onAdjuntar, onSticker
       <BrilloVidrio oscuro={oscuro} />
       {children}
       {pista ? (
-        <View style={[estilos.pista, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
-          <Text style={[estilos.pistaTxt, { color: colores.texto }]}>Mantén presionado para grabar</Text>
+        <View pointerEvents="none" style={estilos.pistaZona}>
+          <View style={[estilos.pista, { backgroundColor: colores.surface, borderColor: colores.borde }]}>
+            <Text style={[estilos.pistaTxt, { color: colores.texto }]}>Mantén presionado para grabar</Text>
+          </View>
         </View>
       ) : null}
 
@@ -156,7 +158,8 @@ const estilos = StyleSheet.create({
   input: { flex: 1, borderWidth: 1, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, maxHeight: 120 },
   enviar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   presionado: { opacity: 0.7 },
-  pista: { alignSelf: "center", borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6, marginBottom: 6 },
+  pistaZona: { position: "absolute", top: -44, left: 0, right: 0, alignItems: "center" },
+  pista: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
   pistaTxt: { fontSize: 12, fontFamily: fuentes.media },
   grabCentro: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44 },
   grabPunto: { width: 10, height: 10, borderRadius: 5 },
