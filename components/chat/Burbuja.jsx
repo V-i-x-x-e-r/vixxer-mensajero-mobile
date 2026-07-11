@@ -39,14 +39,14 @@ export function BurbujaMedible({ style, onSeleccionar, onPress, onResponder, chi
   }
 
   const contenido = (
-    <Pressable ref={ref} onLongPress={onSeleccionar ? alMantener : undefined} onPress={onPress} delayLongPress={250} style={style}>
+    <Pressable ref={ref} onLongPress={onSeleccionar ? alMantener : undefined} onPress={onPress} delayLongPress={200} style={style}>
       {children}
     </Pressable>
   );
 
   const gesto = Gesture.Pan()
-    .activeOffsetX(12)
-    .failOffsetX(-12)
+    .activeOffsetX(18)
+    .failOffsetX(-18)
     .failOffsetY([-16, 16])
     .onUpdate((e) =>
     {
@@ -94,7 +94,7 @@ export function BurbujaMedible({ style, onSeleccionar, onPress, onResponder, chi
           ref={ref}
           onLongPress={onSeleccionar ? alMantener : undefined}
           onPress={onPress}
-          delayLongPress={250}
+          delayLongPress={200}
           style={[style, estiloArrastre]}
         >
           {children}

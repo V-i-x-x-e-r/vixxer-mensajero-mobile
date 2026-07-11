@@ -148,22 +148,6 @@ export default function Cercania()
             </Animated.View>
           ) : null}
 
-          {cerca.activo ? (
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                estilos.onda,
-                {
-                  left: centro - 24,
-                  top: centro - 24,
-                  borderColor: salida.color,
-                  opacity: pulso.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] }),
-                  transform: [{ scale: pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 3.4] }) }],
-                },
-              ]}
-            />
-          ) : null}
-
           {peers.map((p) =>
           {
             const ang = (anguloDe(p.id) * Math.PI) / 180;
@@ -269,7 +253,6 @@ const estilos = StyleSheet.create({
   zonaRadar: { alignItems: "center", paddingTop: 24 },
   barrido: { position: "absolute", top: 8, width: 2, borderRadius: 1, opacity: 0.8 },
   estela: { position: "absolute", top: 8, width: 10, borderRadius: 5, opacity: 0.12 },
-  onda: { position: "absolute", width: 48, height: 48, borderRadius: 24, borderWidth: 2 },
   peerOnda: { position: "absolute", left: -3, top: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: "#38BDF8" },
   peerEtiqueta: { position: "absolute", top: 16, left: -12, width: 40, textAlign: "center", fontSize: 9 },
   botonRadar: { marginTop: 10, borderWidth: 1, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8 },

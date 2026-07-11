@@ -43,6 +43,7 @@ import { Bote } from "../../components/Bote";
 import { Silencio } from "../../components/Silencio";
 import { Ojo } from "../../components/Ojo";
 import { Confirmacion } from "../../components/Confirmacion";
+import { Superficie } from "../../components/Superficie";
 import { leerEstados, alternarSilenciado } from "../../lib/chatLocal";
 import { guardarMedia } from "../../lib/descargas";
 import { leerOcultos, ocultarMensaje } from "../../lib/ocultos";
@@ -143,6 +144,40 @@ export default function Chat()
   const [barraAlto, setBarraAlto] = useState(0);
   const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const estadoGrab = useAudioRecorderState(grabadora, 150);
+  const grabandoRef = useRef(false);
+  const textoRef = useRef("");
+
+  useEffect(() =>
+  {
+    textoRef.current = texto;
+  }, [texto]);
+
+  useEffect(() => () =>
+  {
+    if (!grabandoRef.current)
+    {
+      return;
+    }
+    grabandoRef.current = false;
+    const ms = durMs.current;
+    const wf = normalizarMuestras(muestras.current) || undefined;
+    Promise.resolve()
+      .then(() => grabadora.stop())
+      .then(() =>
+      {
+        const uri = grabadora.uri;
+        if (!uri || ms < 700)
+        {
+          return;
+        }
+        return guardarAudioBorrador(claveBorrador, uri).then((estable) =>
+          guardarBorrador(claveBorrador, {
+            texto: textoRef.current,
+            audio: { uri: estable, t: "audio", mime: "audio/mp4", dur: Math.max(1, Math.round(ms / 1000)), wf },
+          }));
+      })
+      .catch(() => {});
+  }, []);
   const muestras = useRef([]);
   const durMs = useRef(0);
   const [grabPausado, setGrabPausado] = useState(false);
@@ -967,6 +1002,7 @@ export default function Chat()
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
+      grabandoRef.current = true;
       setGrabPausado(false);
     }
     catch (e)
@@ -1000,6 +1036,7 @@ export default function Chat()
       return;
     }
     setGrabando(false);
+    grabandoRef.current = false;
     setGrabPausado(false);
     const ms = durMs.current || (grabadora.currentTime || 0) * 1000;
     try
@@ -1345,7 +1382,7 @@ export default function Chat()
 
       <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
         <Pressable style={estilos.menuFondo} onPress={() => setMenu(false)}>
-          <View style={[estilos.menuCaja, { backgroundColor: colores.surface, borderColor: colores.borde, top: insets.top + 48 }]}>
+          <Superficie radio={14} style={[estilos.menuCaja, { top: insets.top + 48 }]}>
             <Pressable
               onPress={() => { setMenu(false); setPickerTemp(true); }}
               style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}
@@ -1373,7 +1410,7 @@ export default function Chat()
               <Candado color={colores.error} tamano={18} />
               <Text style={[estilos.menuTxt, { color: colores.error }]}>Bloquear</Text>
             </Pressable>
-          </View>
+          </Superficie>
         </Pressable>
       </Modal>
 
@@ -1816,7 +1853,7 @@ const estilos = StyleSheet.create({
   encabezado: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerAcciones: { flexDirection: "row", alignItems: "center", gap: 18 },
   menuFondo: { flex: 1 },
-  menuCaja: { position: "absolute", right: 10, minWidth: 224, borderWidth: 1, borderRadius: 14, paddingVertical: 6, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
+  menuCaja: { position: "absolute", right: 10, minWidth: 224, paddingVertical: 6, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 8 },
   menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
   menuDivisor: { height: 1, marginVertical: 4, marginHorizontal: 8 },
   menuTxt: { fontSize: 15, fontFamily: fuentes.media },

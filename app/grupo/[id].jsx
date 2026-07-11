@@ -74,6 +74,40 @@ export default function GrupoChat()
   const [aviso, setAviso] = useState("");
   const grabadora = useAudioRecorder({ ...RecordingPresets.HIGH_QUALITY, isMeteringEnabled: true });
   const estadoGrab = useAudioRecorderState(grabadora, 150);
+  const grabandoRef = useRef(false);
+  const textoRef = useRef("");
+
+  useEffect(() =>
+  {
+    textoRef.current = borrador;
+  }, [borrador]);
+
+  useEffect(() => () =>
+  {
+    if (!grabandoRef.current)
+    {
+      return;
+    }
+    grabandoRef.current = false;
+    const ms = durMs.current;
+    const wf = normalizarMuestras(muestras.current) || undefined;
+    Promise.resolve()
+      .then(() => grabadora.stop())
+      .then(() =>
+      {
+        const uri = grabadora.uri;
+        if (!uri || ms < 700)
+        {
+          return;
+        }
+        return guardarAudioBorrador(claveBorrador, uri).then((estable) =>
+          guardarBorrador(claveBorrador, {
+            texto: textoRef.current,
+            audio: { uri: estable, t: "audio", mime: "audio/mp4", dur: Math.max(1, Math.round(ms / 1000)), wf },
+          }));
+      })
+      .catch(() => {});
+  }, []);
   const muestras = useRef([]);
   const durMs = useRef(0);
   const [grabPausado, setGrabPausado] = useState(false);
@@ -562,6 +596,7 @@ export default function GrupoChat()
       await grabadora.prepareToRecordAsync();
       grabadora.record();
       setGrabando(true);
+      grabandoRef.current = true;
       setGrabPausado(false);
     }
     catch (e)
@@ -595,6 +630,7 @@ export default function GrupoChat()
       return;
     }
     setGrabando(false);
+    grabandoRef.current = false;
     setGrabPausado(false);
     const ms = durMs.current || (grabadora.currentTime || 0) * 1000;
     try

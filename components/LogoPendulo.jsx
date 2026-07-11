@@ -7,14 +7,13 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 
 export function VCincelada({ cx, cy, r })
 {
-  const w = r * 0.8;
-  const top = cy - r * 0.58;
-  const bot = cy + r * 0.94;
-  const iw = r * 0.48;
-  const ib = cy + r * 0.5;
+  const w = r * 0.74;
+  const top = cy - r * 0.55;
+  const bot = cy + r * 0.78;
+  const iw = r * 0.4;
+  const ib = cy + r * 0.3;
   const izq = `M ${cx - w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx - iw} ${top} Z`;
   const der = `M ${cx + w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx + iw} ${top} Z`;
-  const dx = r * 0.045;
   const dy = r * 0.055;
   const cid = `vxClip${Math.round(cx)}_${Math.round(cy)}`;
   return (
@@ -23,11 +22,11 @@ export function VCincelada({ cx, cy, r })
         <Circle cx={cx} cy={cy} r={r * 0.985} />
       </ClipPath>
       <G clipPath={`url(#${cid})`}>
-        <G transform={`translate(${-dx}, ${-dy})`} opacity="0.55">
+        <G transform={`translate(0, ${-dy})`} opacity="0.55">
           <Path d={izq} fill="#05080C" />
           <Path d={der} fill="#05080C" />
         </G>
-        <G transform={`translate(${dx}, ${dy})`} opacity="0.5">
+        <G transform={`translate(0, ${dy})`} opacity="0.5">
           <Path d={izq} fill="#DCE3EC" />
           <Path d={der} fill="#DCE3EC" />
         </G>
@@ -282,10 +281,10 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
     );
   }
 
-  const cx = [30, 72, 120, 168, 210];
-  const ancho = 240 * (alto / 56);
+  const cx = [24, 70, 122, 174, 220];
+  const ancho = 244 * (alto / 56);
   return (
-    <Svg width={ancho} height={alto} viewBox="0 0 240 56">
+    <Svg width={ancho} height={alto} viewBox="0 0 244 56">
       <Gradientes />
       <Bola x={cx[0]} y={28} r={21} mini />
       <Bola x={cx[1]} y={28} r={21} mini />

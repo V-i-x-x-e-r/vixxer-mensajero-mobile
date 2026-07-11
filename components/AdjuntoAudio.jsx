@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { View, Pressable, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { obtenerMedia } from "../lib/mediaRemota";
@@ -13,6 +13,8 @@ const ANCHO_ONDA = 148;
 export function AdjuntoAudio({ media, color, compacto })
 {
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
+  const [cargando, setCargando] = useState(false);
+  const listo = useRef(false);
   const [velocidad, setVelocidad] = useState(0);
   const [posSuave, setPosSuave] = useState(0);
   const [ondaW, setOndaW] = useState(ANCHO_ONDA);
@@ -22,24 +24,41 @@ export function AdjuntoAudio({ media, color, compacto })
 
   useEffect(() =>
   {
-    if (uri)
-    {
-      return;
-    }
-    let activo = true;
-    obtenerMedia({ ...media, mime: media.mime || "audio/m4a" })
-      .then((final) => activo && setUri(final))
-      .catch(() => {});
-    return () => { activo = false; };
-  }, [media.path]);
+    listo.current = false;
+  }, [media.path, media.local]);
 
-  useEffect(() =>
+  async function asegurar()
   {
-    if (uri)
+    if (listo.current)
     {
-      player.replace(uri);
+      return true;
     }
-  }, [uri]);
+    let final = uri;
+    if (!final)
+    {
+      if (cargando)
+      {
+        return false;
+      }
+      setCargando(true);
+      try
+      {
+        final = await obtenerMedia({ ...media, mime: media.mime || "audio/m4a" });
+        setUri(final);
+      }
+      catch (e)
+      {
+        return false;
+      }
+      finally
+      {
+        setCargando(false);
+      }
+    }
+    player.replace(final);
+    listo.current = true;
+    return true;
+  }
 
   useEffect(() =>
   {
@@ -61,29 +80,27 @@ export function AdjuntoAudio({ media, color, compacto })
   const reproduciendo = estado && estado.playing;
   const tiempo = duracionCorta(reproduciendo || posicion > 0.3 ? Math.max(0, duracion - posicion) : duracion) || "0:00";
 
-  function alternar()
+  async function alternar()
   {
-    if (!uri)
-    {
-      return;
-    }
     if (reproduciendo)
     {
       player.pause();
+      return;
     }
-    else
+    if (!(await asegurar()))
     {
-      if (duracion > 0 && posicion >= duracion - 0.15)
-      {
-        player.seekTo(0);
-      }
-      player.play();
+      return;
     }
+    if (duracion > 0 && posicion >= duracion - 0.15)
+    {
+      player.seekTo(0);
+    }
+    player.play();
   }
 
   function buscar(e)
   {
-    if (!uri || duracion <= 0)
+    if (!listo.current || duracion <= 0)
     {
       return;
     }
@@ -123,7 +140,7 @@ export function AdjuntoAudio({ media, color, compacto })
 
   const play = (
     <Pressable onPress={alternar} hitSlop={8} style={estilos.play}>
-      {!uri ? <ActivityIndicator color={color} /> : <Text style={{ color, fontSize: 20 }}>{reproduciendo ? "❚❚" : "▶"}</Text>}
+      {cargando ? <ActivityIndicator color={color} /> : <Text style={{ color, fontSize: 20 }}>{reproduciendo ? "❚❚" : "▶"}</Text>}
     </Pressable>
   );
 
@@ -145,11 +162,9 @@ export function AdjuntoAudio({ media, color, compacto })
         {ondaBarras}
         <Text style={[estilos.tiempo, { color }]}>{tiempo}</Text>
       </View>
-      {uri ? (
-        <Pressable onPress={cambiarVelocidad} hitSlop={6} style={[estilos.velocidad, { borderColor: color }]}>
-          <Text style={[estilos.velocidadTxt, { color }]}>{VELOCIDADES[velocidad]}x</Text>
-        </Pressable>
-      ) : null}
+      <Pressable onPress={cambiarVelocidad} hitSlop={6} style={[estilos.velocidad, { borderColor: color }]}>
+        <Text style={[estilos.velocidadTxt, { color }]}>{VELOCIDADES[velocidad]}x</Text>
+      </Pressable>
     </View>
   );
 }
