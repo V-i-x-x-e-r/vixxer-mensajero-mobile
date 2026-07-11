@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { leerBase64 } from "../../lib/archivos";
-import { cifrarArchivo } from "../../lib/crypto";
+import { cifrarArchivoTrozos } from "../../lib/crypto";
 import { guardarCache } from "../../lib/mediaCache";
 import { generarPreview } from "../../lib/mediaPreview";
 import { publicarProgreso, limpiarProgreso } from "../../lib/progresoMedia";
@@ -41,8 +41,8 @@ export function useEnvioMedia({ miId, setMensajes, enviarPlano, alPersistir })
       publicarProgreso(localId, 0);
       const extra = await generarPreview(actual);
       const base64 = await leerBase64(actual.uri);
-      const cif = cifrarArchivo(base64);
-      const { path } = await api.subirMediaConProgreso(cif.datos, (p) => publicarProgreso(localId, p * 0.95));
+      const cif = await cifrarArchivoTrozos(base64, (p) => publicarProgreso(localId, p * 0.2));
+      const { path } = await api.subirMediaConProgreso(cif.datos, (p) => publicarProgreso(localId, 0.2 + p * 0.75));
       guardarCache(path, actual.uri);
       const plano = JSON.stringify({
         t: actual.tipo,

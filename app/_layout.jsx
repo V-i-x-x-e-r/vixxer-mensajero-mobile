@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AppState, View, StyleSheet } from "react-native";
+import { AppState, InteractionManager, View, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
@@ -74,10 +74,13 @@ function Contenido()
       setBloqueado(t);
     });
     asegurarSocket().then(() => escucharLlamadas()).catch(() => {});
-    respaldoAutomatico();
-    arrancarSiActivo().catch(() => {});
-    leer(TOKEN).then((t) => t && registrarPush()).catch(() => {});
-    cargarLlavero().catch(() => {});
+    const tarea = InteractionManager.runAfterInteractions(() =>
+    {
+      respaldoAutomatico();
+      arrancarSiActivo().catch(() => {});
+      leer(TOKEN).then((t) => t && registrarPush()).catch(() => {});
+      cargarLlavero().catch(() => {});
+    });
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")
@@ -90,7 +93,11 @@ function Contenido()
         }
       }
     });
-    return () => sub.remove();
+    return () =>
+    {
+      sub.remove();
+      tarea.cancel();
+    };
   }, []);
 
   return (
@@ -129,7 +136,11 @@ export default function RootLayout()
         router.push({ pathname: "/grupo/[id]", params: { id: datos.grupo } });
       }
     });
-    return () => sub.remove();
+    return () =>
+    {
+      sub.remove();
+      tarea.cancel();
+    };
   }, []);
 
   if (!listas)
