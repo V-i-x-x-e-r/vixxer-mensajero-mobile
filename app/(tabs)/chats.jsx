@@ -84,6 +84,7 @@ export default function Chats()
   const [sel, setSel] = useState(null);
   const [tecleando, setTecleando] = useState({});
   const tiempos = useRef({});
+  const recargaPendiente = useRef(null);
   const [borrando, setBorrando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [alias, setAlias] = useState({});
@@ -163,6 +164,19 @@ export default function Chats()
     }
   }, []);
 
+  const programarCarga = useCallback(() =>
+  {
+    if (recargaPendiente.current)
+    {
+      return;
+    }
+    recargaPendiente.current = setTimeout(() =>
+    {
+      recargaPendiente.current = null;
+      cargar();
+    }, 250);
+  }, [cargar]);
+
   useEffect(() =>
   {
     leerCacheLista().then((c) =>
@@ -197,7 +211,7 @@ export default function Chats()
       {
         socket.emit("mensaje:entregado", { id: fila.id });
         await mostrar(fila.remitente_id);
-        cargar();
+        programarCarga();
       });
       socket.on("usuario:escribiendo", (data) =>
       {
@@ -231,8 +245,13 @@ export default function Chats()
         socket.off("mensaje:recibido");
         socket.off("usuario:escribiendo");
       }
+      if (recargaPendiente.current)
+      {
+        clearTimeout(recargaPendiente.current);
+        recargaPendiente.current = null;
+      }
     };
-  }, [cargar]);
+  }, [programarCarga]);
 
   useFocusEffect(
     useCallback(() =>
@@ -514,7 +533,7 @@ const estilos = StyleSheet.create({
   marca: { flexDirection: "row", alignItems: "center", gap: 10 },
   titulo: { fontSize: 18, fontFamily: fuentes.semibold },
   herramientas: { flexDirection: "row", alignItems: "center", gap: 20 },
-  estado: { flexDirection: "row", alignItems: "center", gap: 6 },
+  estado: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -5 },
   punto: { width: 8, height: 8, borderRadius: 4 },
   estadoTxt: { fontSize: 12 },
   buscar: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, height: 38, marginTop: 8 },

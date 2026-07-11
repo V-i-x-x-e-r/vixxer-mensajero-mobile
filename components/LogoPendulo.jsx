@@ -7,11 +7,11 @@ const AnimatedG = Animated.createAnimatedComponent(G);
 
 export function VCincelada({ cx, cy, r })
 {
-  const w = r * 1.02;
-  const top = cy - r * 0.72;
-  const bot = cy + r * 0.98;
-  const iw = r * 0.5;
-  const ib = cy + r * 0.2;
+  const w = r * 0.8;
+  const top = cy - r * 0.58;
+  const bot = cy + r * 0.94;
+  const iw = r * 0.48;
+  const ib = cy + r * 0.5;
   const izq = `M ${cx - w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx - iw} ${top} Z`;
   const der = `M ${cx + w} ${top} L ${cx} ${bot} L ${cx} ${ib} L ${cx + iw} ${top} Z`;
   const dx = r * 0.045;
@@ -51,17 +51,15 @@ function Bola({ x, y, r, central, mini })
   );
 }
 
-const BARRA_TRAS = 7;
-const BARRA_FRENTE = 19;
 const LOGIN_BY = 130;
-const PIVOTE = 13;
+const PIVOTE = 12;
 
 function HilosLambda({ x, colorHilo })
 {
   return (
     <>
-      <Line x1={x} y1={LOGIN_BY} x2={x - 11} y2={BARRA_TRAS} stroke={colorHilo} strokeWidth="1.4" opacity="0.75" />
-      <Line x1={x} y1={LOGIN_BY} x2={x + 11} y2={BARRA_FRENTE} stroke={colorHilo} strokeWidth="1.4" opacity="0.9" />
+      <Line x1={x - 5} y1={6} x2={x} y2={LOGIN_BY} stroke={colorHilo} strokeWidth="1.3" opacity="0.55" />
+      <Line x1={x + 5} y1={18} x2={x} y2={LOGIN_BY} stroke={colorHilo} strokeWidth="1.3" opacity="0.8" />
     </>
   );
 }
@@ -227,7 +225,12 @@ export function LogoPendulo({ variante = "fila", alto = 40, quieto = false, velo
             <Gradientes />
             <Path d="M 84 240 L 66 256" stroke="#4A525E" strokeWidth="11" strokeLinecap="round" />
             <Path d="M 216 240 L 234 256" stroke="#4A525E" strokeWidth="11" strokeLinecap="round" />
-            <Path d={`M 62 ${BARRA_TRAS} H 238`} stroke="url(#vxMarco)" strokeWidth="8" strokeLinecap="round" opacity="0.85" />
+            <ClipPath id="vxMarcoTras">
+              <Rect x="0" y="0" width="300" height="72" />
+            </ClipPath>
+            <G clipPath="url(#vxMarcoTras)">
+              <Rect x="24" y="6" width="252" height="200" rx="52" fill="none" stroke="url(#vxMarco)" strokeWidth="10" opacity="0.9" />
+            </G>
             <HilosLambda x={LOGIN_CX[1]} colorHilo={colorBarra} />
             <HilosLambda x={LOGIN_CX[2]} colorHilo={colorBarra} />
             <HilosLambda x={LOGIN_CX[3]} colorHilo={colorBarra} />

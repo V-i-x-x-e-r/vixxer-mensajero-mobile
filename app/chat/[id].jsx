@@ -167,6 +167,15 @@ export default function Chat()
 
   const datosWeb = useMemo(() => invertidos.slice().reverse(), [invertidos]);
   const datosLista = esWeb ? datosWeb : invertidos;
+  const mensajesPorId = useMemo(() =>
+  {
+    const mapa = new Map();
+    for (const mensaje of mensajes)
+    {
+      mapa.set(mensaje.id, mensaje);
+    }
+    return mapa;
+  }, [mensajes]);
 
   useEffect(() =>
   {
@@ -1177,7 +1186,7 @@ export default function Chat()
   {
     return seleccionados.every((id) =>
     {
-      const m = mensajes.find((x) => x.id === id);
+      const m = mensajesPorId.get(id);
       return m && m.remitente_id === miId.current && !String(id).startsWith("local-");
     });
   }
@@ -1462,7 +1471,7 @@ export default function Chat()
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const media = leerMedia(item.texto);
           const citadoCrudo = item.respuestaTexto
-            ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
+            ?? (item.respuesta_a ? (mensajesPorId.get(item.respuesta_a)?.texto ?? "Mensaje") : null);
           const citadoEf = citadoCrudo ? leerEfimero(citadoCrudo) : null;
           const citadoMedia = citadoCrudo ? leerMedia(citadoCrudo) : null;
           const citado = citadoMedia ? resumenMensaje(citadoCrudo) : citadoEf ? citadoEf.m : citadoCrudo;

@@ -788,6 +788,15 @@ export default function GrupoChat()
 
   const visibles = useMemo(() => (ocultos.size ? mensajes.filter((m) => !ocultos.has(m.id)) : mensajes), [mensajes, ocultos]);
   const datos = useMemo(() => (esWeb ? visibles : visibles.slice().reverse()), [visibles]);
+  const mensajesPorId = useMemo(() =>
+  {
+    const mapa = new Map();
+    for (const mensaje of mensajes)
+    {
+      mapa.set(mensaje.id, mensaje);
+    }
+    return mapa;
+  }, [mensajes]);
   const ultimoFijado = fijados.length > 0 ? fijados[fijados.length - 1] : null;
   const mencion = useMemo(() =>
   {
@@ -855,7 +864,7 @@ export default function GrupoChat()
           const prev = esWeb ? datos[index - 1] : datos[index + 1];
           const nuevoDia = !prev || !mismoDia(prev.enviado_en, item.enviado_en);
           const citadoCrudo = item.respuestaTexto
-            ?? (item.respuesta_a ? (mensajes.find((m) => m.id === item.respuesta_a)?.texto ?? "Mensaje") : null);
+            ?? (item.respuesta_a ? (mensajesPorId.get(item.respuesta_a)?.texto ?? "Mensaje") : null);
           const citadoMedia = citadoCrudo ? leerMedia(citadoCrudo) : null;
           const cita = citadoMedia ? resumenMensaje(citadoCrudo) : citadoCrudo;
           const lecturas = Object.keys(item.leido_por || {}).length;
