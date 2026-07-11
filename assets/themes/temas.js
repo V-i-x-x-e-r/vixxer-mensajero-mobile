@@ -1,30 +1,30 @@
 export const claro =
 {
   fondo: "#FFFFFF",
-  surface: "#FFFFFF",
-  texto: "#0A0A0A",
-  muted: "#A3A3A3",
-  borde: "#E5E5E5",
-  bordeFoco: "#0A0A0A",
-  botonFondo: "#0A0A0A",
+  surface: "#F5F5F7",
+  texto: "#1D1D1F",
+  muted: "#86868B",
+  borde: "#E8E8ED",
+  bordeFoco: "#1D1D1F",
+  botonFondo: "#1D1D1F",
   botonTexto: "#FFFFFF",
-  enlace: "#0A0A0A",
-  placeholder: "#A3A3A3",
+  enlace: "#1D1D1F",
+  placeholder: "#A1A1A6",
   error: "#DC2626",
 };
 
 export const oscuro =
 {
-  fondo: "#0F0F0F",
-  surface: "#1A1A1A",
-  texto: "#F5F5F5",
-  muted: "#737373",
-  borde: "#2A2A2A",
-  bordeFoco: "#F5F5F5",
+  fondo: "#0D0F13",
+  surface: "#171A20",
+  texto: "#EDEFF3",
+  muted: "#7C8492",
+  borde: "#242A33",
+  bordeFoco: "#EDEFF3",
   botonFondo: "#FFFFFF",
-  botonTexto: "#0A0A0A",
-  enlace: "#F5F5F5",
-  placeholder: "#4A4A4A",
+  botonTexto: "#0D0F13",
+  enlace: "#EDEFF3",
+  placeholder: "#5E6673",
   error: "#F87171",
 };
 

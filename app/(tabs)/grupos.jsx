@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { View, Text, Pressable, FlatList, RefreshControl, Modal, StyleSheet } from "react-native";
 import Animated, { LinearTransition } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -83,6 +83,7 @@ export default function Grupos()
   const [sel, setSel] = useState(null);
   const [escribiendo, setEscribiendo] = useState({});
   const [confirmarSalir, setConfirmarSalir] = useState(false);
+  const recargaPendiente = useRef(null);
 
   const cargar = useCallback(async () =>
   {
@@ -126,6 +127,19 @@ export default function Grupos()
     }
   }, []);
 
+  const programarCarga = useCallback(() =>
+  {
+    if (recargaPendiente.current)
+    {
+      return;
+    }
+    recargaPendiente.current = setTimeout(() =>
+    {
+      recargaPendiente.current = null;
+      cargar();
+    }, 250);
+  }, [cargar]);
+
   useEffect(() =>
   {
     leerCacheGrupos().then((c) =>
@@ -145,7 +159,7 @@ export default function Grupos()
     {
       return;
     }
-    const alCambio = () => cargar();
+    const alCambio = () => programarCarga();
     const tiempos = {};
     function alEscribiendo(data)
     {
@@ -178,8 +192,13 @@ export default function Grupos()
       socket.off("grupo:actualizado", alCambio);
       socket.off("grupo:escribiendo", alEscribiendo);
       Object.values(tiempos).forEach(clearTimeout);
+      if (recargaPendiente.current)
+      {
+        clearTimeout(recargaPendiente.current);
+        recargaPendiente.current = null;
+      }
     };
-  }, [cargar]);
+  }, [programarCarga]);
 
   useFocusEffect(useCallback(() => { cargar(); }, [cargar]));
 
