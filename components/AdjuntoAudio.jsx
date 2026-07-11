@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Pressable, Text, ActivityIndicator, StyleSheet } from "react-native";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import { obtenerMedia } from "../lib/mediaRemota";
 import { leerCache } from "../lib/mediaCache";
 import { duracionCorta } from "../lib/mediaPreview";
 import { barrasDeterministas } from "../lib/audioWave";
+import { suscribirAudio, estadoAudio, reproducirAudio, pausarAudio, buscarAudio, velocidadAudio } from "../lib/reproductor";
 import { fuentes } from "../assets/themes/temas";
 
 const VELOCIDADES = [1, 1.5, 2];
@@ -12,53 +12,16 @@ const ANCHO_ONDA = 148;
 
 export function AdjuntoAudio({ media, color, compacto })
 {
+  const id = media.path || media.local || "";
   const [uri, setUri] = useState(() => media.local || leerCache(media.path) || null);
   const [cargando, setCargando] = useState(false);
-  const listo = useRef(false);
+  const [estado, setEstado] = useState(() => estadoAudio(id));
   const [velocidad, setVelocidad] = useState(0);
   const [posSuave, setPosSuave] = useState(0);
   const [ondaW, setOndaW] = useState(ANCHO_ONDA);
-  const player = useAudioPlayer(null);
-  const estado = useAudioPlayerStatus(player);
   const barras = Array.isArray(media.wf) && media.wf.length > 0 ? media.wf : barrasDeterministas(media.path || media.local);
 
-  useEffect(() =>
-  {
-    listo.current = false;
-  }, [media.path, media.local]);
-
-  async function asegurar()
-  {
-    if (listo.current)
-    {
-      return true;
-    }
-    let final = uri;
-    if (!final)
-    {
-      if (cargando)
-      {
-        return false;
-      }
-      setCargando(true);
-      try
-      {
-        final = await obtenerMedia({ ...media, mime: media.mime || "audio/m4a" });
-        setUri(final);
-      }
-      catch (e)
-      {
-        return false;
-      }
-      finally
-      {
-        setCargando(false);
-      }
-    }
-    player.replace(final);
-    listo.current = true;
-    return true;
-  }
+  useEffect(() => suscribirAudio((actual, ultimo) => setEstado(actual === id ? ultimo : null)), [id]);
 
   useEffect(() =>
   {
@@ -75,50 +38,72 @@ export function AdjuntoAudio({ media, color, compacto })
   }, [estado?.playing, estado?.currentTime, velocidad]);
 
   const duracion = estado && estado.duration ? estado.duration : media.dur || 0;
-  const posicion = posSuave;
+  const posicion = estado ? posSuave : 0;
   const progreso = duracion > 0 ? Math.min(1, posicion / duracion) : 0;
   const reproduciendo = estado && estado.playing;
   const tiempo = duracionCorta(reproduciendo || posicion > 0.3 ? Math.max(0, duracion - posicion) : duracion) || "0:00";
+
+  async function asegurar()
+  {
+    if (uri)
+    {
+      return uri;
+    }
+    if (cargando)
+    {
+      return null;
+    }
+    setCargando(true);
+    try
+    {
+      const final = await obtenerMedia({ ...media, mime: media.mime || "audio/m4a" });
+      setUri(final);
+      return final;
+    }
+    catch (e)
+    {
+      return null;
+    }
+    finally
+    {
+      setCargando(false);
+    }
+  }
 
   async function alternar()
   {
     if (reproduciendo)
     {
-      player.pause();
+      pausarAudio();
       return;
     }
-    if (!(await asegurar()))
+    const final = await asegurar();
+    if (!final)
     {
       return;
     }
-    if (duracion > 0 && posicion >= duracion - 0.15)
+    if (estado && duracion > 0 && posicion >= duracion - 0.15)
     {
-      player.seekTo(0);
+      buscarAudio(id, 0);
     }
-    player.play();
+    reproducirAudio(id, final, VELOCIDADES[velocidad]);
   }
 
   function buscar(e)
   {
-    if (!listo.current || duracion <= 0)
+    if (!estado || duracion <= 0)
     {
       return;
     }
     const x = Math.min(1, Math.max(0, e.nativeEvent.locationX / ondaW));
-    player.seekTo(x * duracion);
+    buscarAudio(id, x * duracion);
   }
 
   function cambiarVelocidad()
   {
     const sig = (velocidad + 1) % VELOCIDADES.length;
     setVelocidad(sig);
-    try
-    {
-      player.setPlaybackRate(VELOCIDADES[sig], "high");
-    }
-    catch (e)
-    {
-    }
+    velocidadAudio(id, VELOCIDADES[sig]);
   }
 
   const ondaBarras = (

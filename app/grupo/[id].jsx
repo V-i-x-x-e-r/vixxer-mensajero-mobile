@@ -5,7 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
-import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
+import { cifrar, descifrar } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { llavePublicaDe } from "../../lib/llaves";
 import { leerCacheChat, guardarCacheChat } from "../../lib/chatCache";

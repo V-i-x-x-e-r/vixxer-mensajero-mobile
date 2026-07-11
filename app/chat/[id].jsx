@@ -7,7 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets } from "expo-audio";
 import * as api from "../../lib/api";
 import { obtenerSocket, asegurarSocket } from "../../lib/socket";
-import { cifrar, descifrar, cifrarArchivo } from "../../lib/crypto";
+import { cifrar, descifrar, cifrarArchivoTrozos } from "../../lib/crypto";
 import { leerBase64 } from "../../lib/archivos";
 import { guardarCache } from "../../lib/mediaCache";
 import { generarPreview } from "../../lib/mediaPreview";
@@ -924,8 +924,8 @@ export default function Chat()
       publicarProgreso(localId, 0);
       const extra = await generarPreview({ ...actual, tipo: tipoDe(actual) });
       const base64 = await leerBase64(actual.uri);
-      const cif = cifrarArchivo(base64);
-      const { path } = await api.subirMediaConProgreso(cif.datos, (p) => publicarProgreso(localId, p * 0.95));
+      const cif = await cifrarArchivoTrozos(base64, (p) => publicarProgreso(localId, p * 0.2));
+      const { path } = await api.subirMediaConProgreso(cif.datos, (p) => publicarProgreso(localId, 0.2 + p * 0.75));
       guardarCache(path, actual.uri);
       const plano = JSON.stringify({
         t: tipoDe(actual),
@@ -1091,7 +1091,7 @@ export default function Chat()
     try
     {
       const base64 = await leerBase64(audioDraft.uri);
-      const cif = cifrarArchivo(base64);
+      const cif = await cifrarArchivoTrozos(base64);
       const { path } = await api.subirMediaConProgreso(cif.datos);
       await mandar(JSON.stringify({
         t: "audio",
