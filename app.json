@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "dev.vixxer.mensajero",
+      "icon": "./assets/icon-android.png",
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.BLUETOOTH_SCAN",
@@ -21,11 +22,7 @@
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
         "android.permission.ACCESS_COARSE_LOCATION"
-      ],
-      "adaptiveIcon": {
-        "backgroundColor": "#0C1015",
-        "foregroundImage": "./assets/adaptive-foreground.png"
-      }
+      ]
     },
     "web": {
       "bundler": "metro",
