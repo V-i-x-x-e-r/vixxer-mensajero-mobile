@@ -41,6 +41,7 @@
     "react-native-ble-plx": "^3.5.1",
     "react-native-gesture-handler": "~2.31.1",
     "react-native-incall-manager": "^4.2.1",
+    "react-native-libsodium": "^1.7.0",
     "react-native-qrcode-svg": "^6.3.21",
     "react-native-reanimated": "4.3.1",
     "react-native-safe-area-context": "~5.7.0",

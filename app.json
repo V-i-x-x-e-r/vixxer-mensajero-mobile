@@ -73,7 +73,8 @@
       "expo-sharing",
       "@config-plugins/react-native-webrtc",
       "expo-image",
-      "expo-asset"
+      "expo-asset",
+      "react-native-libsodium"
     ],
     "extra": {
       "router": {},
