@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AppState, InteractionManager, View, StyleSheet } from "react-native";
+import { AppState, View, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack, router } from "expo-router";
 import * as Notifications from "expo-notifications";
@@ -74,13 +74,13 @@ function Contenido()
       setBloqueado(t);
     });
     asegurarSocket().then(() => escucharLlamadas()).catch(() => {});
-    const tarea = InteractionManager.runAfterInteractions(() =>
+    const tarea = setTimeout(() =>
     {
       respaldoAutomatico();
       arrancarSiActivo().catch(() => {});
       leer(TOKEN).then((t) => t && registrarPush()).catch(() => {});
       cargarLlavero().catch(() => {});
-    });
+    }, 400);
     const sub = AppState.addEventListener("change", (estado) =>
     {
       if (estado === "active")
@@ -96,7 +96,7 @@ function Contenido()
     return () =>
     {
       sub.remove();
-      tarea.cancel();
+      clearTimeout(tarea);
     };
   }, []);
 
@@ -139,7 +139,7 @@ export default function RootLayout()
     return () =>
     {
       sub.remove();
-      tarea.cancel();
+      clearTimeout(tarea);
     };
   }, []);
 
