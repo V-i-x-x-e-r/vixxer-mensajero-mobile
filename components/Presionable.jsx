@@ -18,6 +18,7 @@ export function Presionable({ onPress, onLongPress, delayLongPress, style, conte
   return (
     <Pressable
       style={contenedor}
+      android_ripple={{ color: "rgba(127, 127, 127, 0.12)" }}
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={delayLongPress}

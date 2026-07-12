@@ -636,9 +636,11 @@ export default function Chat()
       {
         setMensajes((prev) =>
         {
-          const porMesh = prev.filter((m) => m.porBle && !descifrados.some((d) => d.id === m.id || d.cliente_id === m.id));
-          const lista = porMesh.length > 0
-            ? [...descifrados, ...porMesh].sort((a, b) => (a.enviado_en || "").localeCompare(b.enviado_en || ""))
+          const extras = prev.filter((m) =>
+            (m.porBle || String(m.id).startsWith("local-")) &&
+            !descifrados.some((d) => d.id === m.id || d.cliente_id === m.id));
+          const lista = extras.length > 0
+            ? [...descifrados, ...extras].sort((a, b) => (a.enviado_en || "").localeCompare(b.enviado_en || ""))
             : descifrados;
           guardarCacheChat(otroId, lista);
           return lista;
@@ -990,7 +992,11 @@ export default function Chat()
 
   async function iniciarGrabacion()
   {
-    const permiso = await AudioModule.requestRecordingPermissionsAsync();
+    let permiso = await AudioModule.getRecordingPermissionsAsync();
+    if (!permiso.granted)
+    {
+      permiso = await AudioModule.requestRecordingPermissionsAsync();
+    }
     if (!permiso.granted)
     {
       return;
@@ -1385,7 +1391,7 @@ export default function Chat()
           <Superficie radio={14} style={[estilos.menuCaja, { top: insets.top + 48 }]}>
             <Pressable
               onPress={() => { setMenu(false); setPickerTemp(true); }}
-              style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}
+              android_ripple={{ color: "rgba(127, 127, 127, 0.14)" }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}
             >
               <Reloj color={temporizador > 0 ? colores.botonFondo : colores.texto} tamano={18} />
               <View style={{ flex: 1 }}>
@@ -1394,19 +1400,19 @@ export default function Chat()
               </View>
             </Pressable>
             <View style={[estilos.menuDivisor, { backgroundColor: colores.borde }]} />
-            <Pressable onPress={alternarSilencio} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+            <Pressable onPress={alternarSilencio} android_ripple={{ color: "rgba(127, 127, 127, 0.14)" }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
               <Silencio color={silenciado ? colores.botonFondo : colores.texto} tamano={18} />
               <Text style={[estilos.menuTxt, { color: colores.texto }]}>{silenciado ? "Activar sonido" : "Silenciar"}</Text>
             </Pressable>
-            <Pressable onPress={verContacto} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+            <Pressable onPress={verContacto} android_ripple={{ color: "rgba(127, 127, 127, 0.14)" }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
               <Ojo color={colores.texto} tamano={18} />
               <Text style={[estilos.menuTxt, { color: colores.texto }]}>Ver contacto</Text>
             </Pressable>
-            <Pressable onPress={() => { setMenu(false); setConfirmar("vaciar"); }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+            <Pressable onPress={() => { setMenu(false); setConfirmar("vaciar"); }} android_ripple={{ color: "rgba(127, 127, 127, 0.14)" }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
               <Bote color={colores.texto} tamano={18} />
               <Text style={[estilos.menuTxt, { color: colores.texto }]}>Vaciar chat</Text>
             </Pressable>
-            <Pressable onPress={() => { setMenu(false); setConfirmar("bloquear"); }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
+            <Pressable onPress={() => { setMenu(false); setConfirmar("bloquear"); }} android_ripple={{ color: "rgba(127, 127, 127, 0.14)" }} style={({ pressed }) => [estilos.menuItem, pressed && estilos.presionadoLeve]}>
               <Candado color={colores.error} tamano={18} />
               <Text style={[estilos.menuTxt, { color: colores.error }]}>Bloquear</Text>
             </Pressable>

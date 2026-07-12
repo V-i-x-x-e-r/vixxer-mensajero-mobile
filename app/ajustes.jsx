@@ -348,7 +348,7 @@ export default function Ajustes()
   function FilaNav({ etiqueta, valor, onPress, color, cargando })
   {
     return (
-      <Pressable onPress={onPress} disabled={!!cargando} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado]}>
+      <Pressable onPress={onPress} disabled={!!cargando} android_ripple={{ color: "rgba(127, 127, 127, 0.12)" }} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado]}>
         <Text style={[estilos.etiqueta, { color: color || colores.texto }]}>{cargando ? "Un momento…" : etiqueta}</Text>
         <View style={estilos.filaDerecha}>
           {valor ? <Text style={[estilos.valor, { color: colores.muted }]}>{valor}</Text> : null}
@@ -377,7 +377,7 @@ export default function Ajustes()
   function FilaValor({ etiqueta, valor, onPress, apagada })
   {
     return (
-      <Pressable onPress={onPress} disabled={apagada} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado, apagada && { opacity: 0.4 }]}>
+      <Pressable onPress={onPress} disabled={apagada} android_ripple={{ color: "rgba(127, 127, 127, 0.12)" }} style={({ pressed }) => [estilos.fila, pressed && estilos.presionado, apagada && { opacity: 0.4 }]}>
         <Text style={[estilos.etiqueta, { color: colores.texto }]}>{etiqueta}</Text>
         <Text style={[estilos.valor, { color: colores.botonFondo }]}>{valor}</Text>
       </Pressable>

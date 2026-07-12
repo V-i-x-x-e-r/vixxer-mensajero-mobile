@@ -230,8 +230,15 @@ export default function GrupoChat()
         const desc = filas.map(descifrarFila);
         if (activo && (desc.length > 0 || !cache))
         {
-          setMensajes(desc);
-          persistir(desc);
+          setMensajes((prev) =>
+          {
+            const locales = prev.filter((m) => String(m.id).startsWith("local-") && !desc.some((d) => d.id === m.id || d.cliente_id === m.id));
+            const junto = locales.length > 0
+              ? [...desc, ...locales].sort((a, b) => (a.enviado_en || "").localeCompare(b.enviado_en || ""))
+              : desc;
+            persistir(junto);
+            return junto;
+          });
         }
         marcarVisto(id);
         reportarLeidos(desc);
@@ -584,7 +591,11 @@ export default function GrupoChat()
     {
       return;
     }
-    const permiso = await AudioModule.requestRecordingPermissionsAsync();
+    let permiso = await AudioModule.getRecordingPermissionsAsync();
+    if (!permiso.granted)
+    {
+      permiso = await AudioModule.requestRecordingPermissionsAsync();
+    }
     if (!permiso.granted)
     {
       return;

@@ -19,7 +19,7 @@ const ANCHO = 260;
 function Accion({ icono, etiqueta, onPress, color })
 {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [estilos.accion, pressed && estilos.presionado]}>
+    <Pressable onPress={onPress} android_ripple={{ color: "rgba(127, 127, 127, 0.16)", borderless: true }} style={({ pressed }) => [estilos.accion, pressed && estilos.presionado]}>
       {icono}
       <Text style={[estilos.accionTxt, { color }]}>{etiqueta}</Text>
     </Pressable>
