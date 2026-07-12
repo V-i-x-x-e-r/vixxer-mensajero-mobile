@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { View, Text, Pressable, ScrollView, Animated, Easing, Alert, Linking, Dimensions, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
+import { View, Text, Pressable, ScrollView, Alert, Linking, Dimensions, StyleSheet } from "react-native";
 import { Stack } from "expo-router";
-import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from "react-native-svg";
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withTiming } from "react-native-reanimated";
+import Svg, { Circle, Line } from "react-native-svg";
 import { estadoCercania, alCambio, listaPeers, cercaniaSoportada, activarModo } from "../lib/cercania";
 import { estadisticasMesh } from "../lib/bleMensajeria";
 import { obtenerSocket } from "../lib/socket";
@@ -36,6 +37,32 @@ function barrasDe(rssi)
   return 1;
 }
 
+function Onda({ lado, color, retraso, tope = 1.04, borde = 1.5, arranque = 0.16, opacidad = 0.42, duracion = 2600 })
+{
+  const t = useSharedValue(0);
+
+  useEffect(() =>
+  {
+    t.value = 0;
+    t.value = withDelay(retraso, withRepeat(withTiming(1, { duration: duracion, easing: Easing.out(Easing.quad) }), -1));
+  }, []);
+
+  const estilo = useAnimatedStyle(() => ({
+    opacity: opacidad * (1 - t.value),
+    transform: [{ scale: arranque + t.value * (tope - arranque) }],
+  }));
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        { position: "absolute", width: lado, height: lado, borderRadius: lado / 2, borderWidth: borde, borderColor: color },
+        estilo,
+      ]}
+    />
+  );
+}
+
 export default function Cercania()
 {
   const { colores } = useTema();
@@ -43,9 +70,6 @@ export default function Cercania()
   const [peers, setPeers] = useState(listaPeers());
   const [stats, setStats] = useState(estadisticasMesh());
   const [enLinea, setEnLinea] = useState(!!obtenerSocket()?.connected);
-  const giro = useRef(new Animated.Value(0)).current;
-  const pulso = useRef(new Animated.Value(0)).current;
-
   useEffect(() => alCambio((e) =>
   {
     setCerca(e);
@@ -61,28 +85,6 @@ export default function Cercania()
       setPeers(listaPeers());
     }, 2000);
     return () => clearInterval(reloj);
-  }, []);
-
-  useEffect(() =>
-  {
-    giro.setValue(0);
-    const anim = Animated.loop(
-      Animated.timing(giro, { toValue: 1, duration: peers.length > 0 ? 1900 : 3200, easing: Easing.linear, useNativeDriver: true }),
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [peers.length > 0]);
-
-  useEffect(() =>
-  {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulso, { toValue: 1, duration: 1100, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-        Animated.timing(pulso, { toValue: 0, duration: 0, useNativeDriver: true }),
-      ]),
-    );
-    anim.start();
-    return () => anim.stop();
   }, []);
 
   async function alternarRadar()
@@ -104,7 +106,6 @@ export default function Cercania()
 
   const lado = Math.min(Dimensions.get("window").width - 40, 340);
   const centro = lado / 2;
-  const rotacion = giro.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
 
   const salida = enLinea
     ? { texto: "Servidor Vixxer", detalle: "Tienes internet: tus mensajes salen directo y actúas de puente para otros.", color: VERDE }
@@ -129,23 +130,11 @@ export default function Cercania()
           </Svg>
 
           {cerca.activo ? (
-            <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ rotate: rotacion }] }]} pointerEvents="none">
-              <Svg width={lado} height={lado}>
-                <Defs>
-                  <LinearGradient id="haz" x1="0" y1="1" x2="0" y2="0">
-                    <Stop offset="0%" stopColor={salida.color} stopOpacity="0" />
-                    <Stop offset="100%" stopColor={salida.color} stopOpacity="0.95" />
-                  </LinearGradient>
-                </Defs>
-                <Path
-                  d={`M ${centro} ${centro} L ${centro} 6 L ${centro - (centro - 6) * 0.52} ${centro - (centro - 6) * 0.85} Z`}
-                  fill={salida.color}
-                  opacity={0.13}
-                />
-                <Line x1={centro} y1={centro} x2={centro} y2={6} stroke="url(#haz)" strokeWidth={3} strokeLinecap="round" />
-                <Circle cx={centro} cy={10} r={4.5} fill={salida.color} opacity={0.9} />
-              </Svg>
-            </Animated.View>
+            <View style={[StyleSheet.absoluteFill, estilos.centrado]} pointerEvents="none">
+              <Onda key={`a-${salida.color}`} lado={lado} color={salida.color} retraso={0} />
+              <Onda key={`b-${salida.color}`} lado={lado} color={salida.color} retraso={870} />
+              <Onda key={`c-${salida.color}`} lado={lado} color={salida.color} retraso={1740} />
+            </View>
           ) : null}
 
           {peers.map((p) =>
@@ -156,15 +145,9 @@ export default function Cercania()
             const y = centro + r * Math.sin(ang);
             return (
               <View key={p.id} style={{ position: "absolute", left: x - 7, top: y - 7 }}>
-                <Animated.View
-                  style={[
-                    estilos.peerOnda,
-                    {
-                      opacity: pulso.interpolate({ inputRange: [0, 1], outputRange: [0.6, 0] }),
-                      transform: [{ scale: pulso.interpolate({ inputRange: [0, 1], outputRange: [1, 2.6] }) }],
-                    },
-                  ]}
-                />
+                <View pointerEvents="none" style={{ position: "absolute", left: -13, top: -13 }}>
+                  <Onda lado={40} color={AZUL} retraso={0} tope={1} arranque={0.35} opacidad={0.6} borde={1.5} duracion={1800} />
+                </View>
                 <View style={[estilos.peer, { backgroundColor: AZUL }]}>
                   <View style={estilos.peerPulso} />
                 </View>
@@ -251,9 +234,7 @@ export default function Cercania()
 
 const estilos = StyleSheet.create({
   zonaRadar: { alignItems: "center", paddingTop: 24 },
-  barrido: { position: "absolute", top: 8, width: 2, borderRadius: 1, opacity: 0.8 },
-  estela: { position: "absolute", top: 8, width: 10, borderRadius: 5, opacity: 0.12 },
-  peerOnda: { position: "absolute", left: -3, top: -3, width: 20, height: 20, borderRadius: 10, backgroundColor: "#38BDF8" },
+  centrado: { alignItems: "center", justifyContent: "center" },
   peerEtiqueta: { position: "absolute", top: 16, left: -12, width: 40, textAlign: "center", fontSize: 9 },
   botonRadar: { marginTop: 10, borderWidth: 1, borderRadius: 18, paddingHorizontal: 18, paddingVertical: 8 },
   peer: { position: "absolute", width: 14, height: 14, borderRadius: 7, alignItems: "center", justifyContent: "center" },
